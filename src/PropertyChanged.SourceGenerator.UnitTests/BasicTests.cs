@@ -14,8 +14,11 @@ namespace PropertyChanged.SourceGenerator.UnitTests
         public void Foo()
         {
             string input = @"
+using PropertyChanged.SourceGenerator;
 public partial class SomeViewModel
 {
+    [Notify]
+    private string _foo;
 }";
             this.AssertSource(input);
         }

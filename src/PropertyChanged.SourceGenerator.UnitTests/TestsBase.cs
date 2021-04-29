@@ -15,8 +15,8 @@ namespace PropertyChanged.SourceGenerator.UnitTests
         {
             var inputCompilation = CSharpCompilation.Create("TestCompilation",
                 new[] { CSharpSyntaxTree.ParseText(input) },
-                null,
-                new CSharpCompilationOptions(OutputKind.ConsoleApplication));
+                new[] { MetadataReference.CreateFromFile(typeof(object).Assembly.Location) },
+                new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
 
             var generator = new PropertyChangedSourceGenerator();
 
@@ -24,7 +24,7 @@ namespace PropertyChanged.SourceGenerator.UnitTests
             driver = driver.RunGeneratorsAndUpdateCompilation(inputCompilation, out var outputCompilation, out var diagnostics);
 
             Assert.IsEmpty(diagnostics);
-            Assert.Equals(2, outputCompilation.SyntaxTrees.Count());
+            Assert.AreEqual(2, outputCompilation.SyntaxTrees.Count());
             Assert.IsEmpty(outputCompilation.GetDiagnostics());
 
             var runResult = driver.GetRunResult();

@@ -95,5 +95,23 @@ namespace Test.Foo
 
             this.AssertSource(expected, input, RemovePropertiesRewriter.Instance);
         }
+
+        [Test]
+        public void RaisesIfTypeIsNotPartial()
+        {
+            string input = @"
+using System.ComponentModel;
+public class SomeViewModel : INotifyPropertyChanged
+{
+    public event PropertyChangedEventHandler PropertyChanged;
+    [Notify]
+    private string _foo;
+}";
+
+            this.AssertDiagnostics(input,
+                // (4,14): Warning INPC002: Type 'SomeViewModel' must be partial in order for PropertyChanged.SourceGenerator to generate properties
+                // SomeViewModel
+                Diagnostic("INPC002", @"SomeViewModel").WithLocation(4, 14));
+        }
     }
 }

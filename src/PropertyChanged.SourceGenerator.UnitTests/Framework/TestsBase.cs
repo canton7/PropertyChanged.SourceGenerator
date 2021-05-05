@@ -37,7 +37,7 @@ namespace PropertyChanged.SourceGenerator.UnitTests.Framework
         {
             var (driver, compilation, diagnostics) = this.RunDriver(input);
 
-            Assert.IsEmpty(diagnostics);
+            Assert.IsEmpty(diagnostics, "Unexpected diagnostics:\r\n\r\n" + string.Join("\r\n", diagnostics.Select(x => x.ToString())));
             //Assert.AreEqual(2, outputCompilation.SyntaxTrees.Count());
             var compilationDiagnostics = compilation.GetDiagnostics();
             Assert.IsEmpty(compilationDiagnostics, "Unexpected diagnostics:\r\n\r\n" + string.Join("\r\n", compilationDiagnostics.Select(x => x.ToString())));

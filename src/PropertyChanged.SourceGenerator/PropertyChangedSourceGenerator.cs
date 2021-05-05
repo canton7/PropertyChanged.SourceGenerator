@@ -39,13 +39,13 @@ namespace PropertyChanged.SourceGenerator
             if (diagnostics.HasDiagnostics)
                 return;
 
-            var analyses = receiver.Types.Select(x => analyser.Analyse(x)).ToList();
+            var analyses = receiver.Types.Select(x => analyser.Analyse(x)).Where(x => x != null).ToList();
 
             foreach (var analysis in analyses)
             {
                 var generator = new Generator();
-                generator.Generate(analysis);
-                context.AddSource(analysis.TypeSymbol.Name, SourceText.From(generator.ToString(), Encoding.UTF8));
+                generator.Generate(analysis!);
+                context.AddSource(analysis!.TypeSymbol.Name, SourceText.From(generator.ToString(), Encoding.UTF8));
             }
         }
     }

@@ -35,21 +35,27 @@ namespace PropertyChanged.SourceGenerator.Analysis
                 ?? throw new InvalidOperationException("NotifyAttribute must have been added to assembly");
         }
 
-        public TypeAnalysis Analyse(INamedTypeSymbol typeSymbol)
+        public TypeAnalysis? Analyse(INamedTypeSymbol typeSymbol)
         {
             // Should have been checked by caller
             if (this.inpcSymbol == null || this.propertyChangedSymbol == null)
                 throw new InvalidOperationException();
+
+            bool isPartial = typeSymbol.DeclaringSyntaxReferences
+                .Select(x => x.GetSyntax())
+                .OfType<ClassDeclarationSyntax>()
+                .Any(x => x.Modifiers.Any(m => m.IsKind(SyntaxKind.PartialKeyword)));
+            if (!isPartial)
+            {
+                this.diagnostics.ReportTypeIsNotPartial(typeSymbol);
+                return null;
+            }
 
             var result = new TypeAnalysis()
             {
                 TypeSymbol = typeSymbol
             };
 
-            result.IsPartial = typeSymbol.DeclaringSyntaxReferences
-                .Select(x => x.GetSyntax())
-                .OfType<ClassDeclarationSyntax>()
-                .Any(x => x.Modifiers.Any(m => m.IsKind(SyntaxKind.PartialKeyword)));
             result.HasInpcInterface = typeSymbol.AllInterfaces.Contains(this.inpcSymbol, SymbolEqualityComparer.Default);
             result.HasEvent = typeSymbol.FindImplementationForInterfaceMember(this.propertyChangedSymbol) != null;
             result.HasOnPropertyChangedMethod = TypeAndBaseTypes(typeSymbol)

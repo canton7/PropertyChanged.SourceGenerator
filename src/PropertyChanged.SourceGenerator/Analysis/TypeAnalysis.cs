@@ -8,7 +8,6 @@ namespace PropertyChanged.SourceGenerator.Analysis
     public class TypeAnalysis
     {
         public INamedTypeSymbol TypeSymbol { get; set; } = null!;
-        public bool IsPartial { get; set; }
         public bool HasInpcInterface { get; set; }
         public bool HasEvent { get; set; }
         public bool HasOnPropertyChangedMethod { get; set; }

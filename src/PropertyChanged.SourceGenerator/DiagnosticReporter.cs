@@ -27,8 +27,17 @@ namespace PropertyChanged.SourceGenerator
             this.AddDiagnostic(couldNotFindInpc);
         }
 
-        private static readonly DiagnosticDescriptor memberRenameResultedInConflict = CreateDescriptor(
+        private static readonly DiagnosticDescriptor typeIsNotPartial = CreateDescriptor(
             "INPC002",
+            "Type is not partial",
+            "Type '{0}' must be partial in order for PropertyChanged.SourceGenerator to generate properties");
+        public void ReportTypeIsNotPartial(INamedTypeSymbol typeSymbol)
+        {
+            this.AddDiagnostic(typeIsNotPartial, typeSymbol.Locations, typeSymbol.Name);
+        }
+
+        private static readonly DiagnosticDescriptor memberRenameResultedInConflict = CreateDescriptor(
+            "INPC003",
             "Could not rename field or property",
             "Attempted to rename field or property '{0}', but the result '{1}' was the name of another member. Ignoring");
         public void ReportMemberRenameResultedInConflict(ISymbol symbol, string name)

@@ -3,6 +3,7 @@ using Microsoft.CodeAnalysis.CSharp;
 using NUnit.Framework;
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.ComponentModel;
 using System.Linq;
 using System.Text;
@@ -12,7 +13,7 @@ namespace PropertyChanged.SourceGenerator.UnitTests.Framework
 {
     public abstract class TestsBase
     {
-        protected void AssertSource(string expected, string input)
+        private (GeneratorDriver driver, Compilation compilation, ImmutableArray<Diagnostic> diagnostics) RunDriver(string input)
         {
             input = @"using PropertyChanged.SourceGenerator;
 " + input;
@@ -29,10 +30,19 @@ namespace PropertyChanged.SourceGenerator.UnitTests.Framework
             GeneratorDriver driver = CSharpGeneratorDriver.Create(generator);
             driver = driver.RunGeneratorsAndUpdateCompilation(inputCompilation, out var outputCompilation, out var diagnostics);
 
+            return (driver, outputCompilation, diagnostics);
+        }
+
+        protected void AssertSource(string expected, string input)
+        {
+            var (driver, compilation, diagnostics) = this.RunDriver(input);
+
             Assert.IsEmpty(diagnostics);
             //Assert.AreEqual(2, outputCompilation.SyntaxTrees.Count());
-            // TODO: Might want to assert on this?
-            Assert.IsEmpty(outputCompilation.GetDiagnostics());
+            var compilationDiagnostics = compilation.GetDiagnostics();
+            Assert.IsEmpty(compilationDiagnostics, "Unexpected diagnostics:\r\n\r\n" + string.Join("\r\n", compilationDiagnostics.Select(x => x.ToString())));
+
+            Assert.IsEmpty(compilation.GetDiagnostics());
 
             var runResult = driver.GetRunResult();
             // 0: Attributes
@@ -43,6 +53,17 @@ namespace PropertyChanged.SourceGenerator.UnitTests.Framework
             TestContext.WriteLine(runResult.GeneratedTrees[1].ToString().Replace("\"", "\"\""));
 
             Assert.AreEqual(expected.Trim(), runResult.GeneratedTrees[1].GetRoot().ToString().Trim());
+        }
+
+        protected void AssertDiagnostics(string input, params DiagnosticResult[] expected)
+        {
+            var (driver, compilation, diagnostics) = this.RunDriver(input);
+            DiagnosticVerifier.VerifyDiagnostics(diagnostics, expected);
+        }
+
+        protected static DiagnosticResult Diagnostic(string code, string squiggledText)
+        {
+            return new DiagnosticResult(code, squiggledText);
         }
     }
 }

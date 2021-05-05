@@ -186,7 +186,7 @@ namespace PropertyChanged.SourceGenerator.UnitTests.Framework
         {
             return diagnostic.Location == Location.None
                 ? ""
-                : diagnostic.Location.SourceTree.GetText().ToString(diagnostic.Location.SourceSpan);
+                : diagnostic.Location.SourceTree?.GetText().ToString(diagnostic.Location.SourceSpan) ?? "";
         }
     }
 

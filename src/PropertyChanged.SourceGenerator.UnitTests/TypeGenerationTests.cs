@@ -24,21 +24,10 @@ public partial class SomeViewModel
 partial class SomeViewModel : global::System.ComponentModel.INotifyPropertyChanged
 {
     public event global::System.ComponentModel.PropertyChangedEventHandler PropertyChanged;
-    public string Foo
-    {
-        get => this._foo;
-        set
-        {
-            if (!global::System.Collections.Generic.EqualityComparer<string>.Default.Equals(value, this._foo))
-            {
-                this._foo = value;
-                this.PropertyChanged?.Invoke(this, new global::System.ComponentModel.PropertyChangedEventArgs(""Foo""));
-            }
-        }
-    }
+    public string Foo { get; set; }
 }";
 
-            this.AssertSource(expected, input);
+            this.AssertSource(expected, input, RemovePropertiesRewriter.Instance);
         }
 
         [Test]
@@ -55,21 +44,10 @@ public partial class SomeViewModel : INotifyPropertyChanged
 partial class SomeViewModel
 {
     public event global::System.ComponentModel.PropertyChangedEventHandler PropertyChanged;
-    public string Foo
-    {
-        get => this._foo;
-        set
-        {
-            if (!global::System.Collections.Generic.EqualityComparer<string>.Default.Equals(value, this._foo))
-            {
-                this._foo = value;
-                this.PropertyChanged?.Invoke(this, new global::System.ComponentModel.PropertyChangedEventArgs(""Foo""));
-            }
-        }
-    }
+    public string Foo { get; set; }
 }";
 
-            this.AssertSource(expected, input);
+            this.AssertSource(expected, input, RemovePropertiesRewriter.Instance);
         }
 
         [Test]
@@ -86,21 +64,36 @@ public partial class SomeViewModel : INotifyPropertyChanged
             string expected = @"
 partial class SomeViewModel
 {
-    public string Foo
-    {
-        get => this._foo;
-        set
-        {
-            if (!global::System.Collections.Generic.EqualityComparer<string>.Default.Equals(value, this._foo))
-            {
-                this._foo = value;
-                this.PropertyChanged?.Invoke(this, new global::System.ComponentModel.PropertyChangedEventArgs(""Foo""));
-            }
+    public string Foo { get; set; }
+}";
+
+            this.AssertSource(expected, input, RemovePropertiesRewriter.Instance);
         }
+
+        [Test]
+        public void GeneratesNamespace()
+        {
+            string input = @"
+using System.ComponentModel;
+namespace Test.Foo
+{
+    public partial class SomeViewModel : INotifyPropertyChanged
+    {
+        public event PropertyChangedEventHandler PropertyChanged;
+        [Notify]
+        private string _foo;
+    }
+}";
+            string expected = @"
+namespace Test.Foo
+{
+    partial class SomeViewModel
+    {
+        public string Foo { get; set; }
     }
 }";
 
-            this.AssertSource(expected, input);
+            this.AssertSource(expected, input, RemovePropertiesRewriter.Instance);
         }
     }
 }

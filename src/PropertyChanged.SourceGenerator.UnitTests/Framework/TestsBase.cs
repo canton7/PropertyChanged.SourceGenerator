@@ -33,7 +33,7 @@ namespace PropertyChanged.SourceGenerator.UnitTests.Framework
             return (driver, outputCompilation, diagnostics);
         }
 
-        protected void AssertSource(string expected, string input)
+        protected void AssertSource(string expected, string input, CSharpSyntaxVisitor<SyntaxNode?>? rewriter = null)
         {
             var (driver, compilation, diagnostics) = this.RunDriver(input);
 
@@ -42,17 +42,21 @@ namespace PropertyChanged.SourceGenerator.UnitTests.Framework
             var compilationDiagnostics = compilation.GetDiagnostics();
             Assert.IsEmpty(compilationDiagnostics, "Unexpected diagnostics:\r\n\r\n" + string.Join("\r\n", compilationDiagnostics.Select(x => x.ToString())));
 
-            Assert.IsEmpty(compilation.GetDiagnostics());
-
             var runResult = driver.GetRunResult();
             // 0: Attributes
             // 1: Generated file
             Assert.AreEqual(2, runResult.GeneratedTrees.Length);
             Assert.IsEmpty(runResult.Diagnostics);
 
-            TestContext.WriteLine(runResult.GeneratedTrees[1].ToString().Replace("\"", "\"\""));
+            var rootSyntaxNode = runResult.GeneratedTrees[1].GetRoot();
+            if (rewriter != null)
+            {
+                rootSyntaxNode = rewriter.Visit(rootSyntaxNode);
+            }
 
-            Assert.AreEqual(expected.Trim(), runResult.GeneratedTrees[1].GetRoot().ToString().Trim());
+            TestContext.WriteLine(rootSyntaxNode?.ToString().Replace("\"", "\"\""));
+
+            Assert.AreEqual(expected.Trim().Replace("\r\n", "\n"), rootSyntaxNode?.ToString().Trim().Replace("\r\n", "\n"));
         }
 
         protected void AssertDiagnostics(string input, params DiagnosticResult[] expected)

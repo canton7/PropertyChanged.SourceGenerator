@@ -3,19 +3,25 @@ using Microsoft.CodeAnalysis.CSharp;
 using NUnit.Framework;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace PropertyChanged.SourceGenerator.UnitTests
+namespace PropertyChanged.SourceGenerator.UnitTests.Framework
 {
     public abstract class TestsBase
     {
-        protected void AssertSource(string input)
+        protected void AssertSource(string expected, string input)
         {
+            input = @"using PropertyChanged.SourceGenerator;
+" + input;
+
             var inputCompilation = CSharpCompilation.Create("TestCompilation",
                 new[] { CSharpSyntaxTree.ParseText(input) },
-                new[] { MetadataReference.CreateFromFile(typeof(object).Assembly.Location) },
+                AppDomain.CurrentDomain.GetAssemblies()
+                    .Where(x => !x.IsDynamic && !string.IsNullOrWhiteSpace(x.Location))
+                    .Select(x => MetadataReference.CreateFromFile(x.Location)),
                 new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
 
             var generator = new PropertyChangedSourceGenerator();
@@ -24,18 +30,19 @@ namespace PropertyChanged.SourceGenerator.UnitTests
             driver = driver.RunGeneratorsAndUpdateCompilation(inputCompilation, out var outputCompilation, out var diagnostics);
 
             Assert.IsEmpty(diagnostics);
-            Assert.AreEqual(2, outputCompilation.SyntaxTrees.Count());
+            //Assert.AreEqual(2, outputCompilation.SyntaxTrees.Count());
+            // TODO: Might want to assert on this?
             Assert.IsEmpty(outputCompilation.GetDiagnostics());
 
             var runResult = driver.GetRunResult();
-            Assert.AreEqual(1, runResult.GeneratedTrees.Length);
+            // 0: Attributes
+            // 1: Generated file
+            Assert.AreEqual(2, runResult.GeneratedTrees.Length);
             Assert.IsEmpty(runResult.Diagnostics);
 
-            var generatorResult = runResult.Results[0];
-            Assert.AreEqual(generator, generatorResult.Generator);
-            Assert.IsEmpty(generatorResult.Diagnostics);
-            Assert.AreEqual(1, generatorResult.GeneratedSources.Length);
-            Assert.IsNull(generatorResult.Exception);
+            TestContext.WriteLine(runResult.GeneratedTrees[1].ToString().Replace("\"", "\"\""));
+
+            Assert.AreEqual(expected.Trim(), runResult.GeneratedTrees[1].GetRoot().ToString().Trim());
         }
     }
 }

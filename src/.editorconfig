@@ -238,3 +238,4 @@ dotnet_naming_rule.type_parameters_must_begin_with_t.severity = warning
 dotnet_diagnostic.CA1816.severity = none
 dotnet_diagnostic.CA1822.severity = none
 dotnet_diagnostic.IDE0079.severity = none # Seems to be mis-firing all the time
+dotnet_diagnostic.IDE0057.severity = none # Don't have Index or Range available

@@ -12,22 +12,24 @@ namespace PropertyChanged.SourceGenerator.UnitTests.Framework
     {
         public static void VerifyDiagnostics(
             IEnumerable<Diagnostic> diagnostics,
-            DiagnosticResult[] expected)
+            DiagnosticResult[] expected,
+            int lineOffset)
         {
             var sortedDiagnostics = diagnostics.OrderBy(d => d.Location.SourceSpan.Start).ToList();
-            VerifyDiagnosticResults(sortedDiagnostics, expected);
+            VerifyDiagnosticResults(sortedDiagnostics, expected, lineOffset);
         }
 
         private static void VerifyDiagnosticResults(
             List<Diagnostic> actualResults,
-            DiagnosticResult[] expectedResults)
+            DiagnosticResult[] expectedResults,
+            int lineOffset)
         {
             int expectedCount = expectedResults.Length;
             int actualCount = actualResults.Count;
 
             if (expectedCount != actualCount)
             {
-                string diagnosticsOutput = actualResults.Any() ? FormatDiagnostics(actualResults.ToArray()) : "    NONE.";
+                string diagnosticsOutput = actualResults.Any() ? FormatDiagnostics(lineOffset, actualResults.ToArray()) : "    NONE.";
 
                 Assert.Fail(string.Format("Mismatch between number of diagnostics returned, expected \"{0}\" actual \"{1}\"\r\n\r\nDiagnostics:\r\n{2}\r\n", expectedCount, actualCount, diagnosticsOutput));
             }
@@ -42,47 +44,49 @@ namespace PropertyChanged.SourceGenerator.UnitTests.Framework
                     if (actual.Location != Location.None)
                     {
                         Assert.Fail(string.Format("Expected:\nA project diagnostic with No location\nActual:\n{0}",
-                            FormatDiagnostics(actual)));
+                            FormatDiagnostics(lineOffset, actual)));
                     }
                 }
                 else
                 {
-                    VerifyDiagnosticLocation(actual, actual.Location, expected.Locations.First());
+                    VerifyDiagnosticLocation(actual, actual.Location, expected.Locations.First(), lineOffset);
                     var additionalLocations = actual.AdditionalLocations.ToArray();
 
                     if (additionalLocations.Length != expected.Locations.Count - 1)
                     {
-                        Assert.True(false,
-                            string.Format("Expected {0} additional locations but got {1} ({2}) for Diagnostic:\r\n{3}\r\n",
+                        Assert.Fail(string.Format("Expected {0} additional locations but got {1} ({2}) for Diagnostic:\r\n{3}\r\n",
                                 expected.Locations.Count - 1, additionalLocations.Length,
                                 string.Join(", ", additionalLocations.Select(x =>
                                 {
                                     var start = x.GetLineSpan().StartLinePosition;
-                                    return $"({start.Line + 1},{start.Character + 1})";
+                                    return $"({start.Line + 1 - lineOffset},{start.Character + 1})";
                                 })),
-                                FormatDiagnostics(actual)));
+                                FormatDiagnostics(lineOffset, actual)));
                     }
 
                     for (int j = 0; j < additionalLocations.Length; ++j)
                     {
-                        VerifyDiagnosticLocation(actual, additionalLocations[j], expected.Locations[j + 1]);
+                        VerifyDiagnosticLocation(actual, additionalLocations[j], expected.Locations[j + 1], lineOffset);
                     }
                 }
 
                 if (actual.Id != expected.Code)
                 {
-                    Assert.Fail(string.Format("Expected diagnostic id to be \"{0}\" ({1}) was \"{2}\"\r\n\r\nDiagnostic:\r\n{3}\r\n", expected.Code, expected.Code, actual.Id, FormatDiagnostics(actual)));
+                    Assert.Fail(string.Format("Expected diagnostic id to be \"{0}\" ({1}) was \"{2}\"\r\n\r\nDiagnostic:\r\n{3}\r\n",
+                        expected.Code, expected.Code, actual.Id, FormatDiagnostics(lineOffset, actual)));
                 }
 
                 if (actual.Severity != expected.Severity)
                 {
-                    Assert.Fail(string.Format("Expected diagnostic severity to be \"{0}\" was \"{1}\"\r\n\r\nDiagnostic:\r\n{2}\r\n", expected.Severity, actual.Severity, FormatDiagnostics(actual)));
+                    Assert.Fail(string.Format("Expected diagnostic severity to be \"{0}\" was \"{1}\"\r\n\r\nDiagnostic:\r\n{2}\r\n",
+                        expected.Severity, actual.Severity, FormatDiagnostics(lineOffset, actual)));
                 }
 
                 string squiggledText = GetSquiggledText(actual);
                 if (squiggledText != expected.SquiggledText)
                 {
-                    Assert.Fail(string.Format("Expected squiggled text to be \"{0}\", was \"{1}\"\r\n\r\nDiagnostic:\r\n{2}\r\n", expected.SquiggledText, squiggledText, FormatDiagnostics(actual)));
+                    Assert.Fail(string.Format("Expected squiggled text to be \"{0}\", was \"{1}\"\r\n\r\nDiagnostic:\r\n{2}\r\n",
+                        expected.SquiggledText, squiggledText, FormatDiagnostics(lineOffset, actual)));
                 }
 
                 //if (actual.GetMessage() != expected.Message)
@@ -100,7 +104,8 @@ namespace PropertyChanged.SourceGenerator.UnitTests.Framework
         private static void VerifyDiagnosticLocation(
             Diagnostic diagnostic,
             Location actual,
-            DiagnosticResultLocation expected)
+            DiagnosticResultLocation expected,
+            int lineOffset)
         {
             var actualSpan = actual.GetLineSpan();
 
@@ -113,9 +118,10 @@ namespace PropertyChanged.SourceGenerator.UnitTests.Framework
             // Only check line position if there is an actual line in the real diagnostic
             if (actualLinePosition.Line > 0)
             {
-                if (actualLinePosition.Line + 1 != expected.Line)
+                if (actualLinePosition.Line + 1 - lineOffset != expected.Line)
                 {
-                    Assert.Fail(string.Format("Expected diagnostic to be on line \"{0}\" was actually on line \"{1}\"\r\n\r\nDiagnostic:\r\n{2}\r\n", expected.Line, actualLinePosition.Line + 1, FormatDiagnostics(diagnostic)));
+                    Assert.Fail(string.Format("Expected diagnostic to be on line \"{0}\" was actually on line \"{1}\"\r\n\r\nDiagnostic:\r\n{2}\r\n",
+                        expected.Line, actualLinePosition.Line + 1 - lineOffset, FormatDiagnostics(lineOffset, diagnostic)));
                 }
             }
 
@@ -124,12 +130,13 @@ namespace PropertyChanged.SourceGenerator.UnitTests.Framework
             {
                 if (actualLinePosition.Character + 1 != expected.Column)
                 {
-                    Assert.Fail(string.Format("Expected diagnostic to start at column \"{0}\" was actually at column \"{1}\"\r\n\r\nDiagnostic:\r\n{2}\r\n", expected.Column, actualLinePosition.Character + 1, FormatDiagnostics(diagnostic)));
+                    Assert.Fail(string.Format("Expected diagnostic to start at column \"{0}\" was actually at column \"{1}\"\r\n\r\nDiagnostic:\r\n{2}\r\n",
+                        expected.Column, actualLinePosition.Character + 1, FormatDiagnostics(lineOffset, diagnostic)));
                 }
             }
         }
 
-        private static string FormatDiagnostics(params Diagnostic[] diagnostics)
+        private static string FormatDiagnostics(int lineOffset, params Diagnostic[] diagnostics)
         {
             var builder = new StringBuilder();
             for (int i = 0; i < diagnostics.Length; ++i)
@@ -141,7 +148,7 @@ namespace PropertyChanged.SourceGenerator.UnitTests.Framework
                 if (location != Location.None)
                 {
                     var mappedSpan = location.GetMappedLineSpan().Span;
-                    line = mappedSpan.Start.Line + 1;
+                    line = mappedSpan.Start.Line + 1 - lineOffset;
                     col = mappedSpan.Start.Character + 1;
                 }
 

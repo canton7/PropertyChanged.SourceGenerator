@@ -109,9 +109,10 @@ public class SomeViewModel : INotifyPropertyChanged
 }";
 
             this.AssertDiagnostics(input,
-                // (4,14): Warning INPC002: Type 'SomeViewModel' must be partial in order for PropertyChanged.SourceGenerator to generate properties
+                // (3,14): Warning INPC002: Type 'SomeViewModel' must be partial in order for PropertyChanged.SourceGenerator to generate properties
                 // SomeViewModel
-                Diagnostic("INPC002", @"SomeViewModel").WithLocation(4, 14));
+                Diagnostic("INPC002", @"SomeViewModel").WithLocation(3, 14)
+            );
         }
 
         [Test]

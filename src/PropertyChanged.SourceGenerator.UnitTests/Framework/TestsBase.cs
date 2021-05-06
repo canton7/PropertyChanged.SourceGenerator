@@ -62,7 +62,7 @@ namespace PropertyChanged.SourceGenerator.UnitTests.Framework
         protected void AssertDiagnostics(string input, params DiagnosticResult[] expected)
         {
             var (driver, compilation, diagnostics) = this.RunDriver(input);
-            DiagnosticVerifier.VerifyDiagnostics(diagnostics, expected);
+            DiagnosticVerifier.VerifyDiagnostics(diagnostics, expected, 1); // We add 1 using statement
         }
 
         protected static DiagnosticResult Diagnostic(string code, string squiggledText)

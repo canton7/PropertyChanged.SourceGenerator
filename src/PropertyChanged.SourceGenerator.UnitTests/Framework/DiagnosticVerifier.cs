@@ -74,10 +74,9 @@ namespace PropertyChanged.SourceGenerator.UnitTests.Framework
                     Assert.Fail(string.Format("Expected diagnostic id to be \"{0}\" ({1}) was \"{2}\"\r\n\r\nDiagnostic:\r\n{3}\r\n", expected.Code, expected.Code, actual.Id, FormatDiagnostics(actual)));
                 }
 
-                var expectedSeverity = expected.IsError ? DiagnosticSeverity.Error : DiagnosticSeverity.Warning;
-                if (actual.Severity != expectedSeverity)
+                if (actual.Severity != expected.Severity)
                 {
-                    Assert.Fail(string.Format("Expected diagnostic severity to be \"{0}\" was \"{1}\"\r\n\r\nDiagnostic:\r\n{2}\r\n", expectedSeverity, actual.Severity, FormatDiagnostics(actual)));
+                    Assert.Fail(string.Format("Expected diagnostic severity to be \"{0}\" was \"{1}\"\r\n\r\nDiagnostic:\r\n{2}\r\n", expected.Severity, actual.Severity, FormatDiagnostics(actual)));
                 }
 
                 string squiggledText = GetSquiggledText(actual);
@@ -175,6 +174,10 @@ namespace PropertyChanged.SourceGenerator.UnitTests.Framework
                     builder.AppendFormat(".WithLocation({0}, {1})",
                         line,
                         col);
+                }
+                if (diagnostics[i].Severity != DiagnosticResult.DefaultSeverity)
+                {
+                    builder.AppendFormat(".WithSeverity(DiagnosticSeverity.{0})", diagnostics[i].Severity);
                 }
 
                 builder.AppendLine().AppendLine();

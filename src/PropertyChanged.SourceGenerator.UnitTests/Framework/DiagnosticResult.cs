@@ -3,14 +3,17 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Microsoft.CodeAnalysis;
 
 namespace PropertyChanged.SourceGenerator.UnitTests.Framework
 {
     public class DiagnosticResult
     {
+        public const DiagnosticSeverity DefaultSeverity = DiagnosticSeverity.Warning;
+
         public string Code { get; }
         public string SquiggledText { get; }
-        public bool IsError { get; set; } = true;
+        public DiagnosticSeverity Severity { get; set; } = DefaultSeverity;
         public List<DiagnosticResultLocation> Locations { get; } = new List<DiagnosticResultLocation>();
 
         public DiagnosticResult(string code, string squiggledText)
@@ -25,6 +28,11 @@ namespace PropertyChanged.SourceGenerator.UnitTests.Framework
             return this;
         }
 
+        public DiagnosticResult WithSeverity(DiagnosticSeverity severity)
+        {
+            this.Severity = severity;
+            return this;
+        }
     }
 
     public struct DiagnosticResultLocation

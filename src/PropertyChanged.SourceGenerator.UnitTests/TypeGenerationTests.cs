@@ -113,5 +113,43 @@ public class SomeViewModel : INotifyPropertyChanged
                 // SomeViewModel
                 Diagnostic("INPC002", @"SomeViewModel").WithLocation(4, 14));
         }
+
+        [Test]
+        public void HandlesBadlyNamedGenericTypes()
+        {
+            string input = @"
+public partial class SomeViewModel<@class>
+{
+    [Notify]
+    private string _foo;
+}";
+            string expected = @"
+partial class SomeViewModel<@class> : global::System.ComponentModel.INotifyPropertyChanged
+{
+    public event global::System.ComponentModel.PropertyChangedEventHandler PropertyChanged;
+    public string Foo { get; set; }
+}";
+
+            this.AssertSource(expected, input, RemovePropertiesRewriter.Instance);
+        }
+
+        [Test]
+        public void HandlesGenericTypesWithConstraints()
+        {
+            string input = @"
+public partial class SomeViewModel<T> where T : class
+{
+    [Notify]
+    private string _foo;
+}";
+            string expected = @"
+partial class SomeViewModel<T> : global::System.ComponentModel.INotifyPropertyChanged
+{
+    public event global::System.ComponentModel.PropertyChangedEventHandler PropertyChanged;
+    public string Foo { get; set; }
+}";
+
+            this.AssertSource(expected, input, RemovePropertiesRewriter.Instance);
+        }
     }
 }

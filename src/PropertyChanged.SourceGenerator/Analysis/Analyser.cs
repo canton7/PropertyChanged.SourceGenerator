@@ -12,6 +12,7 @@ namespace PropertyChanged.SourceGenerator.Analysis
     {
         private readonly DiagnosticReporter diagnostics;
         private readonly Configuration config;
+        private readonly Compilation compilation;
         private readonly INamedTypeSymbol? inpcSymbol;
         private readonly IEventSymbol? propertyChangedSymbol;
         private readonly INamedTypeSymbol notifyAttributeSymbol;
@@ -20,6 +21,7 @@ namespace PropertyChanged.SourceGenerator.Analysis
         {
             this.diagnostics = diagnostics;
             this.config = config;
+            this.compilation = compilation;
 
             this.inpcSymbol = compilation.GetTypeByMetadataName("System.ComponentModel.INotifyPropertyChanged");
             if (this.inpcSymbol == null)
@@ -65,6 +67,7 @@ namespace PropertyChanged.SourceGenerator.Analysis
                     x.Parameters[0].Type.SpecialType == SpecialType.System_String &&
                     x.TypeParameters.Length == 0 &&
                     (x.DeclaredAccessibility != Accessibility.Private || SymbolEqualityComparer.Default.Equals(x.ContainingType, typeSymbol)));
+            result.IsInNullableContext = this.compilation.Options.NullableContextOptions.HasFlag(NullableContextOptions.Enable);
 
             foreach (var member in typeSymbol.GetMembers())
             {

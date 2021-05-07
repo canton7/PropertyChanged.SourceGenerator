@@ -22,6 +22,11 @@ namespace PropertyChanged.SourceGenerator
 
         public void Generate(TypeAnalysis typeAnalysis)
         {
+            if (typeAnalysis.IsInNullableContext)
+            {
+                this.writer.WriteLine("#nullable enable annotations");
+            }
+
             if (typeAnalysis.TypeSymbol.ContainingNamespace is { IsGlobalNamespace: false } @namespace)
             {
                 this.writer.WriteLine($"namespace {@namespace.ToDisplayString(SymbolDisplayFormats.Namespace)}");
@@ -53,7 +58,8 @@ namespace PropertyChanged.SourceGenerator
 
             if (!typeAnalysis.HasEvent)
             {
-                this.writer.WriteLine("public event global::System.ComponentModel.PropertyChangedEventHandler PropertyChanged;");
+                string type = $"global::System.ComponentModel.PropertyChangedEventHandler{(typeAnalysis.IsInNullableContext ? "?" : "")}";
+                this.writer.WriteLine($"public event {type} PropertyChanged;");
             }
 
             foreach (var member in typeAnalysis.Members)

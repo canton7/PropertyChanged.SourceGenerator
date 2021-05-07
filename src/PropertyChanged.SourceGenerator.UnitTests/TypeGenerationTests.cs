@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 namespace PropertyChanged.SourceGenerator.UnitTests
 {
     [TestFixture]
-    public class BasicTests : TestsBase
+    public class TypeGenerationTests : TestsBase
     {
         [Test]
         public void GeneratesInpcInterfaceAndEventIfNotSpecified()

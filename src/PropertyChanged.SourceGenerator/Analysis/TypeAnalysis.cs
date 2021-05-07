@@ -12,5 +12,6 @@ namespace PropertyChanged.SourceGenerator.Analysis
         public bool HasEvent { get; set; }
         public bool HasOnPropertyChangedMethod { get; set; }
         public List<MemberAnalysis> Members { get; } = new();
+        public bool IsInNullableContext { get; set; }
     }
 }

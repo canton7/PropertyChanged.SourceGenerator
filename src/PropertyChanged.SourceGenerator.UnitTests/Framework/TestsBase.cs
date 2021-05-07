@@ -13,7 +13,9 @@ namespace PropertyChanged.SourceGenerator.UnitTests.Framework
 {
     public abstract class TestsBase
     {
-        private (GeneratorDriver driver, Compilation compilation, ImmutableArray<Diagnostic> diagnostics) RunDriver(string input)
+        private (GeneratorDriver driver, Compilation compilation, ImmutableArray<Diagnostic> diagnostics) RunDriver(
+            string input,
+            NullableContextOptions nullableContextOptions)
         {
             input = @"using PropertyChanged.SourceGenerator;
 " + input;
@@ -23,7 +25,8 @@ namespace PropertyChanged.SourceGenerator.UnitTests.Framework
                 AppDomain.CurrentDomain.GetAssemblies()
                     .Where(x => !x.IsDynamic && !string.IsNullOrWhiteSpace(x.Location))
                     .Select(x => MetadataReference.CreateFromFile(x.Location)),
-                new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
+                new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary,
+                    nullableContextOptions: nullableContextOptions));
 
             var generator = new PropertyChangedSourceGenerator();
 
@@ -33,9 +36,13 @@ namespace PropertyChanged.SourceGenerator.UnitTests.Framework
             return (driver, outputCompilation, diagnostics);
         }
 
-        protected void AssertSource(string expected, string input, CSharpSyntaxVisitor<SyntaxNode?>? rewriter = null)
+        protected void AssertSource(
+            string expected,
+            string input,
+            CSharpSyntaxVisitor<SyntaxNode?>? rewriter = null,
+            NullableContextOptions nullableContextOptions = NullableContextOptions.Disable)
         {
-            var (driver, compilation, diagnostics) = this.RunDriver(input);
+            var (driver, compilation, diagnostics) = this.RunDriver(input, nullableContextOptions);
 
             Assert.IsEmpty(diagnostics, "Unexpected diagnostics:\r\n\r\n" + string.Join("\r\n", diagnostics.Select(x => x.ToString())));
             //Assert.AreEqual(2, outputCompilation.SyntaxTrees.Count());
@@ -54,14 +61,18 @@ namespace PropertyChanged.SourceGenerator.UnitTests.Framework
                 rootSyntaxNode = rewriter.Visit(rootSyntaxNode);
             }
 
-            TestContext.WriteLine(rootSyntaxNode?.ToString().Replace("\"", "\"\""));
+            string actual = rootSyntaxNode?.ToFullString().Trim().Replace("\r\n", "\n") ?? "";
+            // Strip off the comments at the top
+            actual = string.Join('\n', actual.Split('\n').SkipWhile(x => x.StartsWith("//")));
 
-            Assert.AreEqual(expected.Trim().Replace("\r\n", "\n"), rootSyntaxNode?.ToString().Trim().Replace("\r\n", "\n"));
+            TestContext.WriteLine(actual);
+
+            Assert.AreEqual(expected.Trim().Replace("\r\n", "\n"), actual);
         }
 
         protected void AssertDiagnostics(string input, params DiagnosticResult[] expected)
         {
-            var (driver, compilation, diagnostics) = this.RunDriver(input);
+            var (driver, compilation, diagnostics) = this.RunDriver(input, NullableContextOptions.Enable);
             DiagnosticVerifier.VerifyDiagnostics(diagnostics, expected, 1); // We add 1 using statement
         }
 

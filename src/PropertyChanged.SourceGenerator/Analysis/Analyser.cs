@@ -110,12 +110,32 @@ namespace PropertyChanged.SourceGenerator.Analysis
             AttributeData notifyAttribute)
         {
             string? explicitName = null;
+            Accessibility getterAccessibility = Accessibility.Public;
+            Accessibility setterAccessibility = Accessibility.Public;
+
             foreach (var arg in notifyAttribute.ConstructorArguments)
             {
                 if (arg.Type?.SpecialType == SpecialType.System_String)
                 {
                     explicitName = (string?)arg.Value;
                 }
+                else if (arg.Type?.Name == "Getter")
+                {
+                    getterAccessibility = (Accessibility)(int)arg.Value!;
+                }
+                else if (arg.Type?.Name == "Setter")
+                {
+                    setterAccessibility = (Accessibility)(int)arg.Value!;
+                }
+            }
+
+            // We can't have a getter/setter being internal, and the setter/getter being protected
+            if ((getterAccessibility == Accessibility.Internal && setterAccessibility == Accessibility.Protected) ||
+                (getterAccessibility == Accessibility.Protected && setterAccessibility == Accessibility.Internal))
+            {
+                this.diagnostics.ReportIncomapatiblePropertyAccessibilities(type, notifyAttribute);
+                getterAccessibility = Accessibility.ProtectedOrInternal;
+                setterAccessibility = Accessibility.ProtectedOrInternal;
             }
 
             var result = new MemberAnalysis()
@@ -123,6 +143,8 @@ namespace PropertyChanged.SourceGenerator.Analysis
                 BackingMember = backingMember,
                 Name = this.TransformName(typeSymbol, backingMember, explicitName),
                 Type = type,
+                GetterAccessibility = getterAccessibility,
+                SetterAccessibility = setterAccessibility,
             };
 
             if (type.IsReferenceType)

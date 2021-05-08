@@ -86,12 +86,14 @@ namespace PropertyChanged.SourceGenerator
                 this.writer.WriteLine(NullableContextToComment(context));
             }
 
-            this.writer.WriteLine($"public {member.Type.ToDisplayString(SymbolDisplayFormats.MethodOrPropertyReturnType)} {member.Name}");
+            var (propertyAccessibility, getterAccessibility, setterAccessibility) = CalculateAccessibilities(member);
+
+            this.writer.WriteLine($"{propertyAccessibility}{member.Type.ToDisplayString(SymbolDisplayFormats.MethodOrPropertyReturnType)} {member.Name}");
             this.writer.WriteLine("{");
             this.writer.Indent++;
 
-            this.writer.WriteLine($"get => {backingMemberReference};");
-            this.writer.WriteLine("set");
+            this.writer.WriteLine($"{getterAccessibility}get => {backingMemberReference};");
+            this.writer.WriteLine($"{setterAccessibility}set");
             this.writer.WriteLine("{");
             this.writer.Indent++;
 
@@ -119,6 +121,28 @@ namespace PropertyChanged.SourceGenerator
             }
         }
 
+        private static (string property, string getter, string setter) CalculateAccessibilities(MemberAnalysis member)
+        {
+            string property;
+            string getter = "";
+            string setter = "";
+
+            if (member.GetterAccessibility >= member.SetterAccessibility)
+            {
+                property = AccessibilityToString(member.GetterAccessibility);
+                setter = member.GetterAccessibility == member.SetterAccessibility
+                    ? ""
+                    : AccessibilityToString(member.SetterAccessibility);
+            }
+            else
+            {
+                property = AccessibilityToString(member.SetterAccessibility);
+                getter = AccessibilityToString(member.GetterAccessibility);
+            }
+
+            return (property, getter, setter);
+        }
+
         private static string NullableContextToComment(NullableContextOptions context)
         {
             return context switch
@@ -127,6 +151,20 @@ namespace PropertyChanged.SourceGenerator
                 NullableContextOptions.Warnings => "#nullable enable warnings",
                 NullableContextOptions.Annotations => "#nullable enable annotations",
                 NullableContextOptions.Enable => "#nullable enable"
+            };
+        }
+
+        private static string AccessibilityToString(Accessibility accessibility)
+        {
+            return accessibility switch
+            {
+                Accessibility.Public => "public ",
+                Accessibility.ProtectedOrInternal => "protected internal ",
+                Accessibility.Internal => "internal ",
+                Accessibility.Protected => "protected ",
+                Accessibility.ProtectedAndInternal => "private protected ",
+                Accessibility.Private => "private ",
+                _ => throw new ArgumentException("Unknown member", nameof(accessibility)),
             };
         }
 

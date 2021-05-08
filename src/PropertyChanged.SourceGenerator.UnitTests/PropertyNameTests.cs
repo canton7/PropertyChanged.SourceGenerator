@@ -40,8 +40,13 @@ public partial class SomeViewModel
     private string _foo;
     public string Foo;
 }";
+            string expected = @"
+partial class SomeViewModel : global::System.ComponentModel.INotifyPropertyChanged
+{
+    public event global::System.ComponentModel.PropertyChangedEventHandler PropertyChanged;
+}";
 
-            this.AssertDiagnostics(input,
+            this.AssertSource(expected, input, RemovePropertiesRewriter.Instance, diagnostics:
                 // (5,20): Warning INPC003: Attempted to generate property 'Foo' for member '_foo', but a member with that name already exists. Skipping this property
                 // _foo
                 Diagnostic("INPC003", @"_foo").WithLocation(5, 20));
@@ -57,8 +62,13 @@ public partial class SomeViewModel
     private string _foo;
     public string Prop;
 }";
+            string expected = @"
+partial class SomeViewModel : global::System.ComponentModel.INotifyPropertyChanged
+{
+    public event global::System.ComponentModel.PropertyChangedEventHandler PropertyChanged;
+}";
 
-            this.AssertDiagnostics(input,
+            this.AssertSource(expected, input, RemovePropertiesRewriter.Instance, diagnostics:
                 // (5,20): Warning INPC003: Attempted to generate property 'Prop' for member '_foo', but a member with that name already exists. Skipping this property
                 // _foo
                 Diagnostic("INPC003", @"_foo").WithLocation(5, 20));

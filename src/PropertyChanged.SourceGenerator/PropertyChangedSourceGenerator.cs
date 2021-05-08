@@ -19,11 +19,33 @@ namespace PropertyChanged.SourceGenerator
 
 namespace PropertyChanged.SourceGenerator
 {
+    internal enum Getter
+    {
+        Public = 6,
+        ProtectedInternal = 5,
+        Internal = 4,
+        Protected = 3,
+        PrivateProtected = 2,
+        Private = 1,
+    }
+
+    internal enum Setter
+    {
+        Public = 6,
+        ProtectedInternal = 5,
+        Internal = 4,
+        Protected = 3,
+        PrivateProtected = 2,
+        Private = 1,
+    }
+
     [global::System.AttributeUsage(global::System.AttributeTargets.Field | global::System.AttributeTargets.Property, AllowMultiple = false)]
     internal class NotifyAttribute : global::System.Attribute
     {
         public NotifyAttribute() { }
-        public NotifyAttribute(string name) { }
+        public NotifyAttribute(string name, Getter get = Getter.Public, Setter set = Setter.Public) { }
+        public NotifyAttribute(Getter get, Setter set = Setter.Public) { }
+        public NotifyAttribute(Setter set) { }
     }
 }"));
         }

@@ -40,42 +40,52 @@ namespace PropertyChanged.SourceGenerator.UnitTests.Framework
             string expected,
             string input,
             CSharpSyntaxVisitor<SyntaxNode?>? rewriter = null,
-            NullableContextOptions nullableContextOptions = NullableContextOptions.Disable)
+            NullableContextOptions nullableContextOptions = NullableContextOptions.Disable,
+            params DiagnosticResult[] diagnostics)
         {
-            var (driver, compilation, diagnostics) = this.RunDriver(input, nullableContextOptions);
+            var (driver, compilation, generatorDiagonstics) = this.RunDriver(input, nullableContextOptions);
+            DiagnosticVerifier.VerifyDiagnostics(generatorDiagonstics, diagnostics, 1); // We add 1 using statement
 
             var runResult = driver.GetRunResult();
-
-            // 0: Attributes
-            // 1: Generated file
-            // 2: PropertyChangedEventArgsCache
-            Assert.AreEqual(3, runResult.GeneratedTrees.Length);
-            Assert.IsEmpty(runResult.Diagnostics);
-
-            var rootSyntaxNode = runResult.GeneratedTrees[1].GetRoot();
-            if (rewriter != null)
+            if (string.IsNullOrEmpty(expected))
             {
-                rootSyntaxNode = rewriter.Visit(rootSyntaxNode);
+                Assert.AreEqual(2, runResult.GeneratedTrees.Length);
+            }
+            else
+            {
+                // 0: Attributes
+                // 1: Generated file
+                // 2: PropertyChangedEventArgsCache
+                Assert.AreEqual(3, runResult.GeneratedTrees.Length);
+                //Assert.IsEmpty(runResult.Diagnostics);
+
+                var rootSyntaxNode = runResult.GeneratedTrees[1].GetRoot();
+                if (rewriter != null)
+                {
+                    rootSyntaxNode = rewriter.Visit(rootSyntaxNode);
+                }
+
+                string actual = rootSyntaxNode?.ToFullString().Trim().Replace("\r\n", "\n") ?? "";
+                // Strip off the comments at the top
+                actual = string.Join('\n', actual.Split('\n').SkipWhile(x => x.StartsWith("//")));
+
+                TestContext.WriteLine(actual.Replace("\"", "\"\""));
+
+                Assert.AreEqual(expected.Trim().Replace("\r\n", "\n"), actual);
             }
 
-            string actual = rootSyntaxNode?.ToFullString().Trim().Replace("\r\n", "\n") ?? "";
-            // Strip off the comments at the top
-            actual = string.Join('\n', actual.Split('\n').SkipWhile(x => x.StartsWith("//")));
-
-            TestContext.WriteLine(actual.Replace("\"", "\"\""));
-
-            Assert.IsEmpty(diagnostics, "Unexpected diagnostics:\r\n\r\n" + string.Join("\r\n", diagnostics.Select(x => x.ToString())));
             //Assert.AreEqual(2, outputCompilation.SyntaxTrees.Count());
-            var compilationDiagnostics = compilation.GetDiagnostics();
+            // We can expect compilation-level diagnostics if there are generator diagnostics: filter the known
+            // bad ones out
+            var compilationDiagnostics = compilation.GetDiagnostics().Except(generatorDiagonstics);
+            if (generatorDiagonstics.Length > 0)
+            {
+                // CS0169: Field isn't used
+                // CS0067: Even isn't used
+                compilationDiagnostics = compilationDiagnostics.Where(x => x.Id is not ("CS0169" or "CS0067"));
+            }
             Assert.IsEmpty(compilationDiagnostics, "Unexpected diagnostics:\r\n\r\n" + string.Join("\r\n", compilationDiagnostics.Select(x => x.ToString())));
 
-            Assert.AreEqual(expected.Trim().Replace("\r\n", "\n"), actual);
-        }
-
-        protected void AssertDiagnostics(string input, params DiagnosticResult[] expected)
-        {
-            var (driver, compilation, diagnostics) = this.RunDriver(input, NullableContextOptions.Enable);
-            DiagnosticVerifier.VerifyDiagnostics(diagnostics, expected, 1); // We add 1 using statement
         }
 
         protected static DiagnosticResult Diagnostic(string code, string squiggledText)

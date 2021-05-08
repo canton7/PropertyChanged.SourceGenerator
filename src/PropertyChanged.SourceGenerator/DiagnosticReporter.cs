@@ -45,6 +45,15 @@ namespace PropertyChanged.SourceGenerator
             this.AddDiagnostic(memberRenameResultedInConflict, symbol.Locations, name, symbol.Name);
         }
 
+        private static readonly DiagnosticDescriptor incompatiblePropertyAccessibilities = CreateDescriptor(
+            "INPC004",
+            "Incompatible property accessibilities",
+            "C# propertes may not have an internal getter and protected setter, or protected setter and internal getter. Defaulting both to protected internal");
+        public void ReportIncomapatiblePropertyAccessibilities(ISymbol member, AttributeData notifyAttribute)
+        {
+            this.AddDiagnostic(incompatiblePropertyAccessibilities, AttributeLocations(notifyAttribute, member));
+        }
+
         private static DiagnosticDescriptor CreateDescriptor(string code, string title, string messageFormat, DiagnosticSeverity severity = DiagnosticSeverity.Warning)
         {
             string[] tags = severity == DiagnosticSeverity.Error ? new[] { WellKnownDiagnosticTags.NotConfigurable } : Array.Empty<string>();
@@ -70,6 +79,13 @@ namespace PropertyChanged.SourceGenerator
                 this.HasErrors = true;
             }
             this.context.ReportDiagnostic(diagnostic);
+        }
+
+        private static IEnumerable<Location> AttributeLocations(AttributeData? attributeData, ISymbol fallback)
+        {
+            // TODO: This squiggles the 'BasePath(...)' bit. Ideally we'd want '[BasePath(...)]' or perhaps just '...'.
+            var attributeLocation = attributeData?.ApplicationSyntaxReference?.GetSyntax().GetLocation();
+            return attributeLocation != null ? new[] { attributeLocation } : fallback.Locations;
         }
     }
 }

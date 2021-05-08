@@ -44,12 +44,8 @@ namespace PropertyChanged.SourceGenerator.UnitTests.Framework
         {
             var (driver, compilation, diagnostics) = this.RunDriver(input, nullableContextOptions);
 
-            Assert.IsEmpty(diagnostics, "Unexpected diagnostics:\r\n\r\n" + string.Join("\r\n", diagnostics.Select(x => x.ToString())));
-            //Assert.AreEqual(2, outputCompilation.SyntaxTrees.Count());
-            var compilationDiagnostics = compilation.GetDiagnostics();
-            Assert.IsEmpty(compilationDiagnostics, "Unexpected diagnostics:\r\n\r\n" + string.Join("\r\n", compilationDiagnostics.Select(x => x.ToString())));
-
             var runResult = driver.GetRunResult();
+
             // 0: Attributes
             // 1: Generated file
             Assert.AreEqual(2, runResult.GeneratedTrees.Length);
@@ -65,7 +61,12 @@ namespace PropertyChanged.SourceGenerator.UnitTests.Framework
             // Strip off the comments at the top
             actual = string.Join('\n', actual.Split('\n').SkipWhile(x => x.StartsWith("//")));
 
-            TestContext.WriteLine(actual);
+            TestContext.WriteLine(actual.Replace("\"", "\"\""));
+
+            Assert.IsEmpty(diagnostics, "Unexpected diagnostics:\r\n\r\n" + string.Join("\r\n", diagnostics.Select(x => x.ToString())));
+            //Assert.AreEqual(2, outputCompilation.SyntaxTrees.Count());
+            var compilationDiagnostics = compilation.GetDiagnostics();
+            Assert.IsEmpty(compilationDiagnostics, "Unexpected diagnostics:\r\n\r\n" + string.Join("\r\n", compilationDiagnostics.Select(x => x.ToString())));
 
             Assert.AreEqual(expected.Trim().Replace("\r\n", "\n"), actual);
         }

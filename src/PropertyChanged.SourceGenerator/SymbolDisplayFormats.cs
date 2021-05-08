@@ -53,14 +53,16 @@ namespace PropertyChanged.SourceGenerator
                 typeQualificationStyle: SymbolDisplayTypeQualificationStyle.NameAndContainingTypesAndNamespaces,
                 genericsOptions: SymbolDisplayGenericsOptions.IncludeTypeParameters,
                 miscellaneousOptions: SymbolDisplayMiscellaneousOptions.EscapeKeywordIdentifiers
-                    | SymbolDisplayMiscellaneousOptions.UseSpecialTypes);
+                    | SymbolDisplayMiscellaneousOptions.UseSpecialTypes
+                    | SymbolDisplayMiscellaneousOptions.IncludeNullableReferenceTypeModifier);
 
             TypeParameter = new SymbolDisplayFormat(
                 globalNamespaceStyle: SymbolDisplayGlobalNamespaceStyle.Included,
                 typeQualificationStyle: SymbolDisplayTypeQualificationStyle.NameAndContainingTypesAndNamespaces,
                 genericsOptions: SymbolDisplayGenericsOptions.IncludeTypeParameters,
                 miscellaneousOptions: SymbolDisplayMiscellaneousOptions.EscapeKeywordIdentifiers
-                    | SymbolDisplayMiscellaneousOptions.UseSpecialTypes);
+                    | SymbolDisplayMiscellaneousOptions.UseSpecialTypes
+                    | SymbolDisplayMiscellaneousOptions.IncludeNullableReferenceTypeModifier);
         }
     }
 }

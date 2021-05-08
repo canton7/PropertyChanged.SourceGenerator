@@ -3,6 +3,7 @@ using System.CodeDom.Compiler;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
+using Microsoft.CodeAnalysis;
 using PropertyChanged.SourceGenerator.Analysis;
 
 namespace PropertyChanged.SourceGenerator
@@ -22,9 +23,10 @@ namespace PropertyChanged.SourceGenerator
 
         public void Generate(TypeAnalysis typeAnalysis)
         {
-            if (typeAnalysis.IsInNullableContext)
+            // SG'd files default to 'disable'
+            if (typeAnalysis.NullableContext != NullableContextOptions.Disable)
             {
-                this.writer.WriteLine("#nullable enable annotations");
+                this.writer.WriteLine(NullableContextToComment(typeAnalysis.NullableContext));
             }
 
             if (typeAnalysis.TypeSymbol.ContainingNamespace is { IsGlobalNamespace: false } @namespace)
@@ -58,27 +60,31 @@ namespace PropertyChanged.SourceGenerator
 
             if (!typeAnalysis.HasEvent)
             {
-                string type = $"global::System.ComponentModel.PropertyChangedEventHandler{(typeAnalysis.IsInNullableContext ? "?" : "")}";
-                this.writer.WriteLine($"public event {type} PropertyChanged;");
+                string nullable = typeAnalysis.NullableContext.HasFlag(NullableContextOptions.Annotations) ? "?" : "";
+                this.writer.WriteLine($"public event global::System.ComponentModel.PropertyChangedEventHandler{nullable} PropertyChanged;");
             }
 
             foreach (var member in typeAnalysis.Members)
             {
-                this.GenerateMember(member);
+                this.GenerateMember(typeAnalysis, member);
             }
 
             this.writer.Indent--;
             this.writer.WriteLine("}");
         }
 
-        private void GenerateMember(MemberAnalysis member)
+        private void GenerateMember(TypeAnalysis type, MemberAnalysis member)
         {
             string backingMemberReference = "this." + member.BackingMember.ToDisplayString(SymbolDisplayFormats.SymbolName);
+
+            if (member.NullableContextOverride is { } context)
+            {
+                this.writer.WriteLine(NullableContextToComment(context));
+            }
 
             this.writer.WriteLine($"public {member.Type.ToDisplayString(SymbolDisplayFormats.MethodOrPropertyReturnType)} {member.Name}");
             this.writer.WriteLine("{");
             this.writer.Indent++;
-
 
             this.writer.WriteLine($"get => {backingMemberReference};");
             this.writer.WriteLine("set");
@@ -100,6 +106,22 @@ namespace PropertyChanged.SourceGenerator
             this.writer.WriteLine("}");
             this.writer.Indent--;
             this.writer.WriteLine("}");
+
+            if (member.NullableContextOverride != null)
+            {
+                this.writer.WriteLine(NullableContextToComment(type.NullableContext));
+            }
+        }
+
+        private static string NullableContextToComment(NullableContextOptions context)
+        {
+            return context switch
+            {
+                NullableContextOptions.Disable => "#nullable disable",
+                NullableContextOptions.Warnings => "#nullable enable warnings",
+                NullableContextOptions.Annotations => "#nullable enable annotations",
+                NullableContextOptions.Enable => "#nullable enable"
+            };
         }
 
         public override string ToString() => this.writer.InnerWriter.ToString();

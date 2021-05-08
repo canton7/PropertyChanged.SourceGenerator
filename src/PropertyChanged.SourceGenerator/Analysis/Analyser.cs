@@ -39,7 +39,6 @@ namespace PropertyChanged.SourceGenerator.Analysis
 
         public TypeAnalysis? Analyse(INamedTypeSymbol typeSymbol)
         {
-            // Should have been checked by caller
             if (this.inpcSymbol == null || this.propertyChangedSymbol == null)
                 throw new InvalidOperationException();
 
@@ -67,7 +66,7 @@ namespace PropertyChanged.SourceGenerator.Analysis
                     x.Parameters[0].Type.SpecialType == SpecialType.System_String &&
                     x.TypeParameters.Length == 0 &&
                     (x.DeclaredAccessibility != Accessibility.Private || SymbolEqualityComparer.Default.Equals(x.ContainingType, typeSymbol)));
-            result.IsInNullableContext = this.compilation.Options.NullableContextOptions.HasFlag(NullableContextOptions.Enable);
+            result.NullableContext = this.compilation.Options.NullableContextOptions;
 
             foreach (var member in typeSymbol.GetMembers())
             {
@@ -92,27 +91,42 @@ namespace PropertyChanged.SourceGenerator.Analysis
 
         private MemberAnalysis AnalyseField(INamedTypeSymbol typeSymbol, IFieldSymbol field, AttributeData notifyAttribute)
         {
-            var result = this.AnalyseMember(typeSymbol, field, notifyAttribute);
-            result.Type = field.Type;
+            var result = this.AnalyseMember(typeSymbol, field, field.Type, notifyAttribute);
 
             return result;
         }
 
         private MemberAnalysis AnalyseProperty(INamedTypeSymbol typeSymbol, IPropertySymbol property, AttributeData notifyAttribute)
         {
-            var result = this.AnalyseMember(typeSymbol, property, notifyAttribute);
-            result.Type = property.Type;
+            var result = this.AnalyseMember(typeSymbol, property, property.Type, notifyAttribute);
 
             return result;
         }
 
-        private MemberAnalysis AnalyseMember(INamedTypeSymbol typeSymbol, ISymbol symbol, AttributeData notifyAttribute)
+        private MemberAnalysis AnalyseMember(
+            INamedTypeSymbol typeSymbol,
+            ISymbol backingMember,
+            ITypeSymbol type,
+            AttributeData notifyAttribute)
         {
-            var result = new MemberAnalysis
+            var result = new MemberAnalysis()
             {
-                BackingMember = symbol,
-                Name = this.TransformName(typeSymbol, symbol)
+                BackingMember = backingMember,
+                Name = this.TransformName(typeSymbol, backingMember),
+                Type = type,
             };
+
+            if (type.IsReferenceType)
+            {
+                if (this.compilation.Options.NullableContextOptions.HasFlag(NullableContextOptions.Annotations) && type.NullableAnnotation == NullableAnnotation.None)
+                {
+                    result.NullableContextOverride = NullableContextOptions.Disable;
+                }
+                else if (this.compilation.Options.NullableContextOptions == NullableContextOptions.Disable && type.NullableAnnotation != NullableAnnotation.None)
+                {
+                    result.NullableContextOverride = NullableContextOptions.Annotations;
+                }
+            }
 
             return result;
         }

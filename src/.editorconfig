@@ -239,3 +239,4 @@ dotnet_diagnostic.CA1816.severity = none
 dotnet_diagnostic.CA1822.severity = none
 dotnet_diagnostic.IDE0079.severity = none # Seems to be mis-firing all the time
 dotnet_diagnostic.IDE0057.severity = none # Don't have Index or Range available
+dotnet_diagnostic.CS8524.severity = none # Don't force switches over enums to include invalid case

@@ -41,12 +41,17 @@ namespace PropertyChanged.SourceGenerator
 
             var analyses = receiver.Types.Select(x => analyser.Analyse(x)).Where(x => x != null).ToList();
 
+            var nameCacheEntries = new HashSet<string>();
             foreach (var analysis in analyses)
             {
-                var generator = new Generator();
+                var generator = new Generator(nameCacheEntries);
                 generator.Generate(analysis!);
                 context.AddSource(analysis!.TypeSymbol.Name, SourceText.From(generator.ToString(), Encoding.UTF8));
             }
+
+            var nameCacheGenerator = new Generator(nameCacheEntries);
+            nameCacheGenerator.GenerateNameCache();
+            context.AddSource("PropertyChangedEventArgsCache", SourceText.From(nameCacheGenerator.ToString(), Encoding.UTF8));
         }
     }
 }

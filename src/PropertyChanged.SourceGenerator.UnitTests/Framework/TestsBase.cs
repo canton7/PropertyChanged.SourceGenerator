@@ -48,7 +48,8 @@ namespace PropertyChanged.SourceGenerator.UnitTests.Framework
 
             // 0: Attributes
             // 1: Generated file
-            Assert.AreEqual(2, runResult.GeneratedTrees.Length);
+            // 2: PropertyChangedEventArgsCache
+            Assert.AreEqual(3, runResult.GeneratedTrees.Length);
             Assert.IsEmpty(runResult.Diagnostics);
 
             var rootSyntaxNode = runResult.GeneratedTrees[1].GetRoot();

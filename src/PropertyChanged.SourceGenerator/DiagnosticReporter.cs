@@ -38,11 +38,11 @@ namespace PropertyChanged.SourceGenerator
 
         private static readonly DiagnosticDescriptor memberRenameResultedInConflict = CreateDescriptor(
             "INPC003",
-            "Could not rename field or property",
-            "Attempted to rename field or property '{0}', but the result '{1}' was the name of another member. Ignoring");
+            "Could not use name for property",
+            "Attempted to generate property '{0}' for member '{1}', but a member with that name already exists. Skipping this property");
         public void ReportMemberRenameResultedInConflict(ISymbol symbol, string name)
         {
-            this.AddDiagnostic(memberRenameResultedInConflict, symbol.Locations, symbol.Name, name);
+            this.AddDiagnostic(memberRenameResultedInConflict, symbol.Locations, name, symbol.Name);
         }
 
         private static DiagnosticDescriptor CreateDescriptor(string code, string title, string messageFormat, DiagnosticSeverity severity = DiagnosticSeverity.Warning)

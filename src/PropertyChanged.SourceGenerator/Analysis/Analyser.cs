@@ -109,10 +109,19 @@ namespace PropertyChanged.SourceGenerator.Analysis
             ITypeSymbol type,
             AttributeData notifyAttribute)
         {
+            string? explicitName = null;
+            foreach (var arg in notifyAttribute.ConstructorArguments)
+            {
+                if (arg.Type?.SpecialType == SpecialType.System_String)
+                {
+                    explicitName = (string?)arg.Value;
+                }
+            }
+
             var result = new MemberAnalysis()
             {
                 BackingMember = backingMember,
-                Name = this.TransformName(typeSymbol, backingMember),
+                Name = this.TransformName(typeSymbol, backingMember, explicitName),
                 Type = type,
             };
 
@@ -131,41 +140,49 @@ namespace PropertyChanged.SourceGenerator.Analysis
             return result;
         }
 
-        private string TransformName(INamedTypeSymbol typeSymbol, ISymbol member)
+        private string TransformName(INamedTypeSymbol typeSymbol, ISymbol member, string? explicitName)
         {
-            string name = member.Name;
-            foreach (string removePrefix in this.config.RemovePrefixes)
+            string name;
+            if (explicitName != null)
             {
-                if (name.StartsWith(removePrefix))
+                name = explicitName;
+            }
+            else
+            {
+                name = member.Name;
+                foreach (string removePrefix in this.config.RemovePrefixes)
                 {
-                    name = name.Substring(removePrefix.Length);
+                    if (name.StartsWith(removePrefix))
+                    {
+                        name = name.Substring(removePrefix.Length);
+                    }
                 }
-            }
-            foreach (string removeSuffix in this.config.RemoveSuffixes)
-            {
-                if (name.EndsWith(removeSuffix))
+                foreach (string removeSuffix in this.config.RemoveSuffixes)
                 {
-                    name = name.Substring(0, name.Length - removeSuffix.Length);
+                    if (name.EndsWith(removeSuffix))
+                    {
+                        name = name.Substring(0, name.Length - removeSuffix.Length);
+                    }
                 }
-            }
-            if (this.config.AddPrefix != null)
-            {
-                name = this.config.AddPrefix + name;
-            }
-            if (this.config.AddSuffix != null)
-            {
-                name += this.config.AddSuffix;
-            }
-            switch (this.config.FirstLetterCapitalisation)
-            {
-                case Capitalisation.None:
-                    break;
-                case Capitalisation.Uppercase:
-                    name = char.ToUpper(name[0]) + name.Substring(1);
-                    break;
-                case Capitalisation.Lowercase:
-                    name = char.ToLower(name[0]) + name.Substring(1);
-                    break;
+                if (this.config.AddPrefix != null)
+                {
+                    name = this.config.AddPrefix + name;
+                }
+                if (this.config.AddSuffix != null)
+                {
+                    name += this.config.AddSuffix;
+                }
+                switch (this.config.FirstLetterCapitalisation)
+                {
+                    case Capitalisation.None:
+                        break;
+                    case Capitalisation.Uppercase:
+                        name = char.ToUpper(name[0]) + name.Substring(1);
+                        break;
+                    case Capitalisation.Lowercase:
+                        name = char.ToLower(name[0]) + name.Substring(1);
+                        break;
+                }
             }
 
             if (typeSymbol.MemberNames.Contains(name))

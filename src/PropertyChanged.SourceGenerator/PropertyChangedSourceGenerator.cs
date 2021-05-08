@@ -22,6 +22,8 @@ namespace PropertyChanged.SourceGenerator
     [global::System.AttributeUsage(global::System.AttributeTargets.Field | global::System.AttributeTargets.Property, AllowMultiple = false)]
     internal class NotifyAttribute : global::System.Attribute
     {
+        public NotifyAttribute() { }
+        public NotifyAttribute(string name) { }
     }
 }"));
         }

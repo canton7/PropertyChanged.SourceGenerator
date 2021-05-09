@@ -23,11 +23,10 @@ public partial class SomeViewModel
             string expected = @"
 partial class SomeViewModel : global::System.ComponentModel.INotifyPropertyChanged
 {
-    public event global::System.ComponentModel.PropertyChangedEventHandler PropertyChanged;
     public string Prop { get; set; }
 }";
 
-            this.AssertThat(input, It.HasFile("SomeViewModel", expected, RemovePropertiesRewriter.Instance));
+            this.AssertThat(input, It.HasFile("SomeViewModel", expected, StandardRewriters));
         }
 
         [Test]
@@ -43,10 +42,9 @@ public partial class SomeViewModel
             string expected = @"
 partial class SomeViewModel : global::System.ComponentModel.INotifyPropertyChanged
 {
-    public event global::System.ComponentModel.PropertyChangedEventHandler PropertyChanged;
 }";
 
-            this.AssertThat(input, It.HasFile("SomeViewModel", expected, RemovePropertiesRewriter.Instance)
+            this.AssertThat(input, It.HasFile("SomeViewModel", expected, StandardRewriters)
                 .HasDiagnostics(
                 // (5,20): Warning INPC003: Attempted to generate property 'Foo' for member '_foo', but a member with that name already exists. Skipping this property
                 // _foo
@@ -67,10 +65,9 @@ public partial class SomeViewModel
             string expected = @"
 partial class SomeViewModel : global::System.ComponentModel.INotifyPropertyChanged
 {
-    public event global::System.ComponentModel.PropertyChangedEventHandler PropertyChanged;
 }";
 
-            this.AssertThat(input, It.HasFile("SomeViewModel", expected, RemovePropertiesRewriter.Instance)
+            this.AssertThat(input, It.HasFile("SomeViewModel", expected, StandardRewriters)
                 .HasDiagnostics(
                 // (5,20): Warning INPC003: Attempted to generate property 'Prop' for member '_foo', but a member with that name already exists. Skipping this property
                 // _foo
@@ -94,10 +91,9 @@ public partial class SomeViewModel : SomeViewModelBase
             string expected = @"
 partial class SomeViewModel : global::System.ComponentModel.INotifyPropertyChanged
 {
-    public event global::System.ComponentModel.PropertyChangedEventHandler PropertyChanged;
 }";
 
-            this.AssertThat(input, It.HasFile("SomeViewModel", expected, RemovePropertiesRewriter.Instance)
+            this.AssertThat(input, It.HasFile("SomeViewModel", expected, StandardRewriters)
                 .HasDiagnostics(
                 // (9,20): Warning INPC003: Attempted to generate property 'Prop' for member '_foo', but a member with that name already exists. Skipping this property
                 // _foo
@@ -119,10 +115,9 @@ public partial class SomeViewModel
             string expected = @"
 partial class SomeViewModel : global::System.ComponentModel.INotifyPropertyChanged
 {
-    public event global::System.ComponentModel.PropertyChangedEventHandler PropertyChanged;
 }";
 
-            this.AssertThat(input, It.HasFile("SomeViewModel", expected, RemovePropertiesRewriter.Instance)
+            this.AssertThat(input, It.HasFile("SomeViewModel", expected, StandardRewriters)
                 .HasDiagnostics(
                 // (5,20): Warning INPC004: Member '_foo' will have the same generated property name 'Prop' as member '_bar'
                 // _foo
@@ -151,7 +146,6 @@ public partial class Derived : Base
             string expectedBase = @"
 partial class Base : global::System.ComponentModel.INotifyPropertyChanged
 {
-    public event global::System.ComponentModel.PropertyChangedEventHandler PropertyChanged;
     public int Prop { get; set; }
 }";
             string expectedDerived = @"
@@ -160,8 +154,8 @@ partial class Derived
 }";
 
             this.AssertThat(input, It
-                .HasFile("Base", expectedBase, RemovePropertiesRewriter.Instance)
-                .HasFile("Derived", expectedDerived, RemovePropertiesRewriter.Instance)
+                .HasFile("Base", expectedBase, StandardRewriters)
+                .HasFile("Derived", expectedDerived, StandardRewriters)
                 .HasDiagnostics(
                 // (10,17): Warning INPC003: Attempted to generate property 'Prop' for member '_bar', but a member with that name already exists. Skipping this property
                 // _bar

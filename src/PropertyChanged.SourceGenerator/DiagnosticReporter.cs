@@ -63,6 +63,24 @@ namespace PropertyChanged.SourceGenerator
             this.AddDiagnostic(incompatiblePropertyAccessibilities, AttributeLocations(notifyAttribute, member));
         }
 
+        private static readonly DiagnosticDescriptor couldNotFindCallableRaisePropertyChangedOverload = CreateDescriptor(
+            "INPC006",
+            "Could not find callable method to raise PropertyChanged event",
+            "Found one or more methods called '{0}' to raise the PropertyChanged event, but they had an unrecognised signatures or were inaccessible");
+        public void RaiseCouldNotFindCallableRaisePropertyChangedOverload(INamedTypeSymbol typeSymbol, string name)
+        {
+            this.AddDiagnostic(couldNotFindCallableRaisePropertyChangedOverload, typeSymbol.Locations, name);
+        }
+
+        private static readonly DiagnosticDescriptor couldNotFindRaisePropertyChangedMethod = CreateDescriptor(
+            "INPC007",
+            "Could not find method to raise PropertyChanged event",
+            "Could not find any suitable methods to raise the PropertyChanged event defined on a base class");
+        public void RaiseCouldNotFindRaisePropertyChangedMethod(INamedTypeSymbol typeSymbol)
+        {
+            this.AddDiagnostic(couldNotFindRaisePropertyChangedMethod, typeSymbol.Locations);
+        }
+
         private static DiagnosticDescriptor CreateDescriptor(string code, string title, string messageFormat, DiagnosticSeverity severity = DiagnosticSeverity.Warning)
         {
             string[] tags = severity == DiagnosticSeverity.Error ? new[] { WellKnownDiagnosticTags.NotConfigurable } : Array.Empty<string>();

@@ -27,6 +27,10 @@ partial class SomeViewModel : global::System.ComponentModel.INotifyPropertyChang
 {
     public event global::System.ComponentModel.PropertyChangedEventHandler? PropertyChanged;
     public string Foo { get; set; }
+    protected virtual void RaisePropertyChanged(global::System.ComponentModel.PropertyChangedEventArgs eventArgs)
+    {
+        this.PropertyChanged?.Invoke(this, eventArgs);
+    }
 }";
 
             this.AssertThat(
@@ -52,6 +56,10 @@ partial class SomeViewModel : global::System.ComponentModel.INotifyPropertyChang
     #nullable enable annotations
     public string Foo { get; set; }
     #nullable disable
+    protected virtual void RaisePropertyChanged(global::System.ComponentModel.PropertyChangedEventArgs eventArgs)
+    {
+        this.PropertyChanged?.Invoke(this, eventArgs);
+    }
 }";
 
             this.AssertThat(
@@ -82,7 +90,6 @@ public partial class SomeViewModel
 #nullable enable
 partial class SomeViewModel : global::System.ComponentModel.INotifyPropertyChanged
 {
-    public event global::System.ComponentModel.PropertyChangedEventHandler? PropertyChanged;
     public string? Nullable
     {
         get => this._nullable;
@@ -91,7 +98,7 @@ partial class SomeViewModel : global::System.ComponentModel.INotifyPropertyChang
             if (!global::System.Collections.Generic.EqualityComparer<string?>.Default.Equals(value, this._nullable))
             {
                 this._nullable = value;
-                this.PropertyChanged?.Invoke(this, global::PropertyChanged.SourceGenerator.Internal.PropertyChangedEventArgsCache.Nullable);
+                this.RaisePropertyChanged(global::PropertyChanged.SourceGenerator.Internal.PropertyChangedEventArgsCache.Nullable);
             }
         }
     }
@@ -103,7 +110,7 @@ partial class SomeViewModel : global::System.ComponentModel.INotifyPropertyChang
             if (!global::System.Collections.Generic.EqualityComparer<string>.Default.Equals(value, this._notNullable))
             {
                 this._notNullable = value;
-                this.PropertyChanged?.Invoke(this, global::PropertyChanged.SourceGenerator.Internal.PropertyChangedEventArgsCache.NotNullable);
+                this.RaisePropertyChanged(global::PropertyChanged.SourceGenerator.Internal.PropertyChangedEventArgsCache.NotNullable);
             }
         }
     }
@@ -116,7 +123,7 @@ partial class SomeViewModel : global::System.ComponentModel.INotifyPropertyChang
             if (!global::System.Collections.Generic.EqualityComparer<string>.Default.Equals(value, this._oblivious))
             {
                 this._oblivious = value;
-                this.PropertyChanged?.Invoke(this, global::PropertyChanged.SourceGenerator.Internal.PropertyChangedEventArgsCache.Oblivious);
+                this.RaisePropertyChanged(global::PropertyChanged.SourceGenerator.Internal.PropertyChangedEventArgsCache.Oblivious);
             }
         }
     }
@@ -129,7 +136,7 @@ partial class SomeViewModel : global::System.ComponentModel.INotifyPropertyChang
             if (!global::System.Collections.Generic.EqualityComparer<int?>.Default.Equals(value, this._nullableValue))
             {
                 this._nullableValue = value;
-                this.PropertyChanged?.Invoke(this, global::PropertyChanged.SourceGenerator.Internal.PropertyChangedEventArgsCache.NullableValue);
+                this.RaisePropertyChanged(global::PropertyChanged.SourceGenerator.Internal.PropertyChangedEventArgsCache.NullableValue);
             }
         }
     }
@@ -137,7 +144,7 @@ partial class SomeViewModel : global::System.ComponentModel.INotifyPropertyChang
 
             this.AssertThat(
                 input,
-                It.HasFile("SomeViewModel", expected),
+                It.HasFile("SomeViewModel", expected, RemoveInpcMembersRewriter.Instance),
                 nullableContextOptions: NullableContextOptions.Enable);
         }
 
@@ -162,7 +169,6 @@ public partial class SomeViewModel
             string expected = @"
 partial class SomeViewModel : global::System.ComponentModel.INotifyPropertyChanged
 {
-    public event global::System.ComponentModel.PropertyChangedEventHandler PropertyChanged;
     #nullable enable annotations
     public string? Nullable
     {
@@ -172,7 +178,7 @@ partial class SomeViewModel : global::System.ComponentModel.INotifyPropertyChang
             if (!global::System.Collections.Generic.EqualityComparer<string?>.Default.Equals(value, this._nullable))
             {
                 this._nullable = value;
-                this.PropertyChanged?.Invoke(this, global::PropertyChanged.SourceGenerator.Internal.PropertyChangedEventArgsCache.Nullable);
+                this.RaisePropertyChanged(global::PropertyChanged.SourceGenerator.Internal.PropertyChangedEventArgsCache.Nullable);
             }
         }
     }
@@ -186,7 +192,7 @@ partial class SomeViewModel : global::System.ComponentModel.INotifyPropertyChang
             if (!global::System.Collections.Generic.EqualityComparer<string>.Default.Equals(value, this._notNullable))
             {
                 this._notNullable = value;
-                this.PropertyChanged?.Invoke(this, global::PropertyChanged.SourceGenerator.Internal.PropertyChangedEventArgsCache.NotNullable);
+                this.RaisePropertyChanged(global::PropertyChanged.SourceGenerator.Internal.PropertyChangedEventArgsCache.NotNullable);
             }
         }
     }
@@ -199,7 +205,7 @@ partial class SomeViewModel : global::System.ComponentModel.INotifyPropertyChang
             if (!global::System.Collections.Generic.EqualityComparer<string>.Default.Equals(value, this._oblivious))
             {
                 this._oblivious = value;
-                this.PropertyChanged?.Invoke(this, global::PropertyChanged.SourceGenerator.Internal.PropertyChangedEventArgsCache.Oblivious);
+                this.RaisePropertyChanged(global::PropertyChanged.SourceGenerator.Internal.PropertyChangedEventArgsCache.Oblivious);
             }
         }
     }
@@ -211,7 +217,7 @@ partial class SomeViewModel : global::System.ComponentModel.INotifyPropertyChang
             if (!global::System.Collections.Generic.EqualityComparer<int?>.Default.Equals(value, this._nullableValue))
             {
                 this._nullableValue = value;
-                this.PropertyChanged?.Invoke(this, global::PropertyChanged.SourceGenerator.Internal.PropertyChangedEventArgsCache.NullableValue);
+                this.RaisePropertyChanged(global::PropertyChanged.SourceGenerator.Internal.PropertyChangedEventArgsCache.NullableValue);
             }
         }
     }
@@ -219,7 +225,7 @@ partial class SomeViewModel : global::System.ComponentModel.INotifyPropertyChang
 
             this.AssertThat(
                 input,
-                It.HasFile("SomeViewModel", expected),
+                It.HasFile("SomeViewModel", expected, RemoveInpcMembersRewriter.Instance),
                 nullableContextOptions: NullableContextOptions.Disable);
         }
     }

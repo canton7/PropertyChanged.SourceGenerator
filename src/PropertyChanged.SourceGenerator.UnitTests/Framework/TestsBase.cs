@@ -38,6 +38,9 @@ namespace PropertyChanged.SourceGenerator.UnitTests.Framework
         }
 
         protected static Expectation It { get; } = new Expectation();
+        protected static ImmutableList<CSharpSyntaxVisitor<SyntaxNode?>> StandardRewriters { get; } = new CSharpSyntaxVisitor<SyntaxNode?>[] {
+            RemovePropertiesRewriter.Instance, RemoveInpcMembersRewriter.Instance
+        }.ToImmutableList();
 
         protected void AssertThat(
             string input,
@@ -63,9 +66,9 @@ namespace PropertyChanged.SourceGenerator.UnitTests.Framework
                     Assert.NotNull(generatedTree, $"No output file with name {expectedFile.Name}");
 
                     var rootSyntaxNode = generatedTree!.GetRoot();
-                    if (expectedFile.Rewriter != null)
+                    foreach (var rewriter in expectedFile.Rewriters)
                     {
-                        rootSyntaxNode = expectedFile.Rewriter.Visit(rootSyntaxNode);
+                        rootSyntaxNode = rewriter.Visit(rootSyntaxNode);
                     }
 
                     string actual = rootSyntaxNode?.ToFullString().Trim().Replace("\r\n", "\n") ?? "";
@@ -113,12 +116,16 @@ namespace PropertyChanged.SourceGenerator.UnitTests.Framework
             this.ExpectedFiles = expectedFiles;
         }
 
-        public Expectation HasFile(string name, string source, CSharpSyntaxVisitor<SyntaxNode?>? rewriter = null)
+        public Expectation HasFile(string name, string source, params CSharpSyntaxVisitor<SyntaxNode?>[] rewriters) =>
+            this.HasFile(name, source, rewriters.AsEnumerable());
+
+        public Expectation HasFile(string name, string source, IEnumerable<CSharpSyntaxVisitor<SyntaxNode?>> rewriters)
         {
             if (this.ExpectedFiles.Any(x => x.Name == name))
                 throw new ArgumentException("Already have a file with that name", nameof(name));
 
-            return new Expectation(this.ExpectedDiagnostics, this.ExpectedFiles.Add(new FileExpectation(name, source, rewriter)));
+            return new Expectation(this.ExpectedDiagnostics, this.ExpectedFiles.Add(
+                new FileExpectation(name, source, rewriters.ToImmutableList())));
         }
 
         public Expectation HasDiagnostics(params DiagnosticResult[] expectediagnostics)
@@ -131,13 +138,13 @@ namespace PropertyChanged.SourceGenerator.UnitTests.Framework
     {
         public string Name { get; }
         public string Source { get; }
-        public CSharpSyntaxVisitor<SyntaxNode?>? Rewriter { get; }
+        public ImmutableList<CSharpSyntaxVisitor<SyntaxNode?>> Rewriters { get; }
 
-        public FileExpectation(string name, string source, CSharpSyntaxVisitor<SyntaxNode?>? rewriter)
+        public FileExpectation(string name, string source, ImmutableList<CSharpSyntaxVisitor<SyntaxNode?>> rewriters)
         {
             this.Name = name;
             this.Source = source;
-            this.Rewriter = rewriter;
+            this.Rewriters = rewriters;
         }
     }
 }

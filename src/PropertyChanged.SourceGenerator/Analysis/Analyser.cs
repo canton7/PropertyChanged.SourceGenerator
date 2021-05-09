@@ -14,7 +14,8 @@ namespace PropertyChanged.SourceGenerator.Analysis
         private readonly Configuration config;
         private readonly Compilation compilation;
         private readonly INamedTypeSymbol? inpcSymbol;
-        private readonly IEventSymbol? propertyChangedSymbol;
+        private readonly INamedTypeSymbol? propertyChangedEventHandlerSymbol;
+        private readonly INamedTypeSymbol? propertyChangedEventArgsSymbol;
         private readonly INamedTypeSymbol notifyAttributeSymbol;
 
         public Analyser(DiagnosticReporter diagnostics, Configuration config, Compilation compilation)
@@ -30,7 +31,8 @@ namespace PropertyChanged.SourceGenerator.Analysis
             }
             else
             {
-                this.propertyChangedSymbol = this.inpcSymbol.GetMembers().OfType<IEventSymbol>().Single(x => x.Name == "PropertyChanged");
+                this.propertyChangedEventHandlerSymbol = compilation.GetTypeByMetadataName("System.ComponentModel.PropertyChangedEventHandler");
+                this.propertyChangedEventArgsSymbol = compilation.GetTypeByMetadataName("System.ComponentModel.PropertyChangedEventArgs");
             }
 
             this.notifyAttributeSymbol = compilation.GetTypeByMetadataName("PropertyChanged.SourceGenerator.NotifyAttribute")
@@ -90,7 +92,7 @@ namespace PropertyChanged.SourceGenerator.Analysis
 
         private TypeAnalysis? Analyse(INamedTypeSymbol typeSymbol, List<TypeAnalysis> baseTypeAnalyses)
         {
-            if (this.inpcSymbol == null || this.propertyChangedSymbol == null)
+            if (this.inpcSymbol == null)
                 throw new InvalidOperationException();
 
             bool isPartial = typeSymbol.DeclaringSyntaxReferences
@@ -108,18 +110,14 @@ namespace PropertyChanged.SourceGenerator.Analysis
                 TypeSymbol = typeSymbol
             };
 
+            if (!this.TryFindPropertyRaiseMethod(typeSymbol, result, baseTypeAnalyses))
+            {
+                return null;
+            }
+
             // If we've got any base types, that will have the INPC interface and event on, for sure
             result.HasInpcInterface = baseTypeAnalyses.Count > 0
                 || typeSymbol.AllInterfaces.Contains(this.inpcSymbol, SymbolEqualityComparer.Default);
-            result.HasEvent = baseTypeAnalyses.Count > 0
-                || typeSymbol.FindImplementationForInterfaceMember(this.propertyChangedSymbol) != null;
-            result.HasOnPropertyChangedMethod = TypeAndBaseTypes(typeSymbol)
-                .SelectMany(x => x.GetMembers(this.config.OnPropertyChangedMethodName))
-                .OfType<IMethodSymbol>()
-                .Any(x => x.Parameters.Length == 1 &&
-                    x.Parameters[0].Type.SpecialType == SpecialType.System_String &&
-                    x.TypeParameters.Length == 0 &&
-                    (x.DeclaredAccessibility != Accessibility.Private || SymbolEqualityComparer.Default.Equals(x.ContainingType, typeSymbol)));
             result.NullableContext = this.compilation.Options.NullableContextOptions;
 
             foreach (var member in typeSymbol.GetMembers())
@@ -238,6 +236,110 @@ namespace PropertyChanged.SourceGenerator.Analysis
             }
 
             return result;
+        }
+
+        private bool TryFindPropertyRaiseMethod(
+            INamedTypeSymbol typeSymbol,
+            TypeAnalysis typeAnalysis,
+            IReadOnlyList<TypeAnalysis> baseTypeAnalyses)
+        {
+            // Try and find out how we raise the PropertyChanged event
+            // 1. If noone's defined the PropertyChanged event yet, we'll define it ourselves
+            // 2. Otherwise, try and find a method to raise the event:
+            //   a. If PropertyChanged is in a base class, we'll need to abort if we can't find one
+            //   b. If PropertyChanged is in our class, we'll just define one and call it
+
+            // They might have defined the event but not the interface, so we'll just look for the event by its
+            // signature
+            var eventSymbol = TypeAndBaseTypes(typeSymbol)
+                .SelectMany(x => x.GetMembers("PropertyChanged"))
+                .OfType<IEventSymbol>()
+                .FirstOrDefault(x => SymbolEqualityComparer.Default.Equals(x.Type, this.propertyChangedEventHandlerSymbol) &&
+                    !x.IsStatic);
+
+            // If there's no event, the base type in our hierarchy is defining it
+            typeAnalysis.RequiresEvent = eventSymbol == null && baseTypeAnalyses.Count == 0;
+
+            // Try and find a method with a name we recognise and a signature we know how to call
+            // We prioritise the method name over things like the signature or where in the type hierarchy
+            // it is. One we've found any method with a name we're looking for, stop: it's most likely they've 
+            // just messed up the signature
+            RaisePropertyChangedMethodSignature? signature = null;
+            string? methodName = null;
+            foreach (string name in this.config.RaisePropertyChangedMethodNames)
+            {
+                var methods = TypeAndBaseTypes(typeSymbol)
+                    .SelectMany(x => x.GetMembers(name))
+                    .OfType<IMethodSymbol>()
+                    .Where(x => !x.IsOverride && !x.IsStatic)
+                    .ToList();
+                if (methods.Count > 0)
+                {
+                    signature = FindCallableOverload(methods);
+                    if (signature != null)
+                    {
+                        methodName = name;
+                    }
+                    else
+                    {
+                        this.diagnostics.RaiseCouldNotFindCallableRaisePropertyChangedOverload(typeSymbol, name);
+                        return false;
+                    }
+                    break;
+                }
+            }
+
+            if (signature != null)
+            {
+                // We found a method which we know how to call
+                typeAnalysis.RequiresRaisePropertyChangedMethod = false;
+                typeAnalysis.RaisePropertyChangedMethodName = methodName!;
+                typeAnalysis.RaisePropertyChangedMethodSignature = signature.Value;
+            }
+            else
+            {
+                // The base type in our hierarchy is defining its own
+                // Make sure that that type can actually access the event, if it's pre-existing
+                if (eventSymbol != null && baseTypeAnalyses.Count == 0 && 
+                    !SymbolEqualityComparer.Default.Equals(eventSymbol.ContainingType, typeSymbol))
+                {
+                    this.diagnostics.RaiseCouldNotFindRaisePropertyChangedMethod(typeSymbol);
+                    return false;
+                }
+                
+                typeAnalysis.RequiresRaisePropertyChangedMethod = baseTypeAnalyses.Count == 0;
+                typeAnalysis.RaisePropertyChangedMethodName = this.config.RaisePropertyChangedMethodNames[0];
+                typeAnalysis.RaisePropertyChangedMethodSignature = RaisePropertyChangedMethodSignature.PropertyChangedEventArgs;
+            }
+
+            return true;
+
+            RaisePropertyChangedMethodSignature? FindCallableOverload(List<IMethodSymbol> methods)
+            {
+                // We care about the order in which we choose an overload, which unfortunately means we're quadratic
+                if (methods.Any(x => IsAccessibleNormalInstanceMethod(x) &&
+                    x.Parameters.Length == 1 &&
+                    SymbolEqualityComparer.Default.Equals(x.Parameters[0].Type, this.propertyChangedEventArgsSymbol) &&
+                    x.Parameters[0].RefKind == RefKind.None))
+                {
+                    return RaisePropertyChangedMethodSignature.PropertyChangedEventArgs;
+                }
+
+                if (methods.Any(x => IsAccessibleNormalInstanceMethod(x) &&
+                    x.Parameters.Length == 1 &&
+                    x.Parameters[0].Type.SpecialType == SpecialType.System_String &&
+                    x.Parameters[0].RefKind == RefKind.None))
+                {
+                    return RaisePropertyChangedMethodSignature.String;
+                }
+
+                return null;
+            }
+
+            bool IsAccessibleNormalInstanceMethod(IMethodSymbol method) =>
+                !method.IsGenericMethod &&
+                method.ReturnsVoid &&
+                this.compilation.IsSymbolAccessibleWithin(method, typeSymbol);
         }
 
         private string TransformName(ISymbol member)

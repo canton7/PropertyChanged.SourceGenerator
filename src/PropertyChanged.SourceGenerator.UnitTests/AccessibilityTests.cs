@@ -23,11 +23,10 @@ public partial class SomeViewModel
             string expected = @"
 partial class SomeViewModel : global::System.ComponentModel.INotifyPropertyChanged
 {
-    public event global::System.ComponentModel.PropertyChangedEventHandler PropertyChanged;
     internal string Foo { get; private set; }
 }";
 
-            this.AssertThat(input, It.HasFile("SomeViewModel", expected, RemovePropertiesRewriter.Instance));
+            this.AssertThat(input, It.HasFile("SomeViewModel", expected, StandardRewriters));
         }
 
         [Test]
@@ -42,11 +41,10 @@ public partial class SomeViewModel
             string expected = @"
 partial class SomeViewModel : global::System.ComponentModel.INotifyPropertyChanged
 {
-    public event global::System.ComponentModel.PropertyChangedEventHandler PropertyChanged;
     protected string Foo { private protected get; set; }
 }";
 
-            this.AssertThat(input, It.HasFile("SomeViewModel", expected, RemovePropertiesRewriter.Instance));
+            this.AssertThat(input, It.HasFile("SomeViewModel", expected, StandardRewriters));
         }
 
         [Test]
@@ -61,11 +59,10 @@ public partial class SomeViewModel
             string expected = @"
 partial class SomeViewModel : global::System.ComponentModel.INotifyPropertyChanged
 {
-    public event global::System.ComponentModel.PropertyChangedEventHandler PropertyChanged;
     internal string Foo { get; set; }
 }";
 
-            this.AssertThat(input, It.HasFile("SomeViewModel", expected, RemovePropertiesRewriter.Instance));
+            this.AssertThat(input, It.HasFile("SomeViewModel", expected, StandardRewriters));
         }
 
         [Test]
@@ -80,11 +77,10 @@ public partial class SomeViewModel
             string expected = @"
 partial class SomeViewModel : global::System.ComponentModel.INotifyPropertyChanged
 {
-    public event global::System.ComponentModel.PropertyChangedEventHandler PropertyChanged;
     protected internal string Foo { get; set; }
 }";
 
-            this.AssertThat(input, It.HasFile("SomeViewModel", expected, RemovePropertiesRewriter.Instance)
+            this.AssertThat(input, It.HasFile("SomeViewModel", expected, StandardRewriters)
                 .HasDiagnostics(
                 // (4,6): Warning INPC005: C# propertes may not have an internal getter and protected setter, or protected setter and internal getter. Defaulting both to protected internal
                 // Notify(Getter.Internal, Setter.Protected)
@@ -104,11 +100,10 @@ public partial class SomeViewModel
             string expected = @"
 partial class SomeViewModel : global::System.ComponentModel.INotifyPropertyChanged
 {
-    public event global::System.ComponentModel.PropertyChangedEventHandler PropertyChanged;
     protected internal string Foo { get; set; }
 }";
 
-            this.AssertThat(input, It.HasFile("SomeViewModel", expected, RemovePropertiesRewriter.Instance)
+            this.AssertThat(input, It.HasFile("SomeViewModel", expected, StandardRewriters)
                 .HasDiagnostics(
                 // (4,6): Warning INPC005: C# propertes may not have an internal getter and protected setter, or protected setter and internal getter. Defaulting both to protected internal
                 // Notify(Getter.Internal, Setter.Protected)

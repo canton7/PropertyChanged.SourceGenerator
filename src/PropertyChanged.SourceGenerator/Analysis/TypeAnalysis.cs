@@ -5,12 +5,22 @@ using Microsoft.CodeAnalysis;
 
 namespace PropertyChanged.SourceGenerator.Analysis
 {
+    public enum RaisePropertyChangedMethodSignature
+    {
+        // Just pass PropertyChangedEventArgs 
+        PropertyChangedEventArgs,
+        // Just pass the string name
+        String,
+    }
+
     public class TypeAnalysis
     {
         public INamedTypeSymbol TypeSymbol { get; set; } = null!;
         public bool HasInpcInterface { get; set; }
-        public bool HasEvent { get; set; }
-        public bool HasOnPropertyChangedMethod { get; set; }
+        public bool RequiresEvent { get; set; }
+        public bool RequiresRaisePropertyChangedMethod { get; set; }
+        public string RaisePropertyChangedMethodName { get; set; } = null!;
+        public RaisePropertyChangedMethodSignature RaisePropertyChangedMethodSignature { get; set; }
         public List<MemberAnalysis> Members { get; } = new();
         public NullableContextOptions NullableContext { get; set; }
     }

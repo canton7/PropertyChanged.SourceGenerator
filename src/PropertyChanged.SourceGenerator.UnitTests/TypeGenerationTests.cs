@@ -3,6 +3,7 @@ using PropertyChanged.SourceGenerator.UnitTests.Framework;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection.Metadata;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -11,96 +12,6 @@ namespace PropertyChanged.SourceGenerator.UnitTests
     [TestFixture]
     public class TypeGenerationTests : TestsBase
     {
-        [Test]
-        public void GeneratesInpcInterfaceAndEventIfNotSpecified()
-        {
-            string input = @"
-public partial class SomeViewModel
-{
-    [Notify]
-    private string _foo;
-}";
-            string expected = @"
-partial class SomeViewModel : global::System.ComponentModel.INotifyPropertyChanged
-{
-    public event global::System.ComponentModel.PropertyChangedEventHandler PropertyChanged;
-    public string Foo { get; set; }
-}";
-
-            this.AssertThat(input, It.HasFile("SomeViewModel", expected, RemovePropertiesRewriter.Instance));
-        }
-
-        [Test]
-        public void GeneratesEventIfNotSpecified()
-        {
-            string input = @"
-using System.ComponentModel;
-public partial class SomeViewModel : INotifyPropertyChanged
-{
-    [Notify]
-    private string _foo;
-}";
-            string expected = @"
-partial class SomeViewModel
-{
-    public event global::System.ComponentModel.PropertyChangedEventHandler PropertyChanged;
-    public string Foo { get; set; }
-}";
-
-            this.AssertThat(input, It.HasFile("SomeViewModel", expected, RemovePropertiesRewriter.Instance));
-        }
-
-        [Test]
-        public void DoesNotGenerateEventIfAlreadySpecified()
-        {
-            string input = @"
-using System.ComponentModel;
-public partial class SomeViewModel : INotifyPropertyChanged
-{
-    public event PropertyChangedEventHandler PropertyChanged;
-    [Notify]
-    private string _foo;
-}";
-            string expected = @"
-partial class SomeViewModel
-{
-    public string Foo { get; set; }
-}";
-
-            this.AssertThat(input, It.HasFile("SomeViewModel", expected, RemovePropertiesRewriter.Instance));
-        }
-
-        [Test]
-        public void DoesNotGenerateEventOnDerivedClass()
-        {
-            string input = @"
-public partial class Base
-{
-    [Notify]
-    private string _foo;
-}
-public partial class Derived : Base
-{
-    [Notify]
-    private string _bar;
-}";
-            string expectedBase = @"
-partial class Base : global::System.ComponentModel.INotifyPropertyChanged
-{
-    public event global::System.ComponentModel.PropertyChangedEventHandler PropertyChanged;
-    public string Foo { get; set; }
-}";
-            string expectedDerived = @"
-partial class Derived
-{
-    public string Bar { get; set; }
-}";
-
-            this.AssertThat(input, It
-                .HasFile("Base", expectedBase, RemovePropertiesRewriter.Instance)
-                .HasFile("Derived", expectedDerived, RemovePropertiesRewriter.Instance));
-        }
-
         [Test]
         public void GeneratesNamespace()
         {
@@ -124,7 +35,7 @@ namespace Test.Foo
     }
 }";
 
-            this.AssertThat(input, It.HasFile("SomeViewModel", expected, RemovePropertiesRewriter.Instance));
+            this.AssertThat(input, It.HasFile("SomeViewModel", expected, StandardRewriters));
         }
 
         [Test]
@@ -158,11 +69,10 @@ public partial class SomeViewModel<@class>
             string expected = @"
 partial class SomeViewModel<@class> : global::System.ComponentModel.INotifyPropertyChanged
 {
-    public event global::System.ComponentModel.PropertyChangedEventHandler PropertyChanged;
     public string Foo { get; set; }
 }";
 
-            this.AssertThat(input, It.HasFile("SomeViewModel", expected, RemovePropertiesRewriter.Instance));
+            this.AssertThat(input, It.HasFile("SomeViewModel", expected, StandardRewriters));
         }
 
         [Test]
@@ -177,11 +87,10 @@ public partial class SomeViewModel<T> where T : class
             string expected = @"
 partial class SomeViewModel<T> : global::System.ComponentModel.INotifyPropertyChanged
 {
-    public event global::System.ComponentModel.PropertyChangedEventHandler PropertyChanged;
     public string Foo { get; set; }
 }";
 
-            this.AssertThat(input, It.HasFile("SomeViewModel", expected, RemovePropertiesRewriter.Instance));
+            this.AssertThat(input, It.HasFile("SomeViewModel", expected, StandardRewriters));
         }
     }
 }

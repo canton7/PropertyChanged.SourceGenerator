@@ -1,6 +1,7 @@
 ﻿using System;
 using System.CodeDom.Compiler;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -62,7 +63,7 @@ namespace PropertyChanged.SourceGenerator
             this.writer.WriteLine("{");
             this.writer.Indent++;
 
-            if (!typeAnalysis.HasEvent)
+            if (typeAnalysis.RequiresEvent)
             {
                 string nullable = typeAnalysis.NullableContext.HasFlag(NullableContextOptions.Annotations) ? "?" : "";
                 this.writer.WriteLine($"public event global::System.ComponentModel.PropertyChangedEventHandler{nullable} PropertyChanged;");
@@ -71,6 +72,19 @@ namespace PropertyChanged.SourceGenerator
             foreach (var member in typeAnalysis.Members)
             {
                 this.GenerateMember(typeAnalysis, member);
+            }
+
+            if (typeAnalysis.RequiresRaisePropertyChangedMethod)
+            {
+                Trace.Assert(typeAnalysis.RaisePropertyChangedMethodSignature == RaisePropertyChangedMethodSignature.PropertyChangedEventArgs);
+                this.writer.WriteLine($"protected virtual void {typeAnalysis.RaisePropertyChangedMethodName}(global::System.ComponentModel.PropertyChangedEventArgs eventArgs)");
+                this.writer.WriteLine("{");
+                this.writer.Indent++;
+
+                this.writer.WriteLine("this.PropertyChanged?.Invoke(this, eventArgs);");
+
+                this.writer.Indent--;
+                this.writer.WriteLine("}");
             }
 
             this.writer.Indent--;
@@ -105,8 +119,7 @@ namespace PropertyChanged.SourceGenerator
 
             this.writer.WriteLine($"{backingMemberReference} = value;");
 
-            this.nameCacheEntries.Add(member.Name);
-            this.writer.WriteLine($"this.PropertyChanged?.Invoke(this, global::PropertyChanged.SourceGenerator.Internal.PropertyChangedEventArgsCache.{member.Name});");
+            this.GenerateRaiseEvent(type, member);
 
             this.writer.Indent--;
             this.writer.WriteLine("}");
@@ -118,6 +131,21 @@ namespace PropertyChanged.SourceGenerator
             if (member.NullableContextOverride != null)
             {
                 this.writer.WriteLine(NullableContextToComment(type.NullableContext));
+            }
+        }
+
+        private void GenerateRaiseEvent(TypeAnalysis type, MemberAnalysis member)
+        {
+            switch (type.RaisePropertyChangedMethodSignature)
+            {
+                case RaisePropertyChangedMethodSignature.PropertyChangedEventArgs:
+                    this.nameCacheEntries.Add(member.Name);
+                    this.writer.WriteLine($"this.{type.RaisePropertyChangedMethodName}(global::PropertyChanged.SourceGenerator.Internal.PropertyChangedEventArgsCache.{member.Name});");
+                    break;
+
+                case RaisePropertyChangedMethodSignature.String:
+                    this.writer.WriteLine($"this.{type.RaisePropertyChangedMethodName}(\"{member.Name}\");");
+                    break;
             }
         }
 

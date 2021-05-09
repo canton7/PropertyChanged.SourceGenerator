@@ -27,7 +27,7 @@ partial class SomeViewModel : global::System.ComponentModel.INotifyPropertyChang
     internal string Foo { get; private set; }
 }";
 
-            this.AssertSource(expected, input, RemovePropertiesRewriter.Instance);
+            this.AssertThat(input, It.HasFile("SomeViewModel", expected, RemovePropertiesRewriter.Instance));
         }
 
         [Test]
@@ -46,7 +46,7 @@ partial class SomeViewModel : global::System.ComponentModel.INotifyPropertyChang
     protected string Foo { private protected get; set; }
 }";
 
-            this.AssertSource(expected, input, RemovePropertiesRewriter.Instance);
+            this.AssertThat(input, It.HasFile("SomeViewModel", expected, RemovePropertiesRewriter.Instance));
         }
 
         [Test]
@@ -65,7 +65,7 @@ partial class SomeViewModel : global::System.ComponentModel.INotifyPropertyChang
     internal string Foo { get; set; }
 }";
 
-            this.AssertSource(expected, input, RemovePropertiesRewriter.Instance);
+            this.AssertThat(input, It.HasFile("SomeViewModel", expected, RemovePropertiesRewriter.Instance));
         }
 
         [Test]
@@ -84,10 +84,12 @@ partial class SomeViewModel : global::System.ComponentModel.INotifyPropertyChang
     protected internal string Foo { get; set; }
 }";
 
-            this.AssertSource(expected, input, RemovePropertiesRewriter.Instance, diagnostics:
-                // (4,6): Warning INPC004: C# propertes may not have an internal getter and protected setter, or protected setter and internal getter. Defaulting both to protected internal
+            this.AssertThat(input, It.HasFile("SomeViewModel", expected, RemovePropertiesRewriter.Instance)
+                .HasDiagnostics(
+                // (4,6): Warning INPC005: C# propertes may not have an internal getter and protected setter, or protected setter and internal getter. Defaulting both to protected internal
                 // Notify(Getter.Internal, Setter.Protected)
-                Diagnostic("INPC004", @"Notify(Getter.Internal, Setter.Protected)").WithLocation(4, 6));
+                Diagnostic("INPC005", @"Notify(Getter.Internal, Setter.Protected)").WithLocation(4, 6)
+            ));
         }
 
         [Test]
@@ -106,10 +108,12 @@ partial class SomeViewModel : global::System.ComponentModel.INotifyPropertyChang
     protected internal string Foo { get; set; }
 }";
 
-            this.AssertSource(expected, input, RemovePropertiesRewriter.Instance, diagnostics:
-                // (4,6): Warning INPC004: C# propertes may not have an internal getter and protected setter, or protected setter and internal getter. Defaulting both to protected internal
+            this.AssertThat(input, It.HasFile("SomeViewModel", expected, RemovePropertiesRewriter.Instance)
+                .HasDiagnostics(
+                // (4,6): Warning INPC005: C# propertes may not have an internal getter and protected setter, or protected setter and internal getter. Defaulting both to protected internal
                 // Notify(Getter.Internal, Setter.Protected)
-                Diagnostic("INPC004", @"Notify(Getter.Internal, Setter.Protected)").WithLocation(4, 6));
+                Diagnostic("INPC005", @"Notify(Getter.Internal, Setter.Protected)").WithLocation(4, 6)
+            ));
         }
     }
 }

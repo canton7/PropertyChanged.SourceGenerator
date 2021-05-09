@@ -27,7 +27,7 @@ partial class SomeViewModel : global::System.ComponentModel.INotifyPropertyChang
     public string Foo { get; set; }
 }";
 
-            this.AssertSource(expected, input, RemovePropertiesRewriter.Instance);
+            this.AssertThat(input, It.HasFile("SomeViewModel", expected, RemovePropertiesRewriter.Instance));
         }
 
         [Test]
@@ -47,7 +47,7 @@ partial class SomeViewModel
     public string Foo { get; set; }
 }";
 
-            this.AssertSource(expected, input, RemovePropertiesRewriter.Instance);
+            this.AssertThat(input, It.HasFile("SomeViewModel", expected, RemovePropertiesRewriter.Instance));
         }
 
         [Test]
@@ -67,7 +67,38 @@ partial class SomeViewModel
     public string Foo { get; set; }
 }";
 
-            this.AssertSource(expected, input, RemovePropertiesRewriter.Instance);
+            this.AssertThat(input, It.HasFile("SomeViewModel", expected, RemovePropertiesRewriter.Instance));
+        }
+
+        [Test]
+        public void DoesNotGenerateEventOnDerivedClass()
+        {
+            string input = @"
+public partial class Base
+{
+    [Notify]
+    private string _foo;
+}
+public partial class Derived : Base
+{
+    [Notify]
+    private string _bar;
+}";
+            string expectedBase = @"
+partial class Base : global::System.ComponentModel.INotifyPropertyChanged
+{
+    public event global::System.ComponentModel.PropertyChangedEventHandler PropertyChanged;
+    public string Foo { get; set; }
+}";
+            string expectedDerived = @"
+partial class Derived
+{
+    public string Bar { get; set; }
+}";
+
+            this.AssertThat(input, It
+                .HasFile("Base", expectedBase, RemovePropertiesRewriter.Instance)
+                .HasFile("Derived", expectedDerived, RemovePropertiesRewriter.Instance));
         }
 
         [Test]
@@ -93,7 +124,7 @@ namespace Test.Foo
     }
 }";
 
-            this.AssertSource(expected, input, RemovePropertiesRewriter.Instance);
+            this.AssertThat(input, It.HasFile("SomeViewModel", expected, RemovePropertiesRewriter.Instance));
         }
 
         [Test]
@@ -107,13 +138,12 @@ public class SomeViewModel : INotifyPropertyChanged
     [Notify]
     private string _foo;
 }";
-            string expected = "";
 
-            this.AssertSource(expected, input, diagnostics:
+            this.AssertThat(input, It.HasDiagnostics(
                 // (3,14): Warning INPC002: Type 'SomeViewModel' must be partial in order for PropertyChanged.SourceGenerator to generate properties
                 // SomeViewModel
                 Diagnostic("INPC002", @"SomeViewModel").WithLocation(3, 14)
-            );
+            ));
         }
 
         [Test]
@@ -132,7 +162,7 @@ partial class SomeViewModel<@class> : global::System.ComponentModel.INotifyPrope
     public string Foo { get; set; }
 }";
 
-            this.AssertSource(expected, input, RemovePropertiesRewriter.Instance);
+            this.AssertThat(input, It.HasFile("SomeViewModel", expected, RemovePropertiesRewriter.Instance));
         }
 
         [Test]
@@ -151,7 +181,7 @@ partial class SomeViewModel<T> : global::System.ComponentModel.INotifyPropertyCh
     public string Foo { get; set; }
 }";
 
-            this.AssertSource(expected, input, RemovePropertiesRewriter.Instance);
+            this.AssertThat(input, It.HasFile("SomeViewModel", expected, RemovePropertiesRewriter.Instance));
         }
     }
 }

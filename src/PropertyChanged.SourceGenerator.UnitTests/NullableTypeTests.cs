@@ -29,7 +29,10 @@ partial class SomeViewModel : global::System.ComponentModel.INotifyPropertyChang
     public string Foo { get; set; }
 }";
 
-            this.AssertSource(expected, input, RemovePropertiesRewriter.Instance, NullableContextOptions.Enable);
+            this.AssertThat(
+                input,
+                It.HasFile("SomeViewModel", expected, RemovePropertiesRewriter.Instance),
+                nullableContextOptions: NullableContextOptions.Enable);
         }
 
         [Test]
@@ -51,7 +54,11 @@ partial class SomeViewModel : global::System.ComponentModel.INotifyPropertyChang
     #nullable disable
 }";
 
-            this.AssertSource(expected, input, RemovePropertiesRewriter.Instance, NullableContextOptions.Disable);
+            this.AssertThat(
+                input,
+                It.HasFile("SomeViewModel", expected, RemovePropertiesRewriter.Instance),
+                nullableContextOptions: NullableContextOptions.Disable);
+            ;
         }
 
         [Test]
@@ -128,7 +135,10 @@ partial class SomeViewModel : global::System.ComponentModel.INotifyPropertyChang
     }
 }";
 
-            this.AssertSource(expected, input, nullableContextOptions: NullableContextOptions.Enable);
+            this.AssertThat(
+                input,
+                It.HasFile("SomeViewModel", expected),
+                nullableContextOptions: NullableContextOptions.Enable);
         }
 
         [Test]
@@ -207,7 +217,10 @@ partial class SomeViewModel : global::System.ComponentModel.INotifyPropertyChang
     }
 }";
 
-            this.AssertSource(expected, input);
+            this.AssertThat(
+                input,
+                It.HasFile("SomeViewModel", expected),
+                nullableContextOptions: NullableContextOptions.Disable);
         }
     }
 }

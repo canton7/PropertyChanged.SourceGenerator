@@ -36,17 +36,26 @@ namespace PropertyChanged.SourceGenerator
             this.AddDiagnostic(typeIsNotPartial, typeSymbol.Locations, typeSymbol.Name);
         }
 
-        private static readonly DiagnosticDescriptor memberRenameResultedInConflict = CreateDescriptor(
+        private static readonly DiagnosticDescriptor memberWithNameAlreadyExists = CreateDescriptor(
             "INPC003",
-            "Could not use name for property",
+            "Member with this name already exists",
             "Attempted to generate property '{0}' for member '{1}', but a member with that name already exists. Skipping this property");
-        public void ReportMemberRenameResultedInConflict(ISymbol symbol, string name)
+        public void ReportMemberWithNameAlreadyExists(ISymbol symbol, string name)
         {
-            this.AddDiagnostic(memberRenameResultedInConflict, symbol.Locations, name, symbol.Name);
+            this.AddDiagnostic(memberWithNameAlreadyExists, symbol.Locations, name, symbol.Name);
+        }
+
+        private static readonly DiagnosticDescriptor anotherMemberHasSameGeneratedName = CreateDescriptor(
+            "INPC004",
+            "Another member has the same generated name as this one",
+            "Member '{0}' will have the same generated property name '{1}' as member '{2}'. Skipping both properties");
+        public void ReportAnotherMemberHasSameGeneratedName(ISymbol thisMember, ISymbol otherMember, string name)
+        {
+            this.AddDiagnostic(anotherMemberHasSameGeneratedName, thisMember.Locations, thisMember.Name, name, otherMember.Name);
         }
 
         private static readonly DiagnosticDescriptor incompatiblePropertyAccessibilities = CreateDescriptor(
-            "INPC004",
+            "INPC005",
             "Incompatible property accessibilities",
             "C# propertes may not have an internal getter and protected setter, or protected setter and internal getter. Defaulting both to protected internal");
         public void ReportIncomapatiblePropertyAccessibilities(ISymbol member, AttributeData notifyAttribute)

@@ -37,7 +37,58 @@ namespace PropertyChanged.SourceGenerator.Analysis
                 ?? throw new InvalidOperationException("NotifyAttribute must have been added to assembly");
         }
 
-        public TypeAnalysis? Analyse(INamedTypeSymbol typeSymbol)
+        public IEnumerable<TypeAnalysis> Analyse(HashSet<INamedTypeSymbol> typeSymbols)
+        {
+            var results = new Dictionary<INamedTypeSymbol, TypeAnalysis>(SymbolEqualityComparer.Default);
+
+            foreach (var typeSymbol in typeSymbols)
+            {
+                Analyse(typeSymbol);
+            }
+
+            return results.Values;
+
+            void Analyse(INamedTypeSymbol typeSymbol)
+            {
+                // If we've already analysed this one, return
+                if (results.ContainsKey(typeSymbol))
+                    return;
+
+                // If we haven't analysed its base type yet, do that now. This will then happen recursively
+                // Special System.Object, as we'll hit it a lot
+                if (typeSymbol.BaseType != null
+                    && typeSymbol.BaseType.SpecialType != SpecialType.System_Object
+                    && !results.ContainsKey(typeSymbol.BaseType))
+                {
+                    Analyse(typeSymbol.BaseType);
+                }
+
+                // If we're not actually supposed to analyse this type, bail. We have to do this after the base
+                // type analysis check above, as we can have TypeWeAnalyse depends on TypeWeDontAnalyse depends
+                // on TypeWeAnalyse.
+                if (!typeSymbols.Contains(typeSymbol))
+                    return;
+
+                // Right, we know we've analysed all of the base types by now. Fetch them
+                var baseTypes = new List<TypeAnalysis>();
+                for (var t = typeSymbol.BaseType; t != null && t.SpecialType != SpecialType.System_Object; t = t.BaseType)
+                {
+                    if (results.TryGetValue(t, out var baseTypeAnalysis))
+                    {
+                        baseTypes.Add(baseTypeAnalysis);
+                    }
+                }
+
+                // We're set! Analyse it
+                var result = this.Analyse(typeSymbol, baseTypes);
+                if (result != null)
+                {
+                    results.Add(typeSymbol, result);
+                }
+            }
+        }
+
+        private TypeAnalysis? Analyse(INamedTypeSymbol typeSymbol, List<TypeAnalysis> baseTypeAnalyses)
         {
             if (this.inpcSymbol == null || this.propertyChangedSymbol == null)
                 throw new InvalidOperationException();
@@ -57,8 +108,11 @@ namespace PropertyChanged.SourceGenerator.Analysis
                 TypeSymbol = typeSymbol
             };
 
-            result.HasInpcInterface = typeSymbol.AllInterfaces.Contains(this.inpcSymbol, SymbolEqualityComparer.Default);
-            result.HasEvent = typeSymbol.FindImplementationForInterfaceMember(this.propertyChangedSymbol) != null;
+            // If we've got any base types, that will have the INPC interface and event on, for sure
+            result.HasInpcInterface = baseTypeAnalyses.Count > 0
+                || typeSymbol.AllInterfaces.Contains(this.inpcSymbol, SymbolEqualityComparer.Default);
+            result.HasEvent = baseTypeAnalyses.Count > 0
+                || typeSymbol.FindImplementationForInterfaceMember(this.propertyChangedSymbol) != null;
             result.HasOnPropertyChangedMethod = TypeAndBaseTypes(typeSymbol)
                 .SelectMany(x => x.GetMembers(this.config.OnPropertyChangedMethodName))
                 .OfType<IMethodSymbol>()
@@ -70,41 +124,65 @@ namespace PropertyChanged.SourceGenerator.Analysis
 
             foreach (var member in typeSymbol.GetMembers())
             {
-                try
+                switch (member)
                 {
-                    switch (member)
-                    {
-                        case IFieldSymbol field when this.GetNotifyAttribute(field) is { } attribute:
-                            result.Members.Add(this.AnalyseField(typeSymbol, field, attribute));
-                            break;
+                    case IFieldSymbol field when this.GetNotifyAttribute(field) is { } attribute:
+                        result.Members.Add(this.AnalyseField(field, attribute));
+                        break;
 
-                        case IPropertySymbol property when this.GetNotifyAttribute(property) is { } attribute:
-                            result.Members.Add(this.AnalyseProperty(typeSymbol, property, attribute));
-                            break;
-                    }
+                    case IPropertySymbol property when this.GetNotifyAttribute(property) is { } attribute:
+                        result.Members.Add(this.AnalyseProperty(property, attribute));
+                        break;
                 }
-                catch (MemberAnalysisFailedException) { }
+            }
+
+            // Now that we've got all members, we can do inter-member analysis
+
+            // TODO: This could be smarter. We can ignore private members in base classes, for instance
+            // We treat members we're generating on base types as already having been generated for the purposes of
+            // these diagnostics
+            var allDeclaredMemberNames = new HashSet<string>(TypeAndBaseTypes(typeSymbol)
+                .SelectMany(x => x.MemberNames)
+                .Concat(baseTypeAnalyses.SelectMany(x => x.Members.Select(y => y.Name))));
+            for (int i = result.Members.Count - 1; i >= 0; i--)
+            {
+                var member = result.Members[i];
+                if (allDeclaredMemberNames.Contains(member.Name))
+                {
+                    this.diagnostics.ReportMemberWithNameAlreadyExists(member.BackingMember, member.Name);
+                    result.Members.RemoveAt(i);
+                }
+            }
+
+            foreach (var collision in result.Members.GroupBy(x => x.Name).Where(x => x.Count() > 1))
+            {
+                var members = collision.ToList();
+                for (int i = 0; i < members.Count; i++)
+                {
+                    var collidingMember = members[i == 0 ? 1 : 0];
+                    this.diagnostics.ReportAnotherMemberHasSameGeneratedName(members[i].BackingMember, collidingMember.BackingMember, members[i].Name);
+                    result.Members.Remove(members[i]);
+                }
             }
 
             return result;
         }
 
-        private MemberAnalysis AnalyseField(INamedTypeSymbol typeSymbol, IFieldSymbol field, AttributeData notifyAttribute)
+        private MemberAnalysis AnalyseField(IFieldSymbol field, AttributeData notifyAttribute)
         {
-            var result = this.AnalyseMember(typeSymbol, field, field.Type, notifyAttribute);
+            var result = this.AnalyseMember(field, field.Type, notifyAttribute);
 
             return result;
         }
 
-        private MemberAnalysis AnalyseProperty(INamedTypeSymbol typeSymbol, IPropertySymbol property, AttributeData notifyAttribute)
+        private MemberAnalysis AnalyseProperty(IPropertySymbol property, AttributeData notifyAttribute)
         {
-            var result = this.AnalyseMember(typeSymbol, property, property.Type, notifyAttribute);
+            var result = this.AnalyseMember(property, property.Type, notifyAttribute);
 
             return result;
         }
 
         private MemberAnalysis AnalyseMember(
-            INamedTypeSymbol typeSymbol,
             ISymbol backingMember,
             ITypeSymbol type,
             AttributeData notifyAttribute)
@@ -141,7 +219,7 @@ namespace PropertyChanged.SourceGenerator.Analysis
             var result = new MemberAnalysis()
             {
                 BackingMember = backingMember,
-                Name = this.TransformName(typeSymbol, backingMember, explicitName),
+                Name = explicitName ?? this.TransformName(backingMember),
                 Type = type,
                 GetterAccessibility = getterAccessibility,
                 SetterAccessibility = setterAccessibility,
@@ -162,55 +240,41 @@ namespace PropertyChanged.SourceGenerator.Analysis
             return result;
         }
 
-        private string TransformName(INamedTypeSymbol typeSymbol, ISymbol member, string? explicitName)
+        private string TransformName(ISymbol member)
         {
-            string name;
-            if (explicitName != null)
+            string name = member.Name;
+            foreach (string removePrefix in this.config.RemovePrefixes)
             {
-                name = explicitName;
-            }
-            else
-            {
-                name = member.Name;
-                foreach (string removePrefix in this.config.RemovePrefixes)
+                if (name.StartsWith(removePrefix))
                 {
-                    if (name.StartsWith(removePrefix))
-                    {
-                        name = name.Substring(removePrefix.Length);
-                    }
-                }
-                foreach (string removeSuffix in this.config.RemoveSuffixes)
-                {
-                    if (name.EndsWith(removeSuffix))
-                    {
-                        name = name.Substring(0, name.Length - removeSuffix.Length);
-                    }
-                }
-                if (this.config.AddPrefix != null)
-                {
-                    name = this.config.AddPrefix + name;
-                }
-                if (this.config.AddSuffix != null)
-                {
-                    name += this.config.AddSuffix;
-                }
-                switch (this.config.FirstLetterCapitalisation)
-                {
-                    case Capitalisation.None:
-                        break;
-                    case Capitalisation.Uppercase:
-                        name = char.ToUpper(name[0]) + name.Substring(1);
-                        break;
-                    case Capitalisation.Lowercase:
-                        name = char.ToLower(name[0]) + name.Substring(1);
-                        break;
+                    name = name.Substring(removePrefix.Length);
                 }
             }
-
-            if (typeSymbol.MemberNames.Contains(name))
+            foreach (string removeSuffix in this.config.RemoveSuffixes)
             {
-                this.diagnostics.ReportMemberRenameResultedInConflict(member, name);
-                throw new MemberAnalysisFailedException();
+                if (name.EndsWith(removeSuffix))
+                {
+                    name = name.Substring(0, name.Length - removeSuffix.Length);
+                }
+            }
+            if (this.config.AddPrefix != null)
+            {
+                name = this.config.AddPrefix + name;
+            }
+            if (this.config.AddSuffix != null)
+            {
+                name += this.config.AddSuffix;
+            }
+            switch (this.config.FirstLetterCapitalisation)
+            {
+                case Capitalisation.None:
+                    break;
+                case Capitalisation.Uppercase:
+                    name = char.ToUpper(name[0]) + name.Substring(1);
+                    break;
+                case Capitalisation.Lowercase:
+                    name = char.ToLower(name[0]) + name.Substring(1);
+                    break;
             }
 
             return name;
@@ -228,7 +292,5 @@ namespace PropertyChanged.SourceGenerator.Analysis
         {
             return member.GetAttributes().SingleOrDefault(x => SymbolEqualityComparer.Default.Equals(x.AttributeClass, this.notifyAttributeSymbol));
         }
-
-        private class MemberAnalysisFailedException : Exception { }
     }
 }

@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.ComponentModel;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -36,42 +37,45 @@ namespace PropertyChanged.SourceGenerator.UnitTests.Framework
             return (driver, outputCompilation, diagnostics);
         }
 
-        protected void AssertSource(
-            string expected,
+        protected static Expectation It { get; } = new Expectation();
+
+        protected void AssertThat(
             string input,
-            CSharpSyntaxVisitor<SyntaxNode?>? rewriter = null,
-            NullableContextOptions nullableContextOptions = NullableContextOptions.Disable,
-            params DiagnosticResult[] diagnostics)
+            Expectation expectation,
+            NullableContextOptions nullableContextOptions = NullableContextOptions.Disable)
         {
             var (driver, compilation, generatorDiagonstics) = this.RunDriver(input, nullableContextOptions);
-            DiagnosticVerifier.VerifyDiagnostics(generatorDiagonstics, diagnostics, 1); // We add 1 using statement
+            DiagnosticVerifier.VerifyDiagnostics(generatorDiagonstics, expectation.ExpectedDiagnostics.ToArray(), 1); // We add 1 using statement
 
-            var runResult = driver.GetRunResult();
-            if (string.IsNullOrEmpty(expected))
+            if (expectation.ExpectedFiles.Count > 0)
             {
-                Assert.AreEqual(2, runResult.GeneratedTrees.Length);
-            }
-            else
-            {
+                var runResult = driver.GetRunResult();
+
                 // 0: Attributes
                 // 1: Generated file
                 // 2: PropertyChangedEventArgsCache
-                Assert.AreEqual(3, runResult.GeneratedTrees.Length);
+                //Assert.AreEqual(3, runResult.GeneratedTrees.Length);
                 //Assert.IsEmpty(runResult.Diagnostics);
 
-                var rootSyntaxNode = runResult.GeneratedTrees[1].GetRoot();
-                if (rewriter != null)
+                foreach (var expectedFile in expectation.ExpectedFiles)
                 {
-                    rootSyntaxNode = rewriter.Visit(rootSyntaxNode);
+                    var generatedTree = runResult.GeneratedTrees.FirstOrDefault(x => Path.GetFileNameWithoutExtension(x.FilePath) == expectedFile.Name);
+                    Assert.NotNull(generatedTree, $"No output file with name {expectedFile.Name}");
+
+                    var rootSyntaxNode = generatedTree!.GetRoot();
+                    if (expectedFile.Rewriter != null)
+                    {
+                        rootSyntaxNode = expectedFile.Rewriter.Visit(rootSyntaxNode);
+                    }
+
+                    string actual = rootSyntaxNode?.ToFullString().Trim().Replace("\r\n", "\n") ?? "";
+                    // Strip off the comments at the top
+                    actual = string.Join('\n', actual.Split('\n').SkipWhile(x => x.StartsWith("//")));
+
+                    TestContext.WriteLine(actual.Replace("\"", "\"\""));
+
+                    Assert.AreEqual(expectedFile.Source.Trim().Replace("\r\n", "\n"), actual);
                 }
-
-                string actual = rootSyntaxNode?.ToFullString().Trim().Replace("\r\n", "\n") ?? "";
-                // Strip off the comments at the top
-                actual = string.Join('\n', actual.Split('\n').SkipWhile(x => x.StartsWith("//")));
-
-                TestContext.WriteLine(actual.Replace("\"", "\"\""));
-
-                Assert.AreEqual(expected.Trim().Replace("\r\n", "\n"), actual);
             }
 
             //Assert.AreEqual(2, outputCompilation.SyntaxTrees.Count());
@@ -81,16 +85,59 @@ namespace PropertyChanged.SourceGenerator.UnitTests.Framework
             if (generatorDiagonstics.Length > 0)
             {
                 // CS0169: Field isn't used
-                // CS0067: Even isn't used
+                // CS0067: Event isn't used
                 compilationDiagnostics = compilationDiagnostics.Where(x => x.Id is not ("CS0169" or "CS0067"));
             }
             Assert.IsEmpty(compilationDiagnostics, "Unexpected diagnostics:\r\n\r\n" + string.Join("\r\n", compilationDiagnostics.Select(x => x.ToString())));
-
         }
 
         protected static DiagnosticResult Diagnostic(string code, string squiggledText)
         {
             return new DiagnosticResult(code, squiggledText);
+        }
+    }
+
+    public class Expectation
+    {
+        public ImmutableList<DiagnosticResult> ExpectedDiagnostics { get; }
+        public ImmutableList<FileExpectation> ExpectedFiles { get; }
+
+        public Expectation()
+            : this(ImmutableList<DiagnosticResult>.Empty, ImmutableList<FileExpectation>.Empty)
+        {
+        }
+
+        private Expectation(ImmutableList<DiagnosticResult> expectedDiagnostics, ImmutableList<FileExpectation> expectedFiles)
+        {
+            this.ExpectedDiagnostics = expectedDiagnostics;
+            this.ExpectedFiles = expectedFiles;
+        }
+
+        public Expectation HasFile(string name, string source, CSharpSyntaxVisitor<SyntaxNode?>? rewriter = null)
+        {
+            if (this.ExpectedFiles.Any(x => x.Name == name))
+                throw new ArgumentException("Already have a file with that name", nameof(name));
+
+            return new Expectation(this.ExpectedDiagnostics, this.ExpectedFiles.Add(new FileExpectation(name, source, rewriter)));
+        }
+
+        public Expectation HasDiagnostics(params DiagnosticResult[] expectediagnostics)
+        {
+            return new Expectation(this.ExpectedDiagnostics.AddRange(expectediagnostics), this.ExpectedFiles);
+        }
+    }
+
+    public struct FileExpectation
+    {
+        public string Name { get; }
+        public string Source { get; }
+        public CSharpSyntaxVisitor<SyntaxNode?>? Rewriter { get; }
+
+        public FileExpectation(string name, string source, CSharpSyntaxVisitor<SyntaxNode?>? rewriter)
+        {
+            this.Name = name;
+            this.Source = source;
+            this.Rewriter = rewriter;
         }
     }
 }

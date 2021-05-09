@@ -63,7 +63,7 @@ namespace PropertyChanged.SourceGenerator
             if (diagnostics.HasDiagnostics)
                 return;
 
-            var analyses = receiver.Types.Select(x => analyser.Analyse(x)).Where(x => x != null).ToList();
+            var analyses = analyser.Analyse(receiver.Types);
 
             var nameCacheEntries = new HashSet<string>();
             foreach (var analysis in analyses)

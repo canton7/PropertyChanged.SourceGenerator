@@ -201,7 +201,7 @@ partial class SomeViewModel
             if (!global::System.Collections.Generic.EqualityComparer<string>.Default.Equals(value, this._foo))
             {
                 this._foo = value;
-                this.NotifyPropertyChanged(""Foo"");
+                this.NotifyPropertyChanged(@""Foo"");
             }
         }
     }
@@ -301,7 +301,7 @@ partial class C
             if (!global::System.Collections.Generic.EqualityComparer<string>.Default.Equals(value, this._bar))
             {
                 this._bar = value;
-                this.RaisePropertyChanged(""Bar"");
+                this.RaisePropertyChanged(@""Bar"");
             }
         }
     }

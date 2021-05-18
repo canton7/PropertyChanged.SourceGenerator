@@ -47,6 +47,12 @@ namespace PropertyChanged.SourceGenerator
         public NotifyAttribute(Getter get, Setter set = Setter.Public) { }
         public NotifyAttribute(Setter set) { }
     }
+
+    [global::System.AttributeUsage(global::System.AttributeTargets.Field | global::System.AttributeTargets.Property, AllowMultiple = true)]
+    internal class AlsoNotifyAttribute : global::System.Attribute
+    {
+        public AlsoNotifyAttribute(params string[] otherProperties) { }
+    }
 }"));
         }
 
@@ -65,15 +71,15 @@ namespace PropertyChanged.SourceGenerator
 
             var analyses = analyser.Analyse(receiver.Types);
 
-            var nameCacheEntries = new HashSet<string>();
+            var eventArgsCache = new EventArgsCache();
             foreach (var analysis in analyses)
             {
-                var generator = new Generator(nameCacheEntries);
+                var generator = new Generator(eventArgsCache);
                 generator.Generate(analysis!);
                 context.AddSource(analysis!.TypeSymbol.Name, SourceText.From(generator.ToString(), Encoding.UTF8));
             }
 
-            var nameCacheGenerator = new Generator(nameCacheEntries);
+            var nameCacheGenerator = new Generator(eventArgsCache);
             nameCacheGenerator.GenerateNameCache();
             context.AddSource("PropertyChangedEventArgsCache", SourceText.From(nameCacheGenerator.ToString(), Encoding.UTF8));
         }

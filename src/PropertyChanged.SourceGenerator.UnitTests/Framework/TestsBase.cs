@@ -84,7 +84,8 @@ namespace PropertyChanged.SourceGenerator.UnitTests.Framework
             //Assert.AreEqual(2, outputCompilation.SyntaxTrees.Count());
             // We can expect compilation-level diagnostics if there are generator diagnostics: filter the known
             // bad ones out
-            var compilationDiagnostics = compilation.GetDiagnostics().Except(generatorDiagonstics);
+            var compilationDiagnostics = compilation.GetDiagnostics().Except(generatorDiagonstics)
+                .Where(x => !expectation.AllowedCompilationDiagnostics.Contains(x.Id));
             if (generatorDiagonstics.Length > 0)
             {
                 // CS0169: Field isn't used
@@ -104,16 +105,21 @@ namespace PropertyChanged.SourceGenerator.UnitTests.Framework
     {
         public ImmutableList<DiagnosticResult> ExpectedDiagnostics { get; }
         public ImmutableList<FileExpectation> ExpectedFiles { get; }
+        public ImmutableList<string> AllowedCompilationDiagnostics { get; }
 
         public Expectation()
-            : this(ImmutableList<DiagnosticResult>.Empty, ImmutableList<FileExpectation>.Empty)
+            : this(ImmutableList<DiagnosticResult>.Empty, ImmutableList<FileExpectation>.Empty, ImmutableList<string>.Empty)
         {
         }
 
-        private Expectation(ImmutableList<DiagnosticResult> expectedDiagnostics, ImmutableList<FileExpectation> expectedFiles)
+        private Expectation(
+            ImmutableList<DiagnosticResult> expectedDiagnostics,
+            ImmutableList<FileExpectation> expectedFiles,
+            ImmutableList<string> allowedCompilationDiagnostics)
         {
             this.ExpectedDiagnostics = expectedDiagnostics;
             this.ExpectedFiles = expectedFiles;
+            this.AllowedCompilationDiagnostics = allowedCompilationDiagnostics;
         }
 
         public Expectation HasFile(string name, string source, params CSharpSyntaxVisitor<SyntaxNode?>[] rewriters) =>
@@ -125,12 +131,17 @@ namespace PropertyChanged.SourceGenerator.UnitTests.Framework
                 throw new ArgumentException("Already have a file with that name", nameof(name));
 
             return new Expectation(this.ExpectedDiagnostics, this.ExpectedFiles.Add(
-                new FileExpectation(name, source, rewriters.ToImmutableList())));
+                new FileExpectation(name, source, rewriters.ToImmutableList())), this.AllowedCompilationDiagnostics);
         }
 
         public Expectation HasDiagnostics(params DiagnosticResult[] expectediagnostics)
         {
-            return new Expectation(this.ExpectedDiagnostics.AddRange(expectediagnostics), this.ExpectedFiles);
+            return new Expectation(this.ExpectedDiagnostics.AddRange(expectediagnostics), this.ExpectedFiles, this.AllowedCompilationDiagnostics);
+        }
+
+        public Expectation AllowCompilationDiagnostics(params string[] compilationDiagnostics)
+        {
+            return new Expectation(this.ExpectedDiagnostics, this.ExpectedFiles, this.AllowedCompilationDiagnostics.AddRange(compilationDiagnostics));
         }
     }
 

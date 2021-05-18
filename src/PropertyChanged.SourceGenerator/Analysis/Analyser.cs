@@ -17,6 +17,7 @@ namespace PropertyChanged.SourceGenerator.Analysis
         private readonly INamedTypeSymbol? propertyChangedEventHandlerSymbol;
         private readonly INamedTypeSymbol? propertyChangedEventArgsSymbol;
         private readonly INamedTypeSymbol notifyAttributeSymbol;
+        private readonly INamedTypeSymbol alsoNotifyAttributeSymbol;
 
         public Analyser(DiagnosticReporter diagnostics, Configuration config, Compilation compilation)
         {
@@ -37,6 +38,8 @@ namespace PropertyChanged.SourceGenerator.Analysis
 
             this.notifyAttributeSymbol = compilation.GetTypeByMetadataName("PropertyChanged.SourceGenerator.NotifyAttribute")
                 ?? throw new InvalidOperationException("NotifyAttribute must have been added to assembly");
+            this.alsoNotifyAttributeSymbol = compilation.GetTypeByMetadataName("PropertyChanged.SourceGenerator.AlsoNotifyAttribute")
+                ?? throw new InvalidOperationException("AlsoNotifyAttribute must have been added to the assembly");
         }
 
         public IEnumerable<TypeAnalysis> Analyse(HashSet<INamedTypeSymbol> typeSymbols)
@@ -131,37 +134,17 @@ namespace PropertyChanged.SourceGenerator.Analysis
                     case IPropertySymbol property when this.GetNotifyAttribute(property) is { } attribute:
                         result.Members.Add(this.AnalyseProperty(property, attribute));
                         break;
+
+                    default:
+                        this.EnsureNoUnexpectedAttributes(member);
+                        break;
                 }
             }
 
             // Now that we've got all members, we can do inter-member analysis
 
-            // TODO: This could be smarter. We can ignore private members in base classes, for instance
-            // We treat members we're generating on base types as already having been generated for the purposes of
-            // these diagnostics
-            var allDeclaredMemberNames = new HashSet<string>(TypeAndBaseTypes(typeSymbol)
-                .SelectMany(x => x.MemberNames)
-                .Concat(baseTypeAnalyses.SelectMany(x => x.Members.Select(y => y.Name))));
-            for (int i = result.Members.Count - 1; i >= 0; i--)
-            {
-                var member = result.Members[i];
-                if (allDeclaredMemberNames.Contains(member.Name))
-                {
-                    this.diagnostics.ReportMemberWithNameAlreadyExists(member.BackingMember, member.Name);
-                    result.Members.RemoveAt(i);
-                }
-            }
-
-            foreach (var collision in result.Members.GroupBy(x => x.Name).Where(x => x.Count() > 1))
-            {
-                var members = collision.ToList();
-                for (int i = 0; i < members.Count; i++)
-                {
-                    var collidingMember = members[i == 0 ? 1 : 0];
-                    this.diagnostics.ReportAnotherMemberHasSameGeneratedName(members[i].BackingMember, collidingMember.BackingMember, members[i].Name);
-                    result.Members.Remove(members[i]);
-                }
-            }
+            this.ReportPropertyNameCollisions(result, baseTypeAnalyses);
+            this.ResolveAlsoNotify(result, baseTypeAnalyses);
 
             return result;
         }
@@ -282,7 +265,7 @@ namespace PropertyChanged.SourceGenerator.Analysis
                     }
                     else
                     {
-                        this.diagnostics.RaiseCouldNotFindCallableRaisePropertyChangedOverload(typeSymbol, name);
+                        this.diagnostics.ReportCouldNotFindCallableRaisePropertyChangedOverload(typeSymbol, name);
                         return false;
                     }
                     break;
@@ -303,7 +286,7 @@ namespace PropertyChanged.SourceGenerator.Analysis
                 if (eventSymbol != null && baseTypeAnalyses.Count == 0 && 
                     !SymbolEqualityComparer.Default.Equals(eventSymbol.ContainingType, typeSymbol))
                 {
-                    this.diagnostics.RaiseCouldNotFindRaisePropertyChangedMethod(typeSymbol);
+                    this.diagnostics.ReportCouldNotFindRaisePropertyChangedMethod(typeSymbol);
                     return false;
                 }
                 
@@ -380,6 +363,115 @@ namespace PropertyChanged.SourceGenerator.Analysis
             }
 
             return name;
+        }
+
+        private void ReportPropertyNameCollisions(TypeAnalysis typeAnalysis, List<TypeAnalysis> baseTypeAnalyses)
+        {
+            // TODO: This could be smarter. We can ignore private members in base classes, for instance
+            // We treat members we're generating on base types as already having been generated for the purposes of
+            // these diagnostics
+            var allDeclaredMemberNames = new HashSet<string>(TypeAndBaseTypes(typeAnalysis.TypeSymbol)
+                .SelectMany(x => x.MemberNames)
+                .Concat(baseTypeAnalyses.SelectMany(x => x.Members.Select(y => y.Name))));
+            for (int i = typeAnalysis.Members.Count - 1; i >= 0; i--)
+            {
+                var member = typeAnalysis.Members[i];
+                if (allDeclaredMemberNames.Contains(member.Name))
+                {
+                    this.diagnostics.ReportMemberWithNameAlreadyExists(member.BackingMember, member.Name);
+                    typeAnalysis.Members.RemoveAt(i);
+                }
+            }
+
+            foreach (var collision in typeAnalysis.Members.GroupBy(x => x.Name).Where(x => x.Count() > 1))
+            {
+                var members = collision.ToList();
+                for (int i = 0; i < members.Count; i++)
+                {
+                    var collidingMember = members[i == 0 ? 1 : 0];
+                    this.diagnostics.ReportAnotherMemberHasSameGeneratedName(members[i].BackingMember, collidingMember.BackingMember, members[i].Name);
+                    typeAnalysis.Members.Remove(members[i]);
+                }
+            }
+        }
+
+        private void ResolveAlsoNotify(TypeAnalysis typeAnalysis, List<TypeAnalysis> baseTypeAnalyses)
+        {
+            // We've already warned if there are AlsoNotify attributes on members that we haven't analysed
+            foreach (var member in typeAnalysis.Members)
+            {
+                var alsoNotifyAttributes = member.BackingMember.GetAttributes().Where(x => SymbolEqualityComparer.Default.Equals(x.AttributeClass, this.alsoNotifyAttributeSymbol));
+                foreach (var attribute in alsoNotifyAttributes)
+                {
+                    IEnumerable<string?> alsoNotifyValues;
+
+                    if (attribute.ConstructorArguments.Length == 1 &&
+                        attribute.ConstructorArguments[0].Kind == TypedConstantKind.Array &&
+                        !attribute.ConstructorArguments[0].Values.IsDefault)
+                    {
+                        alsoNotifyValues = attribute.ConstructorArguments[0].Values
+                            .Where(x => x.Kind == TypedConstantKind.Primitive && x.Value is null or string)
+                            .Select(x => x.Value)
+                            .Cast<string?>();
+                    }
+                    else
+                    {
+                        alsoNotifyValues = attribute.ConstructorArguments
+                            .Where(x => x.Kind == TypedConstantKind.Primitive && x.Value is null or string)
+                            .Select(x => x.Value)
+                            .Cast<string?>();
+                    }
+
+                    // We only allow them to use the property name. If we didn't, consider:
+                    // 1. Derived class has the same property name as base class (shadowed)
+                    // 2. Derived class has the same field name as a base class (generating different properties)
+                    // 3. Derived class has a field with the same name as a base class' property
+                    // 4. Derived class has a property with the same name as a base class' field
+
+                    foreach (string? alsoNotify in alsoNotifyValues)
+                    {
+                        // Remember that we're probably, but not necessarily, notifying a property which we're also
+                        // generating.
+                        // Allow null and emptystring as special cases
+                        if (!string.IsNullOrEmpty(alsoNotify))
+                        {
+                            bool foundAny = baseTypeAnalyses.Prepend(typeAnalysis)
+                                .SelectMany(x => x.Members)
+                                .Any(x => x.Name == alsoNotify);
+                            foundAny = foundAny || TypeAndBaseTypes(typeAnalysis.TypeSymbol)
+                                .SelectMany(x => x.GetMembers(alsoNotify!))
+                                .OfType<IPropertySymbol>()
+                                .Any();
+                            // Also let them use "Item[]", if an indexer exists
+                            if (!foundAny && alsoNotify!.EndsWith("[]"))
+                            {
+                                string indexerName = alsoNotify.Substring(0, alsoNotify.Length - "[]".Length);
+                                foundAny = TypeAndBaseTypes(typeAnalysis.TypeSymbol)
+                                    .SelectMany(x => x.GetMembers("this[]"))
+                                    .OfType<IPropertySymbol>()
+                                    .Where(x => x.IsIndexer && x.MetadataName == indexerName)
+                                    .Any();
+                            }
+                            if (!foundAny)
+                            {
+                                this.diagnostics.ReportAlsoNotifyPropertyDoesNotExist(alsoNotify!, attribute, member.BackingMember);
+                            }
+                        }
+                        member.AddAlsoNotify(alsoNotify);
+                    }
+                }
+            }
+        }
+
+        private void EnsureNoUnexpectedAttributes(ISymbol member)
+        {
+            foreach (var attribute in member.GetAttributes())
+            {
+                if (SymbolEqualityComparer.Default.Equals(attribute.AttributeClass, this.alsoNotifyAttributeSymbol))
+                {
+                    this.diagnostics.ReportAlsoNotifyAttributeNotValidOnMember(attribute, member);
+                }
+            }
         }
 
         private static IEnumerable<INamedTypeSymbol> TypeAndBaseTypes(INamedTypeSymbol type)

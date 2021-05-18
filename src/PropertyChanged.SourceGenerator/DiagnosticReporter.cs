@@ -66,8 +66,8 @@ namespace PropertyChanged.SourceGenerator
         private static readonly DiagnosticDescriptor couldNotFindCallableRaisePropertyChangedOverload = CreateDescriptor(
             "INPC006",
             "Could not find callable method to raise PropertyChanged event",
-            "Found one or more methods called '{0}' to raise the PropertyChanged event, but they had an unrecognised signatures or were inaccessible");
-        public void RaiseCouldNotFindCallableRaisePropertyChangedOverload(INamedTypeSymbol typeSymbol, string name)
+            "Found one or more methods called '{0}' to raise the PropertyChanged event, but they had an unrecognised signatures or were inaccessible. Ignoring");
+        public void ReportCouldNotFindCallableRaisePropertyChangedOverload(INamedTypeSymbol typeSymbol, string name)
         {
             this.AddDiagnostic(couldNotFindCallableRaisePropertyChangedOverload, typeSymbol.Locations, name);
         }
@@ -76,9 +76,27 @@ namespace PropertyChanged.SourceGenerator
             "INPC007",
             "Could not find method to raise PropertyChanged event",
             "Could not find any suitable methods to raise the PropertyChanged event defined on a base class");
-        public void RaiseCouldNotFindRaisePropertyChangedMethod(INamedTypeSymbol typeSymbol)
+        public void ReportCouldNotFindRaisePropertyChangedMethod(INamedTypeSymbol typeSymbol)
         {
             this.AddDiagnostic(couldNotFindRaisePropertyChangedMethod, typeSymbol.Locations);
+        }
+
+        private static readonly DiagnosticDescriptor alsoNotifyAttributeNotValidOnMember = CreateDescriptor(
+            "INPC008",
+            "AlsoNotify is not valid here",
+            "[AlsoNotify] is only valid on members which also have [Notify]. Skipping");
+        public void ReportAlsoNotifyAttributeNotValidOnMember(AttributeData attribute, ISymbol member)
+        {
+            this.AddDiagnostic(alsoNotifyAttributeNotValidOnMember, AttributeLocations(attribute, member));
+        }
+
+        private static readonly DiagnosticDescriptor alsoNotifyPropertyDoesNotExist = CreateDescriptor(
+            "INPC009",
+            "AlsoNotify property name does not exist",
+            "Unable to find a property called '{0}' on this type or its base types. This event will still be raised");
+        public void ReportAlsoNotifyPropertyDoesNotExist(string alsoNotify, AttributeData attribute, ISymbol member)
+        {
+            this.AddDiagnostic(alsoNotifyPropertyDoesNotExist, AttributeLocations(attribute, member), alsoNotify);
         }
 
         private static DiagnosticDescriptor CreateDescriptor(string code, string title, string messageFormat, DiagnosticSeverity severity = DiagnosticSeverity.Warning)

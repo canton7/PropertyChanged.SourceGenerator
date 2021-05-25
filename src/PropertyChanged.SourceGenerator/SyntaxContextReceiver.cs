@@ -31,7 +31,8 @@ namespace PropertyChanged.SourceGenerator
             void Process(SyntaxNode node)
             {
                 if (context.SemanticModel.GetDeclaredSymbol(node) is { } symbol &&
-                        symbol.GetAttributes().Any(x => x.AttributeClass?.ToDisplayString() == "PropertyChanged.SourceGenerator.NotifyAttribute"))
+                        symbol.GetAttributes().Any(x => 
+                            x.AttributeClass?.ContainingNamespace.ToDisplayString() == "PropertyChanged.SourceGenerator"))
                 {
                     this.Types.Add(symbol.ContainingType);
                 }

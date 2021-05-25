@@ -18,6 +18,7 @@ namespace PropertyChanged.SourceGenerator.Analysis
         private readonly INamedTypeSymbol? propertyChangedEventArgsSymbol;
         private readonly INamedTypeSymbol notifyAttributeSymbol;
         private readonly INamedTypeSymbol alsoNotifyAttributeSymbol;
+        private readonly INamedTypeSymbol dependsOnAttributeSymbol;
 
         public Analyser(DiagnosticReporter diagnostics, Configuration config, Compilation compilation)
         {
@@ -40,6 +41,8 @@ namespace PropertyChanged.SourceGenerator.Analysis
                 ?? throw new InvalidOperationException("NotifyAttribute must have been added to assembly");
             this.alsoNotifyAttributeSymbol = compilation.GetTypeByMetadataName("PropertyChanged.SourceGenerator.AlsoNotifyAttribute")
                 ?? throw new InvalidOperationException("AlsoNotifyAttribute must have been added to the assembly");
+            this.dependsOnAttributeSymbol = compilation.GetTypeByMetadataName("PropertyChanged.SourceGenerator.DependsOnAttribute")
+               ?? throw new InvalidOperationException("DependsOnAttribute must have been added to the assembly");
         }
 
         public IEnumerable<TypeAnalysis> Analyse(HashSet<INamedTypeSymbol> typeSymbols)
@@ -135,7 +138,7 @@ namespace PropertyChanged.SourceGenerator.Analysis
                         result.Members.Add(this.AnalyseProperty(property, attribute));
                         break;
 
-                    default:
+                    case var _ when member is IFieldSymbol or IPropertySymbol:
                         this.EnsureNoUnexpectedAttributes(member);
                         break;
                 }
@@ -145,6 +148,7 @@ namespace PropertyChanged.SourceGenerator.Analysis
 
             this.ReportPropertyNameCollisions(result, baseTypeAnalyses);
             this.ResolveAlsoNotify(result, baseTypeAnalyses);
+            this.ResolveDependsOn(result);
 
             return result;
         }
@@ -403,24 +407,7 @@ namespace PropertyChanged.SourceGenerator.Analysis
                 var alsoNotifyAttributes = member.BackingMember.GetAttributes().Where(x => SymbolEqualityComparer.Default.Equals(x.AttributeClass, this.alsoNotifyAttributeSymbol));
                 foreach (var attribute in alsoNotifyAttributes)
                 {
-                    IEnumerable<string?> alsoNotifyValues;
-
-                    if (attribute.ConstructorArguments.Length == 1 &&
-                        attribute.ConstructorArguments[0].Kind == TypedConstantKind.Array &&
-                        !attribute.ConstructorArguments[0].Values.IsDefault)
-                    {
-                        alsoNotifyValues = attribute.ConstructorArguments[0].Values
-                            .Where(x => x.Kind == TypedConstantKind.Primitive && x.Value is null or string)
-                            .Select(x => x.Value)
-                            .Cast<string?>();
-                    }
-                    else
-                    {
-                        alsoNotifyValues = attribute.ConstructorArguments
-                            .Where(x => x.Kind == TypedConstantKind.Primitive && x.Value is null or string)
-                            .Select(x => x.Value)
-                            .Cast<string?>();
-                    }
+                    var alsoNotifyValues = ExtractAttributeStringParams(attribute);
 
                     // We only allow them to use the property name. If we didn't, consider:
                     // 1. Derived class has the same property name as base class (shadowed)
@@ -462,6 +449,72 @@ namespace PropertyChanged.SourceGenerator.Analysis
                 }
             }
         }
+
+        private void ResolveDependsOn(TypeAnalysis typeAnalysis)
+        {
+            Dictionary<string, MemberAnalysis>? memberPropertyNameLookup = null;
+            Dictionary<ISymbol, MemberAnalysis>? backingMemberLookup = null;
+            foreach (var member in typeAnalysis.TypeSymbol.GetMembers().Where(x => x is IFieldSymbol or IPropertySymbol))
+            {
+                var dependsOnAttributes = member.GetAttributes().Where(x => SymbolEqualityComparer.Default.Equals(x.AttributeClass, this.dependsOnAttributeSymbol));
+                foreach (var attribute in dependsOnAttributes)
+                {
+                    var dependsOnValues = ExtractAttributeStringParams(attribute);
+                    foreach (string? dependsOn in dependsOnValues)
+                    {
+                        memberPropertyNameLookup ??= typeAnalysis.Members.ToDictionary(x => x.Name, x => x, StringComparer.Ordinal);
+                        // This must be the name of a property we're generating
+                        if (dependsOn != null && memberPropertyNameLookup.TryGetValue(dependsOn, out var dependsOnMember))
+                        {
+                            backingMemberLookup ??= typeAnalysis.Members.ToDictionary(x => x.BackingMember, x => x, SymbolEqualityComparer.Default);
+                            // If we're generating this property, make sure we use the generated name...
+                            if (backingMemberLookup.TryGetValue(member, out var memberAnalysis))
+                            {
+                                dependsOnMember.AddAlsoNotify(memberAnalysis.Name);
+                            }
+                            else if (member is IPropertySymbol)
+                            {
+                                dependsOnMember.AddAlsoNotify(member.Name);
+                            }
+                            else
+                            {
+                                // If we're not generating anything from this, and it's not a property, raise
+                                this.diagnostics.RaiseDependsOnAppliedToFieldWithoutNotify(attribute, member);
+                            }
+                        }
+                        else
+                        {
+                            this.diagnostics.RaiseDependsOnPropertyDoesNotExist(dependsOn, attribute, member);
+                        }
+                    }
+                }
+            }
+        }
+
+        private static IEnumerable<string?> ExtractAttributeStringParams(AttributeData attribute)
+        {
+            IEnumerable<string?> values;
+
+            if (attribute.ConstructorArguments.Length == 1 &&
+                attribute.ConstructorArguments[0].Kind == TypedConstantKind.Array &&
+                !attribute.ConstructorArguments[0].Values.IsDefault)
+            {
+                values = attribute.ConstructorArguments[0].Values
+                    .Where(x => x.Kind == TypedConstantKind.Primitive && x.Value is null or string)
+                    .Select(x => x.Value)
+                    .Cast<string?>();
+            }
+            else
+            {
+                values = attribute.ConstructorArguments
+                    .Where(x => x.Kind == TypedConstantKind.Primitive && x.Value is null or string)
+                    .Select(x => x.Value)
+                    .Cast<string?>();
+            }
+
+            return values;
+        }
+
 
         private void EnsureNoUnexpectedAttributes(ISymbol member)
         {

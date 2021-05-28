@@ -1,6 +1,7 @@
 ﻿using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using NUnit.Framework;
+using PropertyChanged.SourceGenerator.Analysis;
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
@@ -14,20 +15,31 @@ namespace PropertyChanged.SourceGenerator.UnitTests.Framework
 {
     public abstract class TestsBase
     {
-        private (GeneratorDriver driver, Compilation compilation, ImmutableArray<Diagnostic> diagnostics) RunDriver(
-            string input,
-            NullableContextOptions nullableContextOptions)
+        private Compilation CreateCompilation(string input, NullableContextOptions nullableContextOptions, bool addAttributes = false)
         {
             input = @"using PropertyChanged.SourceGenerator;
 " + input;
+            var syntaxTrees = new List<SyntaxTree>() { CSharpSyntaxTree.ParseText(input) };
+            if (addAttributes)
+            {
+                syntaxTrees.Add(CSharpSyntaxTree.ParseText(StringConstants.Attributes));
+            }
 
             var inputCompilation = CSharpCompilation.Create("TestCompilation",
-                new[] { CSharpSyntaxTree.ParseText(input) },
+                syntaxTrees,
                 AppDomain.CurrentDomain.GetAssemblies()
                     .Where(x => !x.IsDynamic && !string.IsNullOrWhiteSpace(x.Location))
                     .Select(x => MetadataReference.CreateFromFile(x.Location)),
                 new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary,
                     nullableContextOptions: nullableContextOptions));
+            return inputCompilation;
+        }
+
+        private (GeneratorDriver driver, Compilation compilation, ImmutableArray<Diagnostic> diagnostics) RunDriver(
+            string input,
+            NullableContextOptions nullableContextOptions)
+        {
+            var inputCompilation = this.CreateCompilation(input, nullableContextOptions);
 
             var generator = new PropertyChangedSourceGenerator();
 
@@ -35,6 +47,22 @@ namespace PropertyChanged.SourceGenerator.UnitTests.Framework
             driver = driver.RunGeneratorsAndUpdateCompilation(inputCompilation, out var outputCompilation, out var diagnostics);
 
             return (driver, outputCompilation, diagnostics);
+        }
+
+        protected TypeAnalysis Analyse(string input, string name)
+        {
+            var compilation = this.CreateCompilation(input, NullableContextOptions.Disable, addAttributes: true);
+            var type = compilation.GetTypeByMetadataName(name);
+            Assert.NotNull(type);
+
+            var diagnostics = new DiagnosticReporter();
+            var analyser = new Analyser(diagnostics, new Configuration(), compilation);
+            var typeAnalyses = analyser.Analyse(new HashSet<INamedTypeSymbol>(SymbolEqualityComparer.Default) { type! }).ToList();
+
+            DiagnosticVerifier.VerifyDiagnostics(diagnostics.Diagnostics, Array.Empty<DiagnosticResult>(), 1);
+
+            Assert.AreEqual(1, typeAnalyses.Count);
+            return typeAnalyses[0];
         }
 
         protected static Expectation It { get; } = new Expectation();

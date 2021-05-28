@@ -7,15 +7,10 @@ namespace PropertyChanged.SourceGenerator
 {
     public class DiagnosticReporter
     {
-        private readonly GeneratorExecutionContext context;
+        public List<Diagnostic> Diagnostics { get; } = new();
 
         public bool HasDiagnostics { get; private set; }
         public bool HasErrors { get; private set; }
-
-        public DiagnosticReporter(GeneratorExecutionContext context)
-        {
-            this.context = context;
-        }
 
         private static readonly DiagnosticDescriptor couldNotFindInpc = CreateDescriptor(
             "INPC001",
@@ -140,7 +135,7 @@ namespace PropertyChanged.SourceGenerator
             {
                 this.HasErrors = true;
             }
-            this.context.ReportDiagnostic(diagnostic);
+            this.Diagnostics.Add(diagnostic);
         }
 
         private static IEnumerable<Location> AttributeLocations(AttributeData? attributeData, ISymbol fallback)

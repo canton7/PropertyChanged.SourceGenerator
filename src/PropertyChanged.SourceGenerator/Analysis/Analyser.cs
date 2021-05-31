@@ -296,7 +296,7 @@ namespace PropertyChanged.SourceGenerator.Analysis
                 
                 typeAnalysis.RequiresRaisePropertyChangedMethod = baseTypeAnalyses.Count == 0;
                 typeAnalysis.RaisePropertyChangedMethodName = this.config.RaisePropertyChangedMethodNames[0];
-                typeAnalysis.RaisePropertyChangedMethodSignature = RaisePropertyChangedMethodSignature.PropertyChangedEventArgs;
+                typeAnalysis.RaisePropertyChangedMethodSignature = RaisePropertyChangedMethodSignature.Default;
             }
 
             return true;
@@ -307,17 +307,40 @@ namespace PropertyChanged.SourceGenerator.Analysis
                 if (methods.Any(x => IsAccessibleNormalInstanceMethod(x) &&
                     x.Parameters.Length == 1 &&
                     SymbolEqualityComparer.Default.Equals(x.Parameters[0].Type, this.propertyChangedEventArgsSymbol) &&
-                    x.Parameters[0].RefKind == RefKind.None))
+                    IsNormalParameter(x.Parameters[0])))
                 {
-                    return RaisePropertyChangedMethodSignature.PropertyChangedEventArgs;
+                    return new RaisePropertyChangedMethodSignature(RaisePropertyChangedNameType.PropertyChangedEventArgs, hasOldAndNew: false);
                 }
 
                 if (methods.Any(x => IsAccessibleNormalInstanceMethod(x) &&
                     x.Parameters.Length == 1 &&
                     x.Parameters[0].Type.SpecialType == SpecialType.System_String &&
-                    x.Parameters[0].RefKind == RefKind.None))
+                    IsNormalParameter(x.Parameters[0])))
                 {
-                    return RaisePropertyChangedMethodSignature.String;
+                    return new RaisePropertyChangedMethodSignature(RaisePropertyChangedNameType.String, hasOldAndNew: false);
+                }
+
+                if (methods.Any(x => IsAccessibleNormalInstanceMethod(x) &&
+                    x.Parameters.Length == 3 &&
+                    SymbolEqualityComparer.Default.Equals(x.Parameters[0].Type, this.propertyChangedEventArgsSymbol) &&
+                    IsNormalParameter(x.Parameters[0]) &&
+                    x.Parameters[1].Type.SpecialType == SpecialType.System_Object &&
+                    IsNormalParameter(x.Parameters[1]) &&
+                    x.Parameters[2].Type.SpecialType == SpecialType.System_Object &&
+                    IsNormalParameter(x.Parameters[2])))
+                {
+                    return new RaisePropertyChangedMethodSignature(RaisePropertyChangedNameType.PropertyChangedEventArgs, hasOldAndNew: true);
+                }
+                if (methods.Any(x => IsAccessibleNormalInstanceMethod(x) &&
+                    x.Parameters.Length == 3 &&
+                    x.Parameters[0].Type.SpecialType == SpecialType.System_String &&
+                    IsNormalParameter(x.Parameters[0]) &&
+                    x.Parameters[1].Type.SpecialType == SpecialType.System_Object &&
+                    IsNormalParameter(x.Parameters[1]) &&
+                    x.Parameters[2].Type.SpecialType == SpecialType.System_Object &&
+                    IsNormalParameter(x.Parameters[2])))
+                {
+                    return new RaisePropertyChangedMethodSignature(RaisePropertyChangedNameType.String, hasOldAndNew: true);
                 }
 
                 return null;
@@ -327,6 +350,9 @@ namespace PropertyChanged.SourceGenerator.Analysis
                 !method.IsGenericMethod &&
                 method.ReturnsVoid &&
                 this.compilation.IsSymbolAccessibleWithin(method, typeSymbol);
+
+            bool IsNormalParameter(IParameterSymbol parameter) =>
+                parameter.RefKind == RefKind.None;
         }
 
         private string TransformName(ISymbol member)
@@ -420,31 +446,35 @@ namespace PropertyChanged.SourceGenerator.Analysis
                         // Remember that we're probably, but not necessarily, notifying a property which we're also
                         // generating.
                         // Allow null and emptystring as special cases
+                        ITypeSymbol? foundCallableType = null;
                         if (!string.IsNullOrEmpty(alsoNotify))
                         {
-                            bool foundAny = baseTypeAnalyses.Prepend(typeAnalysis)
+                            var foundType = baseTypeAnalyses.Prepend(typeAnalysis)
                                 .SelectMany(x => x.Members)
-                                .Any(x => x.Name == alsoNotify);
-                            foundAny = foundAny || TypeAndBaseTypes(typeAnalysis.TypeSymbol)
+                                .FirstOrDefault(x => x.Name == alsoNotify)?
+                                .Type;
+                            foundType ??= TypeAndBaseTypes(typeAnalysis.TypeSymbol)
                                 .SelectMany(x => x.GetMembers(alsoNotify!))
                                 .OfType<IPropertySymbol>()
-                                .Any();
+                                .FirstOrDefault(x => this.compilation.IsSymbolAccessibleWithin(x, typeAnalysis.TypeSymbol))?
+                                .Type;
+                            foundCallableType = foundType;
                             // Also let them use "Item[]", if an indexer exists
-                            if (!foundAny && alsoNotify!.EndsWith("[]"))
+                            if (foundType == null && alsoNotify!.EndsWith("[]"))
                             {
                                 string indexerName = alsoNotify.Substring(0, alsoNotify.Length - "[]".Length);
-                                foundAny = TypeAndBaseTypes(typeAnalysis.TypeSymbol)
+                                foundType = TypeAndBaseTypes(typeAnalysis.TypeSymbol)
                                     .SelectMany(x => x.GetMembers("this[]"))
                                     .OfType<IPropertySymbol>()
-                                    .Where(x => x.IsIndexer && x.MetadataName == indexerName)
-                                    .Any();
+                                    .FirstOrDefault(x => x.IsIndexer && x.MetadataName == indexerName)?
+                                    .Type;
                             }
-                            if (!foundAny)
+                            if (foundType == null)
                             {
                                 this.diagnostics.ReportAlsoNotifyPropertyDoesNotExist(alsoNotify!, attribute, member.BackingMember);
                             }
                         }
-                        member.AddAlsoNotify(alsoNotify);
+                        member.AddAlsoNotify(new AlsoNotifyMember(alsoNotify, foundCallableType));
                     }
                 }
             }
@@ -482,11 +512,11 @@ namespace PropertyChanged.SourceGenerator.Analysis
                         // If we're generating this property, make sure we use the generated name...
                         if (lookups.TryGet(member, out var memberAnalysis))
                         {
-                            dependsOnMember.AddAlsoNotify(memberAnalysis.Name);
+                            dependsOnMember.AddAlsoNotify(new AlsoNotifyMember(memberAnalysis.Name, memberAnalysis.Type));
                         }
-                        else if (member is IPropertySymbol)
+                        else if (member is IPropertySymbol property)
                         {
-                            dependsOnMember.AddAlsoNotify(member.Name);
+                            dependsOnMember.AddAlsoNotify(new AlsoNotifyMember(property.Name, property.Type));
                         }
                         else
                         {
@@ -543,7 +573,7 @@ namespace PropertyChanged.SourceGenerator.Analysis
                         continue;
 
                     // It's probably a property access
-                    memberAnalysis.AddAlsoNotify(member.Name);
+                    memberAnalysis.AddAlsoNotify(new AlsoNotifyMember(member.Name, member.Type));
                 }
             }
         }

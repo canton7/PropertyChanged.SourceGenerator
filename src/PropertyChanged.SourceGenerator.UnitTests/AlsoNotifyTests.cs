@@ -289,6 +289,88 @@ namespace PropertyChanged.SourceGenerator.Internal
         }
 
         [Test]
+        public void PassesOldAndNewValue()
+        {
+            string input = @"
+using System.ComponentModel;
+using System.Collections.Generic;
+public partial class SomeViewModel
+{
+    [Notify, AlsoNotify(""Bar"")]
+    private string _foo;
+
+    public List<SomeViewModel> Bar { get; set; }
+
+    public void RaisePropertyChanged(string propertyName, object oldValue, object newValue) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+}";
+            string expected = @"
+partial class SomeViewModel : global::System.ComponentModel.INotifyPropertyChanged
+{
+    public string Foo
+    {
+        get => this._foo;
+        set
+        {
+            if (!global::System.Collections.Generic.EqualityComparer<string>.Default.Equals(value, this._foo))
+            {
+                string old_Foo = this.Foo;
+                global::System.Collections.Generic.List<global::SomeViewModel> old_Bar = this.Bar;
+                this._foo = value;
+                this.RaisePropertyChanged(@""Foo"", old_Foo, this.Foo);
+                this.RaisePropertyChanged(@""Bar"", old_Bar, this.Bar);
+            }
+        }
+    }
+}";
+
+            this.AssertThat(input, It.HasFile("SomeViewModel", expected, RemoveInpcMembersRewriter.Instance));
+        }
+
+        [Test]
+        public void PassesNullForOldAndNewValueIfPropertyDoesNotExist()
+        {
+            string input = @"
+public partial class SomeViewModel
+{
+    [Notify, AlsoNotify(""Item[]"", ""NonExistent"", """")]
+    private string _foo;
+
+    public void RaisePropertyChanged(string propertyName, object oldValue, object newValue) { }
+}";
+            string expected = @"
+partial class SomeViewModel : global::System.ComponentModel.INotifyPropertyChanged
+{
+    public string Foo
+    {
+        get => this._foo;
+        set
+        {
+            if (!global::System.Collections.Generic.EqualityComparer<string>.Default.Equals(value, this._foo))
+            {
+                string old_Foo = this.Foo;
+                this._foo = value;
+                this.RaisePropertyChanged(@""Foo"", old_Foo, this.Foo);
+                this.RaisePropertyChanged(@"""", (object)null, (object)null);
+                this.RaisePropertyChanged(@""Item[]"", (object)null, (object)null);
+                this.RaisePropertyChanged(@""NonExistent"", (object)null, (object)null);
+            }
+        }
+    }
+}";
+
+            this.AssertThat(input, It.HasFile("SomeViewModel", expected, RemoveInpcMembersRewriter.Instance)
+                .HasDiagnostics(
+                    // (4,14): Warning INPC009: Unable to find a property called 'Item[]' on this type or its base types. This event will still be raised
+                    // AlsoNotify("Item[]", "NonExistent", "")
+                    Diagnostic("INPC009", @"AlsoNotify(""Item[]"", ""NonExistent"", """")").WithLocation(4, 14),
+
+                    // (4,14): Warning INPC009: Unable to find a property called 'NonExistent' on this type or its base types. This event will still be raised
+                    // AlsoNotify("Item[]", "NonExistent", "")
+                    Diagnostic("INPC009", @"AlsoNotify(""Item[]"", ""NonExistent"", """")").WithLocation(4, 14)
+                    ));
+        }
+
+        [Test]
         public void HandlesPathologicalAttributeCases()
         {
             string input = @"

@@ -62,7 +62,10 @@ namespace PropertyChanged.SourceGenerator
 
             public bool Equals(Key other) => string.Equals(this.key, other.key, StringComparison.Ordinal);
             public override bool Equals(object? obj) => obj is Key other && this.Equals(other);
-            public override int GetHashCode() => this.key?.GetHashCode() ?? 0;
+            public override int GetHashCode() => this.key == null ? 0 : StringComparer.Ordinal.GetHashCode(this.key);
+
+            public static bool operator ==(Key left, Key right) => left.Equals(right);
+            public static bool operator !=(Key left, Key right) => !left.Equals(right);
 
             public static implicit operator Key(string? key) => new(key);
             public static implicit operator string?(Key key) => key.key;

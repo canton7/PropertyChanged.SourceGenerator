@@ -13,11 +13,11 @@ namespace PropertyChanged.SourceGenerator.Analysis
         public Accessibility GetterAccessibility { get; set; }
         public Accessibility SetterAccessibility { get; set; }
 
-        private HashSet<string?>? _alsoNotify;
-        public IEnumerable<string?> AlsoNotify => this._alsoNotify ?? Enumerable.Empty<string?>();
-        public void AddAlsoNotify(string? alsoNotify)
+        private HashSet<AlsoNotifyMember>? _alsoNotify;
+        public IEnumerable<AlsoNotifyMember> AlsoNotify => this._alsoNotify ?? Enumerable.Empty<AlsoNotifyMember>();
+        public void AddAlsoNotify(AlsoNotifyMember alsoNotify)
         {
-            this._alsoNotify ??= new HashSet<string?>();
+            this._alsoNotify ??= new HashSet<AlsoNotifyMember>();
             this._alsoNotify.Add(alsoNotify);
         }
     }

@@ -211,6 +211,74 @@ partial class SomeViewModel
         }
 
         [Test]
+        public void FindsAndCallsMethodWithEventArgsAndOldAndNewValues()
+        {
+            string input = @"
+using System.ComponentModel;
+public partial class SomeViewModel : INotifyPropertyChanged
+{
+    public event PropertyChangedEventHandler PropertyChanged;
+    private void NotifyPropertyChanged(PropertyChangedEventArgs args, object oldValue, object newValue) =>
+        PropertyChanged?.Invoke(this, args);
+    [Notify]
+    private string _foo;
+}";
+            string expected = @"
+partial class SomeViewModel
+{
+    public string Foo
+    {
+        get => this._foo;
+        set
+        {
+            if (!global::System.Collections.Generic.EqualityComparer<string>.Default.Equals(value, this._foo))
+            {
+                string old_Foo = this.Foo;
+                this._foo = value;
+                this.NotifyPropertyChanged(global::PropertyChanged.SourceGenerator.Internal.PropertyChangedEventArgsCache.Foo, old_Foo, this.Foo);
+            }
+        }
+    }
+}";
+
+            this.AssertThat(input, It.HasFile("SomeViewModel", expected));
+        }
+
+        [Test]
+        public void FindsAndCallsMethodWithStringNameAndOldAndNewValues()
+        {
+            string input = @"
+using System.ComponentModel;
+public partial class SomeViewModel : INotifyPropertyChanged
+{
+    public event PropertyChangedEventHandler PropertyChanged;
+    private void NotifyPropertyChanged(string name, object oldValue, object newValue) =>
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
+    [Notify]
+    private string _foo;
+}";
+            string expected = @"
+partial class SomeViewModel
+{
+    public string Foo
+    {
+        get => this._foo;
+        set
+        {
+            if (!global::System.Collections.Generic.EqualityComparer<string>.Default.Equals(value, this._foo))
+            {
+                string old_Foo = this.Foo;
+                this._foo = value;
+                this.NotifyPropertyChanged(@""Foo"", old_Foo, this.Foo);
+            }
+        }
+    }
+}";
+
+            this.AssertThat(input, It.HasFile("SomeViewModel", expected));
+        }
+
+        [Test]
         public void RaisesIfMethodFoundWithBadSignature()
         {
             string input = @"

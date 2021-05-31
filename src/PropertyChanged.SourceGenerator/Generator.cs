@@ -73,7 +73,8 @@ namespace PropertyChanged.SourceGenerator
 
             if (typeAnalysis.RequiresRaisePropertyChangedMethod)
             {
-                Trace.Assert(typeAnalysis.RaisePropertyChangedMethodSignature == RaisePropertyChangedMethodSignature.PropertyChangedEventArgs);
+                Trace.Assert(typeAnalysis.RaisePropertyChangedMethodSignature.NameType == RaisePropertyChangedNameType.PropertyChangedEventArgs &&
+                    typeAnalysis.RaisePropertyChangedMethodSignature.HasOldAndNew == false);
                 this.writer.WriteLine($"protected virtual void {typeAnalysis.RaisePropertyChangedMethodName}(global::System.ComponentModel.PropertyChangedEventArgs eventArgs)");
                 this.writer.WriteLine("{");
                 this.writer.Indent++;
@@ -114,12 +115,21 @@ namespace PropertyChanged.SourceGenerator
             this.writer.WriteLine("{");
             this.writer.Indent++;
 
+            if (type.RaisePropertyChangedMethodSignature.HasOldAndNew)
+            {
+                this.writer.WriteLine($"{member.Type.ToDisplayString(SymbolDisplayFormats.MethodOrPropertyReturnType)} old_{member.Name} = this.{member.Name};");
+                foreach (var alsoNotify in member.AlsoNotify.Where(x => x.IsCallable))
+                {
+                    this.writer.WriteLine($"{alsoNotify.Type!.ToDisplayString(SymbolDisplayFormats.MethodOrPropertyReturnType)} old_{alsoNotify.Name} = this.{alsoNotify.Name};");
+                }
+            }
+
             this.writer.WriteLine($"{backingMemberReference} = value;");
 
-            this.GenerateRaiseEvent(type, member.Name);
-            foreach (string? alsoNotify in member.AlsoNotify.OrderBy(x => x))
+            this.GenerateRaiseEvent(type, member.Name, isCallable: true);
+            foreach (var alsoNotify in member.AlsoNotify.OrderBy(x => x.Name))
             {
-                this.GenerateRaiseEvent(type, alsoNotify);
+                this.GenerateRaiseEvent(type, alsoNotify.Name, alsoNotify.IsCallable);
             }
 
             this.writer.Indent--;
@@ -135,19 +145,34 @@ namespace PropertyChanged.SourceGenerator
             }
         }
 
-        private void GenerateRaiseEvent(TypeAnalysis type, string? propertyName)
+        private void GenerateRaiseEvent(TypeAnalysis type, string? propertyName, bool isCallable)
         {
-            switch (type.RaisePropertyChangedMethodSignature)
+            this.writer.Write($"this.{type.RaisePropertyChangedMethodName}(");
+
+            switch (type.RaisePropertyChangedMethodSignature.NameType)
             {
-                case RaisePropertyChangedMethodSignature.PropertyChangedEventArgs:
+                case RaisePropertyChangedNameType.PropertyChangedEventArgs:
                     string cacheName = this.eventArgsCache.GetOrAdd(propertyName);
-                    this.writer.WriteLine($"this.{type.RaisePropertyChangedMethodName}(global::PropertyChanged.SourceGenerator.Internal.PropertyChangedEventArgsCache.{cacheName});");
+                    this.writer.Write($"global::PropertyChanged.SourceGenerator.Internal.PropertyChangedEventArgsCache.{cacheName}");
                     break;
 
-                case RaisePropertyChangedMethodSignature.String:
-                    this.writer.WriteLine($"this.{type.RaisePropertyChangedMethodName}({EscapeString(propertyName)});");
+                case RaisePropertyChangedNameType.String:
+                    this.writer.Write(EscapeString(propertyName));
                     break;
             }
+
+            if (type.RaisePropertyChangedMethodSignature.HasOldAndNew)
+            {
+                if (isCallable)
+                {
+                    this.writer.Write($", old_{propertyName}, this.{propertyName}");
+                }
+                else
+                {
+                    this.writer.Write(", (object)null, (object)null");
+                }
+            }
+            this.writer.WriteLine(");");
         }
 
         private static (string property, string getter, string setter) CalculateAccessibilities(MemberAnalysis member)

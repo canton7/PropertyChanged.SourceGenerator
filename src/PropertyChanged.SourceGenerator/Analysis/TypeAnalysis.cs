@@ -5,14 +5,6 @@ using Microsoft.CodeAnalysis;
 
 namespace PropertyChanged.SourceGenerator.Analysis
 {
-    public enum RaisePropertyChangedMethodSignature
-    {
-        // Just pass PropertyChangedEventArgs 
-        PropertyChangedEventArgs,
-        // Just pass the string name
-        String,
-    }
-
     public class TypeAnalysis
     {
         public INamedTypeSymbol TypeSymbol { get; set; } = null!;

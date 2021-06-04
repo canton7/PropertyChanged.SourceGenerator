@@ -111,6 +111,15 @@ namespace PropertyChanged.SourceGenerator
             this.AddDiagnostic(dependsOnAppliedToFieldWithoutNotify, AttributeLocations(attribute, member));
         }
 
+        private static readonly DiagnosticDescriptor alsoNotifyForSelf = CreateDescriptor(
+            "INPC012",
+            "AlsoNotify applied to self",
+            "Property '{0}' cannot have an [AlsoNotify] attribute which refers to that same property");
+        public void ReportAlsoNotifyForSelf(string alsoNotify, AttributeData attribute, ISymbol member)
+        {
+            this.AddDiagnostic(alsoNotifyForSelf, AttributeLocations(attribute, member), alsoNotify);
+        }
+
         private static DiagnosticDescriptor CreateDescriptor(string code, string title, string messageFormat, DiagnosticSeverity severity = DiagnosticSeverity.Warning)
         {
             string[] tags = severity == DiagnosticSeverity.Error ? new[] { WellKnownDiagnosticTags.NotConfigurable } : Array.Empty<string>();

@@ -446,35 +446,42 @@ namespace PropertyChanged.SourceGenerator.Analysis
                         // Remember that we're probably, but not necessarily, notifying a property which we're also
                         // generating.
                         // Allow null and emptystring as special cases
-                        ITypeSymbol? foundCallableType = null;
-                        if (!string.IsNullOrEmpty(alsoNotify))
+                        if (alsoNotify == member.Name)
                         {
-                            var foundType = baseTypeAnalyses.Prepend(typeAnalysis)
-                                .SelectMany(x => x.Members)
-                                .FirstOrDefault(x => x.Name == alsoNotify)?
-                                .Type;
-                            foundType ??= TypeAndBaseTypes(typeAnalysis.TypeSymbol)
-                                .SelectMany(x => x.GetMembers(alsoNotify!))
-                                .OfType<IPropertySymbol>()
-                                .FirstOrDefault(x => this.compilation.IsSymbolAccessibleWithin(x, typeAnalysis.TypeSymbol))?
-                                .Type;
-                            foundCallableType = foundType;
-                            // Also let them use "Item[]", if an indexer exists
-                            if (foundType == null && alsoNotify!.EndsWith("[]"))
-                            {
-                                string indexerName = alsoNotify.Substring(0, alsoNotify.Length - "[]".Length);
-                                foundType = TypeAndBaseTypes(typeAnalysis.TypeSymbol)
-                                    .SelectMany(x => x.GetMembers("this[]"))
-                                    .OfType<IPropertySymbol>()
-                                    .FirstOrDefault(x => x.IsIndexer && x.MetadataName == indexerName)?
-                                    .Type;
-                            }
-                            if (foundType == null)
-                            {
-                                this.diagnostics.ReportAlsoNotifyPropertyDoesNotExist(alsoNotify!, attribute, member.BackingMember);
-                            }
+                            this.diagnostics.ReportAlsoNotifyForSelf(alsoNotify, attribute, member.BackingMember);
                         }
-                        member.AddAlsoNotify(new AlsoNotifyMember(alsoNotify, foundCallableType));
+                        else
+                        {
+                            ITypeSymbol? foundCallableType = null;
+                            if (!string.IsNullOrEmpty(alsoNotify))
+                            {
+                                var foundType = baseTypeAnalyses.Prepend(typeAnalysis)
+                                    .SelectMany(x => x.Members)
+                                    .FirstOrDefault(x => x.Name == alsoNotify)?
+                                    .Type;
+                                foundType ??= TypeAndBaseTypes(typeAnalysis.TypeSymbol)
+                                    .SelectMany(x => x.GetMembers(alsoNotify!))
+                                    .OfType<IPropertySymbol>()
+                                    .FirstOrDefault(x => this.compilation.IsSymbolAccessibleWithin(x, typeAnalysis.TypeSymbol))?
+                                    .Type;
+                                foundCallableType = foundType;
+                                // Also let them use "Item[]", if an indexer exists
+                                if (foundType == null && alsoNotify!.EndsWith("[]"))
+                                {
+                                    string indexerName = alsoNotify.Substring(0, alsoNotify.Length - "[]".Length);
+                                    foundType = TypeAndBaseTypes(typeAnalysis.TypeSymbol)
+                                        .SelectMany(x => x.GetMembers("this[]"))
+                                        .OfType<IPropertySymbol>()
+                                        .FirstOrDefault(x => x.IsIndexer && x.MetadataName == indexerName)?
+                                        .Type;
+                                }
+                                if (foundType == null)
+                                {
+                                    this.diagnostics.ReportAlsoNotifyPropertyDoesNotExist(alsoNotify!, attribute, member.BackingMember);
+                                }
+                            }
+                            member.AddAlsoNotify(new AlsoNotifyMember(alsoNotify, foundCallableType));
+                        }
                     }
                 }
             }

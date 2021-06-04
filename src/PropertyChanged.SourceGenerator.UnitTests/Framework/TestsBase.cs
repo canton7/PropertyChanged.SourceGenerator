@@ -127,6 +127,22 @@ namespace PropertyChanged.SourceGenerator.UnitTests.Framework
         {
             return new DiagnosticResult(code, squiggledText);
         }
+
+        protected void AssertNotifies(string input, string type, string memberName, string propertyName)
+        {
+            var analysis = this.Analyse(input, type);
+            var member = analysis.Members.FirstOrDefault(x => x.Name == memberName);
+            Assert.NotNull(member);
+            Assert.That(member!.AlsoNotify.Select(x => x.Name), Is.EquivalentTo(new[] { propertyName }));
+        }
+
+        protected void AssertDoesNotNotify(string input, string type, string memberName)
+        {
+            var analysis = this.Analyse(input, type);
+            var member = analysis.Members.FirstOrDefault(x => x.Name == memberName);
+            Assert.NotNull(member);
+            Assert.IsEmpty(member!.AlsoNotify);
+        }
     }
 
     public class Expectation

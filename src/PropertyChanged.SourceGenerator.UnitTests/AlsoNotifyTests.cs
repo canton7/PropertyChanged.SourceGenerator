@@ -289,6 +289,38 @@ namespace PropertyChanged.SourceGenerator.Internal
         }
 
         [Test]
+        public void RaisesIfAutoNotifyingSelf()
+        {
+            string input = @"
+public partial class SomeViewModel
+{
+    [Notify, AlsoNotify(""Foo"")]
+    private string _foo;
+}";
+            string expected = @"
+partial class SomeViewModel : global::System.ComponentModel.INotifyPropertyChanged
+{
+    public string Foo
+    {
+        get => this._foo;
+        set
+        {
+            if (!global::System.Collections.Generic.EqualityComparer<string>.Default.Equals(value, this._foo))
+            {
+                this._foo = value;
+                this.RaisePropertyChanged(global::PropertyChanged.SourceGenerator.Internal.PropertyChangedEventArgsCache.Foo);
+            }
+        }
+    }
+}";
+
+            this.AssertThat(input, It.HasFile("SomeViewModel", expected, RemoveInpcMembersRewriter.Instance).HasDiagnostics(
+                // (4,14): Warning INPC012: Property 'Foo' cannot have an [AlsoNotify] attribute which refers to that same property
+                // AlsoNotify("Foo")
+                Diagnostic("INPC012", @"AlsoNotify(""Foo"")").WithLocation(4, 14)));
+        }
+
+        [Test]
         public void PassesOldAndNewValue()
         {
             string input = @"

@@ -180,21 +180,5 @@ public partial class SomeViewModel
             this.AssertNotifies(input, "SomeViewModel", "Foo", "Thing");
             this.AssertDoesNotNotify(input, "SomeViewModel", "Bar");
         }
-
-        private void AssertNotifies(string input, string type, string memberName, string propertyName)
-        {
-            var analysis = this.Analyse(input, type);
-            var member = analysis.Members.FirstOrDefault(x => x.Name == memberName);
-            Assert.NotNull(member);
-            Assert.That(member!.AlsoNotify.Select(x => x.Name), Is.EquivalentTo(new[] { propertyName }));
-        }
-
-        private void AssertDoesNotNotify(string input, string type, string memberName)
-        {
-            var analysis = this.Analyse(input, type);
-            var member = analysis.Members.FirstOrDefault(x => x.Name == memberName);
-            Assert.NotNull(member);
-            Assert.IsEmpty(member!.AlsoNotify);
-        }
     }
 }

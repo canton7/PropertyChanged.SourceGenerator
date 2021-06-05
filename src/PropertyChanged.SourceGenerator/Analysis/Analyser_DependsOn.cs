@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace PropertyChanged.SourceGenerator.Analysis
@@ -41,11 +42,11 @@ namespace PropertyChanged.SourceGenerator.Analysis
                         // If we're generating this property, make sure we use the generated name...
                         if (lookups.TryGet(member, out var memberAnalysis))
                         {
-                            dependsOnMember.AddAlsoNotify(new AlsoNotifyMember(memberAnalysis.Name, memberAnalysis.Type));
+                            dependsOnMember.AddAlsoNotify(AlsoNotifyMember.FromMemberAnalysis(memberAnalysis));
                         }
                         else if (member is IPropertySymbol property)
                         {
-                            dependsOnMember.AddAlsoNotify(new AlsoNotifyMember(property.Name, property.Type));
+                            dependsOnMember.AddAlsoNotify(AlsoNotifyMember.FromProperty(property));
                         }
                         else
                         {
@@ -102,7 +103,7 @@ namespace PropertyChanged.SourceGenerator.Analysis
                         continue;
 
                     // It's probably a property access
-                    memberAnalysis.AddAlsoNotify(new AlsoNotifyMember(member.Name, member.Type));
+                    memberAnalysis.AddAlsoNotify(AlsoNotifyMember.FromProperty(member));
                 }
             }
         }

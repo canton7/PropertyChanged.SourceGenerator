@@ -37,6 +37,8 @@ namespace PropertyChanged.SourceGenerator
     [global::System.AttributeUsage(global::System.AttributeTargets.Field | global::System.AttributeTargets.Property, AllowMultiple = false)]
     internal class NotifyAttribute : global::System.Attribute
     {
+        public string OnChangedMethod { get; set; }
+
         public NotifyAttribute() { }
         public NotifyAttribute(string name, Getter get = Getter.Public, Setter set = Setter.Public) { }
         public NotifyAttribute(Getter get, Setter set = Setter.Public) { }

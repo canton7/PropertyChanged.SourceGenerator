@@ -13,11 +13,21 @@ namespace PropertyChanged.SourceGenerator.Analysis
         [MemberNotNullWhen(true, nameof(Type))]
         public bool IsCallable => this.Type != null;
 
-        public AlsoNotifyMember(string? name, ITypeSymbol? type)
+        public OnPropertyNameChangedInfo? OnPropertyNameChanged { get; }
+
+        private AlsoNotifyMember(string? name, ITypeSymbol? type, OnPropertyNameChangedInfo? onPropertyNameChanged = null)
         {
             this.Name = name;
             this.Type = type;
+            this.OnPropertyNameChanged = onPropertyNameChanged;
         }
+
+        public static AlsoNotifyMember NonCallable(string? name) =>
+            new(name, null);
+        public static AlsoNotifyMember FromMemberAnalysis(MemberAnalysis memberAnalysis) =>
+            new(memberAnalysis.Name, memberAnalysis.Type, memberAnalysis.OnPropertyNameChanged);
+        public static AlsoNotifyMember FromProperty(IPropertySymbol property) =>
+            new(property.Name, property.Type);
 
         public override bool Equals(object obj) => obj is AlsoNotifyMember other && this.Equals(other);
         public bool Equals(AlsoNotifyMember other) => string.Equals(this.Name, other.Name, StringComparison.Ordinal);

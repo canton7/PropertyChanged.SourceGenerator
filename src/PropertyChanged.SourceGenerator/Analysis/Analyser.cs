@@ -201,13 +201,15 @@ namespace PropertyChanged.SourceGenerator.Analysis
                 setterAccessibility = Accessibility.ProtectedOrInternal;
             }
 
+            string name = explicitName ?? this.TransformName(backingMember);
             var result = new MemberAnalysis()
             {
                 BackingMember = backingMember,
-                Name = explicitName ?? this.TransformName(backingMember),
+                Name = name,
                 Type = type,
                 GetterAccessibility = getterAccessibility,
                 SetterAccessibility = setterAccessibility,
+                OnPropertyNameChanged = this.FindOnPropertyNameChangedMethod(name, backingMember, type, notifyAttribute),
             };
 
             if (type.IsReferenceType)

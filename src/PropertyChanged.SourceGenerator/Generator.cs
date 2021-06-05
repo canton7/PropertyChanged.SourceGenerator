@@ -115,10 +115,13 @@ namespace PropertyChanged.SourceGenerator
             this.writer.WriteLine("{");
             this.writer.Indent++;
 
-            if (type.RaisePropertyChangedMethodSignature.HasOldAndNew)
+            if (type.RaisePropertyChangedMethodSignature.HasOldAndNew || member.OnPropertyNameChanged != null)
             {
                 this.writer.WriteLine($"{member.Type.ToDisplayString(SymbolDisplayFormats.MethodOrPropertyReturnType)} old_{member.Name} = this.{member.Name};");
-                foreach (var alsoNotify in member.AlsoNotify.Where(x => x.IsCallable))
+            }
+            foreach (var alsoNotify in member.AlsoNotify.Where(x => x.IsCallable))
+            {
+                if (type.RaisePropertyChangedMethodSignature.HasOldAndNew || alsoNotify.OnPropertyNameChanged != null)
                 {
                     this.writer.WriteLine($"{alsoNotify.Type!.ToDisplayString(SymbolDisplayFormats.MethodOrPropertyReturnType)} old_{alsoNotify.Name} = this.{alsoNotify.Name};");
                 }
@@ -126,9 +129,17 @@ namespace PropertyChanged.SourceGenerator
 
             this.writer.WriteLine($"{backingMemberReference} = value;");
 
+            if (member.OnPropertyNameChanged != null)
+            {
+                this.GenerateOnPropertyNameChanged(member.Name, member.OnPropertyNameChanged.Value);
+            }
             this.GenerateRaiseEvent(type, member.Name, isCallable: true);
             foreach (var alsoNotify in member.AlsoNotify.OrderBy(x => x.Name))
             {
+                if (alsoNotify.OnPropertyNameChanged != null)
+                {
+                    this.GenerateOnPropertyNameChanged(alsoNotify.Name!, alsoNotify.OnPropertyNameChanged.Value);
+                }
                 this.GenerateRaiseEvent(type, alsoNotify.Name, alsoNotify.IsCallable);
             }
 
@@ -171,6 +182,20 @@ namespace PropertyChanged.SourceGenerator
                 {
                     this.writer.Write(", (object)null, (object)null");
                 }
+            }
+            this.writer.WriteLine(");");
+        }
+
+        private void GenerateOnPropertyNameChanged(string propertyName, OnPropertyNameChangedInfo info)
+        {
+            this.writer.Write($"this.{info.Name}(");
+            switch (info.Signature)
+            {
+                case OnPropertyNameChangedSignature.Parameterless:
+                    break;
+                case OnPropertyNameChangedSignature.OldAndNew:
+                    this.writer.Write($"old_{propertyName}, this.{propertyName}");
+                    break;
             }
             this.writer.WriteLine(");");
         }

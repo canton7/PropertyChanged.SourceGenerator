@@ -12,6 +12,7 @@ namespace PropertyChanged.SourceGenerator.Analysis
         public NullableContextOptions? NullableContextOverride { get; set; }
         public Accessibility GetterAccessibility { get; set; }
         public Accessibility SetterAccessibility { get; set; }
+        public OnPropertyNameChangedInfo? OnPropertyNameChanged { get; set; }
 
         private HashSet<AlsoNotifyMember>? _alsoNotify;
         public IEnumerable<AlsoNotifyMember> AlsoNotify => this._alsoNotify ?? Enumerable.Empty<AlsoNotifyMember>();

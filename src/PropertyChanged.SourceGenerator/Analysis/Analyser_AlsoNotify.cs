@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using Microsoft.CodeAnalysis;
 
 namespace PropertyChanged.SourceGenerator.Analysis
 {
@@ -34,35 +35,44 @@ namespace PropertyChanged.SourceGenerator.Analysis
                         }
                         else
                         {
-                            ITypeSymbol? foundCallableType = null;
+                            AlsoNotifyMember? alsoNotifyMember = null;
                             if (!string.IsNullOrEmpty(alsoNotify))
                             {
-                                var foundType = baseTypeAnalyses.Prepend(typeAnalysis)
+                                bool foundAlsoNotify = false;
+                                if (baseTypeAnalyses.Prepend(typeAnalysis)
                                     .SelectMany(x => x.Members)
-                                    .FirstOrDefault(x => x.Name == alsoNotify)?
-                                    .Type;
-                                foundType ??= TypeAndBaseTypes(typeAnalysis.TypeSymbol)
+                                    .FirstOrDefault(x => x.Name == alsoNotify)
+                                    is { } foundMemberAnalysis)
+                                {
+                                    foundAlsoNotify = true;
+                                    alsoNotifyMember = AlsoNotifyMember.FromMemberAnalysis(foundMemberAnalysis);
+                                }
+                                else if (TypeAndBaseTypes(typeAnalysis.TypeSymbol)
                                     .SelectMany(x => x.GetMembers(alsoNotify!))
                                     .OfType<IPropertySymbol>()
-                                    .FirstOrDefault(x => this.compilation.IsSymbolAccessibleWithin(x, typeAnalysis.TypeSymbol))?
-                                    .Type;
-                                foundCallableType = foundType;
-                                // Also let them use "Item[]", if an indexer exists
-                                if (foundType == null && alsoNotify!.EndsWith("[]"))
+                                    .FirstOrDefault(x => this.compilation.IsSymbolAccessibleWithin(x, typeAnalysis.TypeSymbol))
+                                    is { } foundProperty)
                                 {
-                                    string indexerName = alsoNotify.Substring(0, alsoNotify.Length - "[]".Length);
-                                    foundType = TypeAndBaseTypes(typeAnalysis.TypeSymbol)
+                                    foundAlsoNotify = true;
+                                    alsoNotifyMember = AlsoNotifyMember.FromProperty(foundProperty);
+                                }
+                                else
+                                {
+                                    string indexerName = alsoNotify!.Substring(0, alsoNotify.Length - "[]".Length);
+                                    foundAlsoNotify = TypeAndBaseTypes(typeAnalysis.TypeSymbol)
                                         .SelectMany(x => x.GetMembers("this[]"))
                                         .OfType<IPropertySymbol>()
-                                        .FirstOrDefault(x => x.IsIndexer && x.MetadataName == indexerName)?
-                                        .Type;
+                                        .Any(x => x.IsIndexer && x.MetadataName == indexerName);
                                 }
-                                if (foundType == null)
+
+                                if (!foundAlsoNotify)
                                 {
                                     this.diagnostics.ReportAlsoNotifyPropertyDoesNotExist(alsoNotify!, attribute, member.BackingMember);
                                 }
                             }
-                            member.AddAlsoNotify(new AlsoNotifyMember(alsoNotify, foundCallableType));
+
+                            alsoNotifyMember ??= AlsoNotifyMember.NonCallable(alsoNotify);
+                            member.AddAlsoNotify(alsoNotifyMember.Value);
                         }
                     }
                 }

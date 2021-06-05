@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using Microsoft.CodeAnalysis;
 
@@ -85,25 +86,24 @@ namespace PropertyChanged.SourceGenerator.Analysis
 
             RaisePropertyChangedMethodSignature? FindCallableOverload(List<IMethodSymbol> methods)
             {
+                methods.RemoveAll(x => !this.IsAccessibleNormalMethod(x, typeSymbol));
+
                 // We care about the order in which we choose an overload, which unfortunately means we're quadratic
-                if (methods.Any(x => IsAccessibleNormalInstanceMethod(x) &&
-                    x.Parameters.Length == 1 &&
+                if (methods.Any(x => x.Parameters.Length == 1 &&
                     SymbolEqualityComparer.Default.Equals(x.Parameters[0].Type, this.propertyChangedEventArgsSymbol) &&
                     IsNormalParameter(x.Parameters[0])))
                 {
                     return new RaisePropertyChangedMethodSignature(RaisePropertyChangedNameType.PropertyChangedEventArgs, hasOldAndNew: false);
                 }
 
-                if (methods.Any(x => IsAccessibleNormalInstanceMethod(x) &&
-                    x.Parameters.Length == 1 &&
+                if (methods.Any(x => x.Parameters.Length == 1 &&
                     x.Parameters[0].Type.SpecialType == SpecialType.System_String &&
                     IsNormalParameter(x.Parameters[0])))
                 {
                     return new RaisePropertyChangedMethodSignature(RaisePropertyChangedNameType.String, hasOldAndNew: false);
                 }
 
-                if (methods.Any(x => IsAccessibleNormalInstanceMethod(x) &&
-                    x.Parameters.Length == 3 &&
+                if (methods.Any(x => x.Parameters.Length == 3 &&
                     SymbolEqualityComparer.Default.Equals(x.Parameters[0].Type, this.propertyChangedEventArgsSymbol) &&
                     IsNormalParameter(x.Parameters[0]) &&
                     x.Parameters[1].Type.SpecialType == SpecialType.System_Object &&
@@ -113,8 +113,7 @@ namespace PropertyChanged.SourceGenerator.Analysis
                 {
                     return new RaisePropertyChangedMethodSignature(RaisePropertyChangedNameType.PropertyChangedEventArgs, hasOldAndNew: true);
                 }
-                if (methods.Any(x => IsAccessibleNormalInstanceMethod(x) &&
-                    x.Parameters.Length == 3 &&
+                if (methods.Any(x => x.Parameters.Length == 3 &&
                     x.Parameters[0].Type.SpecialType == SpecialType.System_String &&
                     IsNormalParameter(x.Parameters[0]) &&
                     x.Parameters[1].Type.SpecialType == SpecialType.System_Object &&
@@ -127,14 +126,85 @@ namespace PropertyChanged.SourceGenerator.Analysis
 
                 return null;
             }
-
-            bool IsAccessibleNormalInstanceMethod(IMethodSymbol method) =>
-                !method.IsGenericMethod &&
-                method.ReturnsVoid &&
-                this.compilation.IsSymbolAccessibleWithin(method, typeSymbol);
-
-            bool IsNormalParameter(IParameterSymbol parameter) =>
-                parameter.RefKind == RefKind.None;
         }
+
+        private OnPropertyNameChangedInfo? FindOnPropertyNameChangedMethod(
+            string name,
+            ISymbol backingMember,
+            ITypeSymbol memberType,
+            AttributeData notifyAttribute)
+        {
+            INamedTypeSymbol typeSymbol = backingMember.ContainingType!;
+
+            string? explicitOnChangedMethodName = null;
+            foreach (var namedArg in notifyAttribute.NamedArguments)
+            {
+                if (namedArg.Key == "OnChangedMethod")
+                {
+                    if (namedArg.Value.Kind == TypedConstantKind.Primitive &&
+                        namedArg.Value.Value is string value)
+                    {
+                        explicitOnChangedMethodName = value;
+                    }
+                    break;
+                }
+            }
+
+            string onChangedMethodName = explicitOnChangedMethodName ?? $"On{name}Changed";
+            var methods = TypeAndBaseTypes(typeSymbol)
+                .SelectMany(x => x.GetMembers(onChangedMethodName))
+                .OfType<IMethodSymbol>()
+                .Where(x => !x.IsOverride && !x.IsStatic)
+                .ToList();
+
+            OnPropertyNameChangedInfo? result = null;
+            if (methods.Count > 0)
+            {
+                var signature = FindCallableOverload(methods);
+                if (signature != null)
+                {
+                    result = new OnPropertyNameChangedInfo(onChangedMethodName, signature.Value);
+                }
+                else
+                { 
+                    // Raise...
+                }
+            }
+            else  if (explicitOnChangedMethodName != null)
+            {
+                // Raise...
+            }
+
+            return result;
+
+            OnPropertyNameChangedSignature? FindCallableOverload(List<IMethodSymbol> methods)
+            {
+                methods.RemoveAll(x => !this.IsAccessibleNormalMethod(x, typeSymbol));
+
+                if (methods.Any(x => x.Parameters.Length == 2 &&
+                    IsNormalParameter(x.Parameters[0]) &&
+                    IsNormalParameter(x.Parameters[1]) &&
+                    SymbolEqualityComparer.Default.Equals(x.Parameters[0].Type, x.Parameters[1].Type) &&
+                    this.compilation.HasImplicitConversion(memberType, x.Parameters[0].Type)))
+                {
+                    return OnPropertyNameChangedSignature.OldAndNew;
+                }
+
+                if (methods.Any(x => x.Parameters.Length == 0))
+                {
+                    return OnPropertyNameChangedSignature.Parameterless;
+                }
+
+                return null;
+            }
+        }
+
+        private bool IsAccessibleNormalMethod(IMethodSymbol method, ITypeSymbol typeSymbol) =>
+            !method.IsGenericMethod &&
+            method.ReturnsVoid &&
+            this.compilation.IsSymbolAccessibleWithin(method, typeSymbol);
+
+        private static bool IsNormalParameter(IParameterSymbol parameter) =>
+            parameter.RefKind == RefKind.None;
     }
 }

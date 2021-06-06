@@ -15,7 +15,7 @@ namespace PropertyChanged.SourceGenerator.Analysis
 
         public OnPropertyNameChangedInfo? OnPropertyNameChanged { get; }
 
-        private AlsoNotifyMember(string? name, ITypeSymbol? type, OnPropertyNameChangedInfo? onPropertyNameChanged = null)
+        private AlsoNotifyMember(string? name, ITypeSymbol? type, OnPropertyNameChangedInfo? onPropertyNameChanged)
         {
             this.Name = name;
             this.Type = type;
@@ -23,11 +23,11 @@ namespace PropertyChanged.SourceGenerator.Analysis
         }
 
         public static AlsoNotifyMember NonCallable(string? name) =>
-            new(name, null);
+            new(name, null, null);
         public static AlsoNotifyMember FromMemberAnalysis(MemberAnalysis memberAnalysis) =>
             new(memberAnalysis.Name, memberAnalysis.Type, memberAnalysis.OnPropertyNameChanged);
-        public static AlsoNotifyMember FromProperty(IPropertySymbol property) =>
-            new(property.Name, property.Type);
+        public static AlsoNotifyMember FromProperty(IPropertySymbol property, OnPropertyNameChangedInfo? onPropertyNameChanged) =>
+            new(property.Name, property.Type, onPropertyNameChanged);
 
         public override bool Equals(object obj) => obj is AlsoNotifyMember other && this.Equals(other);
         public bool Equals(AlsoNotifyMember other) => string.Equals(this.Name, other.Name, StringComparison.Ordinal);

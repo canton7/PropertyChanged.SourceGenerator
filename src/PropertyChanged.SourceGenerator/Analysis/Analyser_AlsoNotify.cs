@@ -54,11 +54,11 @@ namespace PropertyChanged.SourceGenerator.Analysis
                                     is { } foundProperty)
                                 {
                                     foundAlsoNotify = true;
-                                    alsoNotifyMember = AlsoNotifyMember.FromProperty(foundProperty);
+                                    alsoNotifyMember = AlsoNotifyMember.FromProperty(foundProperty, this.FindOnPropertyNameChangedMethod(foundProperty));
                                 }
-                                else
+                                else if (alsoNotify!.EndsWith("[]"))
                                 {
-                                    string indexerName = alsoNotify!.Substring(0, alsoNotify.Length - "[]".Length);
+                                    string indexerName = alsoNotify.Substring(0, alsoNotify.Length - "[]".Length);
                                     foundAlsoNotify = TypeAndBaseTypes(typeAnalysis.TypeSymbol)
                                         .SelectMany(x => x.GetMembers("this[]"))
                                         .OfType<IPropertySymbol>()

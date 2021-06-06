@@ -46,7 +46,7 @@ namespace PropertyChanged.SourceGenerator.Analysis
                         }
                         else if (member is IPropertySymbol property)
                         {
-                            dependsOnMember.AddAlsoNotify(AlsoNotifyMember.FromProperty(property));
+                            dependsOnMember.AddAlsoNotify(AlsoNotifyMember.FromProperty(property, this.FindOnPropertyNameChangedMethod(property)));
                         }
                         else
                         {
@@ -62,9 +62,9 @@ namespace PropertyChanged.SourceGenerator.Analysis
             }
         }
 
-        private void ResolveAutoDependsOn(IPropertySymbol member, TypeAnalysisLookups lookups)
+        private void ResolveAutoDependsOn(IPropertySymbol property, TypeAnalysisLookups lookups)
         {
-            if (member.GetMethod?.Locations.FirstOrDefault() is { } location &&
+            if (property.GetMethod?.Locations.FirstOrDefault() is { } location &&
                 location.SourceTree?.GetRoot()?.FindNode(location.SourceSpan) is { } getterNode)
             {
                 // Annoyingly, we're looking for references to properties which don't actually exist yet
@@ -103,7 +103,7 @@ namespace PropertyChanged.SourceGenerator.Analysis
                         continue;
 
                     // It's probably a property access
-                    memberAnalysis.AddAlsoNotify(AlsoNotifyMember.FromProperty(member));
+                    memberAnalysis.AddAlsoNotify(AlsoNotifyMember.FromProperty(property, this.FindOnPropertyNameChangedMethod(property)));
                 }
             }
         }

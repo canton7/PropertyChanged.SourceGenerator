@@ -128,29 +128,15 @@ namespace PropertyChanged.SourceGenerator.Analysis
             }
         }
 
+        private OnPropertyNameChangedInfo? FindOnPropertyNameChangedMethod(IPropertySymbol property) =>
+            this.FindOnPropertyNameChangedMethod(property.Name, property.Type, property.ContainingType);
+
         private OnPropertyNameChangedInfo? FindOnPropertyNameChangedMethod(
             string name,
-            ISymbol backingMember,
             ITypeSymbol memberType,
-            AttributeData notifyAttribute)
+            INamedTypeSymbol typeSymbol)
         {
-            INamedTypeSymbol typeSymbol = backingMember.ContainingType!;
-
-            string? explicitOnChangedMethodName = null;
-            foreach (var namedArg in notifyAttribute.NamedArguments)
-            {
-                if (namedArg.Key == "OnChangedMethod")
-                {
-                    if (namedArg.Value.Kind == TypedConstantKind.Primitive &&
-                        namedArg.Value.Value is string value)
-                    {
-                        explicitOnChangedMethodName = value;
-                    }
-                    break;
-                }
-            }
-
-            string onChangedMethodName = explicitOnChangedMethodName ?? $"On{name}Changed";
+            string onChangedMethodName = $"On{name}Changed";
             var methods = TypeAndBaseTypes(typeSymbol)
                 .SelectMany(x => x.GetMembers(onChangedMethodName))
                 .OfType<IMethodSymbol>()
@@ -169,10 +155,6 @@ namespace PropertyChanged.SourceGenerator.Analysis
                 { 
                     // Raise...
                 }
-            }
-            else  if (explicitOnChangedMethodName != null)
-            {
-                // Raise...
             }
 
             return result;

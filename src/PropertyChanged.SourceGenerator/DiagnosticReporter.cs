@@ -120,6 +120,15 @@ namespace PropertyChanged.SourceGenerator
             this.AddDiagnostic(alsoNotifyForSelf, AttributeLocations(attribute, member), alsoNotify);
         }
 
+        private static readonly DiagnosticDescriptor invalidOnPropertyNameChangedSignature = CreateDescriptor(
+            "INPC013",
+            "Unable to find matching On{PropertyName}Changed",
+            "Found one or more On{{PropertyName}}Changed methods called '{0}' for property '{1}', but none had the correct signature, or were inaccessible. Skipping");
+        public void RaiseInvalidOnPropertyNameChangedSignature(string name, string onChangedMethodName, List<IMethodSymbol> methods)
+        {
+            this.AddDiagnostic(invalidOnPropertyNameChangedSignature, methods[0].Locations, onChangedMethodName, name);
+        }
+
         private static DiagnosticDescriptor CreateDescriptor(string code, string title, string messageFormat, DiagnosticSeverity severity = DiagnosticSeverity.Warning)
         {
             string[] tags = severity == DiagnosticSeverity.Error ? new[] { WellKnownDiagnosticTags.NotConfigurable } : Array.Empty<string>();

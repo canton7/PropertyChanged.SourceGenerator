@@ -209,7 +209,7 @@ namespace PropertyChanged.SourceGenerator.Analysis
                 Type = type,
                 GetterAccessibility = getterAccessibility,
                 SetterAccessibility = setterAccessibility,
-                OnPropertyNameChanged = this.FindOnPropertyNameChangedMethod(name, type, backingMember.ContainingType!),
+                OnPropertyNameChanged = this.FindOnPropertyNameChangedMethod(backingMember.ContainingType, name, type, backingMember.ContainingType),
             };
 
             if (type.IsReferenceType)

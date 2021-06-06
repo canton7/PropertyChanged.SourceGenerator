@@ -54,7 +54,9 @@ namespace PropertyChanged.SourceGenerator.Analysis
                                     is { } foundProperty)
                                 {
                                     foundAlsoNotify = true;
-                                    alsoNotifyMember = AlsoNotifyMember.FromProperty(foundProperty, this.FindOnPropertyNameChangedMethod(foundProperty));
+                                    alsoNotifyMember = AlsoNotifyMember.FromProperty(
+                                        foundProperty,
+                                        this.FindOnPropertyNameChangedMethod(typeAnalysis.TypeSymbol, foundProperty));
                                 }
                                 else if (alsoNotify!.EndsWith("[]"))
                                 {

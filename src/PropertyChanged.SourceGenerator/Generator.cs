@@ -115,31 +115,19 @@ namespace PropertyChanged.SourceGenerator
             this.writer.WriteLine("{");
             this.writer.Indent++;
 
-            if (type.RaisePropertyChangedMethodSignature.HasOldAndNew || member.OnPropertyNameChanged != null)
+            this.GenerateOldVariableIfNecessary(type, member);
+            foreach (var alsoNotify in member.AlsoNotify)
             {
-                this.writer.WriteLine($"{member.Type.ToDisplayString(SymbolDisplayFormats.MethodOrPropertyReturnType)} old_{member.Name} = this.{member.Name};");
-            }
-            foreach (var alsoNotify in member.AlsoNotify.Where(x => x.IsCallable))
-            {
-                if (type.RaisePropertyChangedMethodSignature.HasOldAndNew || alsoNotify.OnPropertyNameChanged != null)
-                {
-                    this.writer.WriteLine($"{alsoNotify.Type!.ToDisplayString(SymbolDisplayFormats.MethodOrPropertyReturnType)} old_{alsoNotify.Name} = this.{alsoNotify.Name};");
-                }
+                this.GenerateOldVariableIfNecessary(type, alsoNotify);
             }
 
             this.writer.WriteLine($"{backingMemberReference} = value;");
 
-            if (member.OnPropertyNameChanged != null)
-            {
-                this.GenerateOnPropertyNameChanged(member.Name, member.OnPropertyNameChanged.Value);
-            }
+            this.GenerateOnPropertyNameChangedIfNecessary(member);
             this.GenerateRaiseEvent(type, member.Name, isCallable: true);
             foreach (var alsoNotify in member.AlsoNotify.OrderBy(x => x.Name))
             {
-                if (alsoNotify.OnPropertyNameChanged != null)
-                {
-                    this.GenerateOnPropertyNameChanged(alsoNotify.Name!, alsoNotify.OnPropertyNameChanged.Value);
-                }
+                this.GenerateOnPropertyNameChangedIfNecessary(alsoNotify);
                 this.GenerateRaiseEvent(type, alsoNotify.Name, alsoNotify.IsCallable);
             }
 
@@ -153,6 +141,16 @@ namespace PropertyChanged.SourceGenerator
             if (member.NullableContextOverride != null)
             {
                 this.writer.WriteLine(NullableContextToComment(type.NullableContext));
+            }
+        }
+
+        private void GenerateOldVariableIfNecessary(TypeAnalysis type, IMember member)
+        {
+            if (member.IsCallable &&
+                (type.RaisePropertyChangedMethodSignature.HasOldAndNew ||
+                    member.OnPropertyNameChanged?.Signature == OnPropertyNameChangedSignature.OldAndNew))
+            {
+                this.writer.WriteLine($"{member.Type!.ToDisplayString(SymbolDisplayFormats.MethodOrPropertyReturnType)} old_{member.Name} = this.{member.Name};");
             }
         }
 
@@ -186,18 +184,21 @@ namespace PropertyChanged.SourceGenerator
             this.writer.WriteLine(");");
         }
 
-        private void GenerateOnPropertyNameChanged(string propertyName, OnPropertyNameChangedInfo info)
+        private void GenerateOnPropertyNameChangedIfNecessary(IMember member)
         {
-            this.writer.Write($"this.{info.Name}(");
-            switch (info.Signature)
+            if (member.OnPropertyNameChanged != null)
             {
-                case OnPropertyNameChangedSignature.Parameterless:
-                    break;
-                case OnPropertyNameChangedSignature.OldAndNew:
-                    this.writer.Write($"old_{propertyName}, this.{propertyName}");
-                    break;
+                this.writer.Write($"this.{member.OnPropertyNameChanged.Value.Name}(");
+                switch (member.OnPropertyNameChanged.Value.Signature)
+                {
+                    case OnPropertyNameChangedSignature.Parameterless:
+                        break;
+                    case OnPropertyNameChangedSignature.OldAndNew:
+                        this.writer.Write($"old_{member.Name}, this.{member.Name}");
+                        break;
+                }
+                this.writer.WriteLine(");");
             }
-            this.writer.WriteLine(");");
         }
 
         private static (string property, string getter, string setter) CalculateAccessibilities(MemberAnalysis member)

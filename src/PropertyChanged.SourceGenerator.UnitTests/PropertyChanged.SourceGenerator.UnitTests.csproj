@@ -8,6 +8,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <None Remove="coverage.xml" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="AltCover" Version="8.2.821" />
     <PackageReference Include="Microsoft.CodeAnalysis.Analyzers" Version="3.3.2" />
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="3.9.0" />

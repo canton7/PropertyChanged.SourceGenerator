@@ -128,17 +128,22 @@ namespace PropertyChanged.SourceGenerator.Analysis
             }
         }
 
-        private OnPropertyNameChangedInfo? FindOnPropertyNameChangedMethod(IPropertySymbol property) =>
-            this.FindOnPropertyNameChangedMethod(property.Name, property.Type, property.ContainingType);
+        private OnPropertyNameChangedInfo? FindOnPropertyNameChangedMethod(INamedTypeSymbol typeSymbol, IPropertySymbol property) =>
+            this.FindOnPropertyNameChangedMethod(typeSymbol, property.Name, property.Type, property.ContainingType);
 
+        /// <param name="typeSymbol">Type we're currently analysing</param>
+        /// <param name="name">Name of the property to find an OnPropertyNameChanged method for</param>
+        /// <param name="memberType">Type of the property</param>
+        /// <param name="containingType">Type containing the property (may be a base type)</param>
+        /// <returns></returns>
         private OnPropertyNameChangedInfo? FindOnPropertyNameChangedMethod(
+            INamedTypeSymbol typeSymbol, 
             string name,
             ITypeSymbol memberType,
-            INamedTypeSymbol typeSymbol)
+            INamedTypeSymbol containingType)
         {
             string onChangedMethodName = $"On{name}Changed";
-            var methods = TypeAndBaseTypes(typeSymbol)
-                .SelectMany(x => x.GetMembers(onChangedMethodName))
+            var methods = containingType.GetMembers(onChangedMethodName)
                 .OfType<IMethodSymbol>()
                 .Where(x => !x.IsOverride && !x.IsStatic)
                 .ToList();
@@ -152,8 +157,8 @@ namespace PropertyChanged.SourceGenerator.Analysis
                     result = new OnPropertyNameChangedInfo(onChangedMethodName, signature.Value);
                 }
                 else
-                { 
-                    // Raise...
+                {
+                    this.diagnostics.RaiseInvalidOnPropertyNameChangedSignature(name, onChangedMethodName, methods);
                 }
             }
 

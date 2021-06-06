@@ -6,7 +6,7 @@ using Microsoft.CodeAnalysis;
 
 namespace PropertyChanged.SourceGenerator.Analysis
 {
-    public struct AlsoNotifyMember : IEquatable<AlsoNotifyMember>
+    public struct AlsoNotifyMember : IMember, IEquatable<AlsoNotifyMember>
     {
         public string? Name { get; }
         public ITypeSymbol? Type { get; }

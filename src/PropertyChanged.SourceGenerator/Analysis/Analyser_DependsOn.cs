@@ -20,16 +20,16 @@ namespace PropertyChanged.SourceGenerator.Analysis
                     .ToList();
                 if (dependsOnAttributes.Count > 0)
                 {
-                    this.ResolveManualDependsOn(lookups, member, dependsOnAttributes);
+                    this.ResolveManualDependsOn(typeAnalysis, lookups, member, dependsOnAttributes);
                 }
                 else if (member is IPropertySymbol propertySymbol)
                 {
-                    this.ResolveAutoDependsOn(propertySymbol, lookups);
+                    this.ResolveAutoDependsOn(typeAnalysis, propertySymbol, lookups);
                 }
             }
         }
 
-        private void ResolveManualDependsOn(TypeAnalysisLookups lookups, ISymbol member, List<AttributeData> dependsOnAttributes)
+        private void ResolveManualDependsOn(TypeAnalysis typeAnalysis, TypeAnalysisLookups lookups, ISymbol member, List<AttributeData> dependsOnAttributes)
         {
             foreach (var attribute in dependsOnAttributes)
             {
@@ -46,7 +46,9 @@ namespace PropertyChanged.SourceGenerator.Analysis
                         }
                         else if (member is IPropertySymbol property)
                         {
-                            dependsOnMember.AddAlsoNotify(AlsoNotifyMember.FromProperty(property, this.FindOnPropertyNameChangedMethod(property)));
+                            dependsOnMember.AddAlsoNotify(AlsoNotifyMember.FromProperty(
+                                property,
+                                this.FindOnPropertyNameChangedMethod(typeAnalysis.TypeSymbol, property)));
                         }
                         else
                         {
@@ -62,7 +64,7 @@ namespace PropertyChanged.SourceGenerator.Analysis
             }
         }
 
-        private void ResolveAutoDependsOn(IPropertySymbol property, TypeAnalysisLookups lookups)
+        private void ResolveAutoDependsOn(TypeAnalysis typeAnalysis, IPropertySymbol property, TypeAnalysisLookups lookups)
         {
             if (property.GetMethod?.Locations.FirstOrDefault() is { } location &&
                 location.SourceTree?.GetRoot()?.FindNode(location.SourceSpan) is { } getterNode)
@@ -103,7 +105,9 @@ namespace PropertyChanged.SourceGenerator.Analysis
                         continue;
 
                     // It's probably a property access
-                    memberAnalysis.AddAlsoNotify(AlsoNotifyMember.FromProperty(property, this.FindOnPropertyNameChangedMethod(property)));
+                    memberAnalysis.AddAlsoNotify(AlsoNotifyMember.FromProperty(
+                        property,
+                        this.FindOnPropertyNameChangedMethod(typeAnalysis.TypeSymbol, property)));
                 }
             }
         }

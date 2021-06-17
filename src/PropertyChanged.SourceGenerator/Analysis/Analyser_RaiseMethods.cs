@@ -27,8 +27,10 @@ namespace PropertyChanged.SourceGenerator.Analysis
                 .FirstOrDefault(x => SymbolEqualityComparer.Default.Equals(x.Type, this.propertyChangedEventHandlerSymbol) &&
                     !x.IsStatic);
 
+            bool isGeneratingAnyParent = baseTypeAnalyses.Any(x => x.CanGenerate);
+
             // If there's no event, the base type in our hierarchy is defining it
-            typeAnalysis.RequiresEvent = eventSymbol == null && baseTypeAnalyses.Count == 0;
+            typeAnalysis.RequiresEvent = eventSymbol == null && !isGeneratingAnyParent;
 
             // Try and find a method with a name we recognise and a signature we know how to call
             // We prioritise the method name over things like the signature or where in the type hierarchy
@@ -70,14 +72,14 @@ namespace PropertyChanged.SourceGenerator.Analysis
             {
                 // The base type in our hierarchy is defining its own
                 // Make sure that that type can actually access the event, if it's pre-existing
-                if (eventSymbol != null && baseTypeAnalyses.Count == 0 &&
+                if (eventSymbol != null && !isGeneratingAnyParent &&
                     !SymbolEqualityComparer.Default.Equals(eventSymbol.ContainingType, typeSymbol))
                 {
                     this.diagnostics.ReportCouldNotFindRaisePropertyChangedMethod(typeSymbol);
                     return false;
                 }
 
-                typeAnalysis.RequiresRaisePropertyChangedMethod = baseTypeAnalyses.Count == 0;
+                typeAnalysis.RequiresRaisePropertyChangedMethod = !isGeneratingAnyParent;
                 typeAnalysis.RaisePropertyChangedMethodName = this.config.RaisePropertyChangedMethodNames[0];
                 typeAnalysis.RaisePropertyChangedMethodSignature = RaisePropertyChangedMethodSignature.Default;
             }
@@ -151,6 +153,8 @@ namespace PropertyChanged.SourceGenerator.Analysis
             OnPropertyNameChangedInfo? result = null;
             if (methods.Count > 0)
             {
+                // FindCallableOverload might remove some...
+                var firstMethod = methods[0];
                 var signature = FindCallableOverload(methods);
                 if (signature != null)
                 {
@@ -158,7 +162,7 @@ namespace PropertyChanged.SourceGenerator.Analysis
                 }
                 else
                 {
-                    this.diagnostics.RaiseInvalidOnPropertyNameChangedSignature(name, onChangedMethodName, methods);
+                    this.diagnostics.ReportInvalidOnPropertyNameChangedSignature(name, onChangedMethodName, firstMethod);
                 }
             }
 

@@ -131,6 +131,11 @@ namespace PropertyChanged.SourceGenerator
                 this.GenerateRaiseEvent(type, alsoNotify.Name, alsoNotify.IsCallable);
             }
 
+            if (type.IsChangedPropertyName != null && type.IsChangedPropertyName != member.Name)
+            {
+                this.writer.WriteLine($"this.{type.IsChangedPropertyName} = true;");
+            }
+
             this.writer.Indent--;
             this.writer.WriteLine("}");
             this.writer.Indent--;

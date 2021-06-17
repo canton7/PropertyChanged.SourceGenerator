@@ -269,10 +269,8 @@ partial class Derived : global::System.ComponentModel.INotifyPropertyChanged
         {
             if (!global::System.Collections.Generic.EqualityComparer<int>.Default.Equals(value, this._foo))
             {
-                int old_Bar = this.Bar;
                 this._foo = value;
                 this.RaisePropertyChanged(global::PropertyChanged.SourceGenerator.Internal.PropertyChangedEventArgsCache.Foo);
-                this.OnBarChanged(old_Bar, this.Bar);
                 this.RaisePropertyChanged(global::PropertyChanged.SourceGenerator.Internal.PropertyChangedEventArgsCache.Bar);
             }
         }
@@ -306,17 +304,20 @@ partial class Derived : global::System.ComponentModel.INotifyPropertyChanged
         {
             if (!global::System.Collections.Generic.EqualityComparer<int>.Default.Equals(value, this._foo))
             {
-                int old_Bar = this.Bar;
                 this._foo = value;
                 this.RaisePropertyChanged(global::PropertyChanged.SourceGenerator.Internal.PropertyChangedEventArgsCache.Foo);
-                this.OnBarChanged(old_Bar, this.Bar);
                 this.RaisePropertyChanged(global::PropertyChanged.SourceGenerator.Internal.PropertyChangedEventArgsCache.Bar);
             }
         }
     }
 }";
 
-            this.AssertThat(input, It.HasFile("Derived", expected, RemoveInpcMembersRewriter.Instance));
+            this.AssertThat(input, It.HasFile("Derived", expected, RemoveInpcMembersRewriter.Instance)
+                .HasDiagnostics(
+                    // (5,18): Warning INPC013: Found one or more On{PropertyName}Changed methods called 'OnBarChanged' for property 'Bar', but none had the correct signature, or were inaccessible. Skipping
+                    // OnBarChanged
+                    Diagnostic("INPC013", @"OnBarChanged").WithLocation(5, 18)
+                ));
         }
 
         [Test]

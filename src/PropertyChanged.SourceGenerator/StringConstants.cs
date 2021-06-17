@@ -49,10 +49,15 @@ namespace PropertyChanged.SourceGenerator
         public AlsoNotifyAttribute(params string[] otherProperties) { }
     }
 
-    [global::System.AttributeUsage(global::System.AttributeTargets.Field | global::System.AttributeTargets.Property, AllowMultiple = true)]
+    [global::System.AttributeUsage(global::System.AttributeTargets.Field | global::System.AttributeTargets.Property, AllowMultiple = false)]
     internal class DependsOnAttribute : global::System.Attribute
     {
         public DependsOnAttribute(params string[] otherProperties) { }
+    }
+
+    [global::System.AttributeUsage(global::System.AttributeTargets.Field | global::System.AttributeTargets.Property, AllowMultiple = true)]
+    internal class IsChangedAttribute : global::System.Attribute
+    {
     }
 }";
     }

@@ -38,9 +38,12 @@ namespace PropertyChanged.SourceGenerator
                 var eventArgsCache = new EventArgsCache();
                 foreach (var analysis in analyses)
                 {
-                    var generator = new Generator(eventArgsCache);
-                    generator.Generate(analysis!);
-                    context.AddSource(analysis!.TypeSymbol.Name, SourceText.From(generator.ToString(), Encoding.UTF8));
+                    if (analysis.CanGenerate)
+                    {
+                        var generator = new Generator(eventArgsCache);
+                        generator.Generate(analysis!);
+                        context.AddSource(analysis!.TypeSymbol.Name, SourceText.From(generator.ToString(), Encoding.UTF8));
+                    }
                 }
 
                 var nameCacheGenerator = new Generator(eventArgsCache);

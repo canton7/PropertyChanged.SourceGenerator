@@ -157,9 +157,9 @@ partial class Derived
                 .HasFile("Base", expectedBase, StandardRewriters)
                 .HasFile("Derived", expectedDerived, StandardRewriters)
                 .HasDiagnostics(
-                // (10,17): Warning INPC003: Attempted to generate property 'Prop' for member '_bar', but a member with that name already exists. Skipping this property
-                // _bar
-                Diagnostic("INPC003", @"_bar").WithLocation(10, 17)
+                    // (10,17): Warning INPC003: Attempted to generate property 'Prop' for member '_bar', but a member with that name already exists. Skipping this property
+                    // _bar
+                    Diagnostic("INPC003", @"_bar").WithLocation(10, 17)
             ));
         }
     }

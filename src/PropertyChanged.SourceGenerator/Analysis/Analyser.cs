@@ -19,6 +19,7 @@ namespace PropertyChanged.SourceGenerator.Analysis
         private readonly INamedTypeSymbol notifyAttributeSymbol;
         private readonly INamedTypeSymbol alsoNotifyAttributeSymbol;
         private readonly INamedTypeSymbol dependsOnAttributeSymbol;
+        private readonly INamedTypeSymbol isChangedAttributeSymbol;
 
         public Analyser(DiagnosticReporter diagnostics, Configuration config, Compilation compilation)
         {
@@ -43,6 +44,8 @@ namespace PropertyChanged.SourceGenerator.Analysis
                 ?? throw new InvalidOperationException("AlsoNotifyAttribute must have been added to the assembly");
             this.dependsOnAttributeSymbol = compilation.GetTypeByMetadataName("PropertyChanged.SourceGenerator.DependsOnAttribute")
                ?? throw new InvalidOperationException("DependsOnAttribute must have been added to the assembly");
+            this.isChangedAttributeSymbol = compilation.GetTypeByMetadataName("PropertyChanged.SourceGenerator.IsChangedAttribute")
+               ?? throw new InvalidOperationException("IsChangedAttribute must have been added to the assembly");
         }
 
         public IEnumerable<TypeAnalysis> Analyse(HashSet<INamedTypeSymbol> typeSymbols)
@@ -88,60 +91,58 @@ namespace PropertyChanged.SourceGenerator.Analysis
                 }
 
                 // We're set! Analyse it
-                var result = this.Analyse(typeSymbol, baseTypes);
-                if (result != null)
-                {
-                    results.Add(typeSymbol, result);
-                }
+                results.Add(typeSymbol, this.Analyse(typeSymbol, baseTypes));
             }
         }
 
-        private TypeAnalysis? Analyse(INamedTypeSymbol typeSymbol, List<TypeAnalysis> baseTypeAnalyses)
+        private TypeAnalysis Analyse(INamedTypeSymbol typeSymbol, List<TypeAnalysis> baseTypeAnalyses)
         {
             if (this.inpcSymbol == null)
                 throw new InvalidOperationException();
 
-            bool isPartial = typeSymbol.DeclaringSyntaxReferences
-                .Select(x => x.GetSyntax())
-                .OfType<ClassDeclarationSyntax>()
-                .Any(x => x.Modifiers.Any(m => m.IsKind(SyntaxKind.PartialKeyword)));
-            if (!isPartial)
-            {
-                this.diagnostics.ReportTypeIsNotPartial(typeSymbol);
-                return null;
-            }
-
             var result = new TypeAnalysis()
             {
-                TypeSymbol = typeSymbol
+                CanGenerate = true,
+                TypeSymbol = typeSymbol,
             };
 
             if (!this.TryFindPropertyRaiseMethod(typeSymbol, result, baseTypeAnalyses))
             {
-                return null;
+                result.CanGenerate = false;
             }
 
-            // If we've got any base types, that will have the INPC interface and event on, for sure
-            result.HasInpcInterface = baseTypeAnalyses.Count > 0
+            // If we've got any base types we're generating partial types for , that will have the INPC interface
+            // and event on, for sure
+            result.HasInpcInterface = baseTypeAnalyses.Any(x => x.CanGenerate)
                 || typeSymbol.AllInterfaces.Contains(this.inpcSymbol, SymbolEqualityComparer.Default);
             result.NullableContext = this.compilation.Options.NullableContextOptions;
 
+            this.ResoveInheritedIsChanged(result, baseTypeAnalyses);
+
             foreach (var member in typeSymbol.GetMembers())
             {
+                MemberAnalysis? memberAnalysis = null;
                 switch (member)
                 {
                     case IFieldSymbol field when this.GetNotifyAttribute(field) is { } attribute:
-                        result.Members.Add(this.AnalyseField(field, attribute));
+                        memberAnalysis = this.AnalyseField(field, attribute);
                         break;
 
                     case IPropertySymbol property when this.GetNotifyAttribute(property) is { } attribute:
-                        result.Members.Add(this.AnalyseProperty(property, attribute));
+                        memberAnalysis = this.AnalyseProperty(property, attribute);
                         break;
 
                     case var _ when member is IFieldSymbol or IPropertySymbol:
                         this.EnsureNoUnexpectedAttributes(member);
                         break;
                 }
+
+                if (memberAnalysis != null)
+                {
+                    result.Members.Add(memberAnalysis);
+                }
+
+                this.ResolveIsChangedMember(result, member, memberAnalysis);
             }
 
             // Now that we've got all members, we can do inter-member analysis
@@ -149,6 +150,19 @@ namespace PropertyChanged.SourceGenerator.Analysis
             this.ReportPropertyNameCollisions(result, baseTypeAnalyses);
             this.ResolveAlsoNotify(result, baseTypeAnalyses);
             this.ResolveDependsOn(result);
+
+            bool isPartial = typeSymbol.DeclaringSyntaxReferences
+                .Select(x => x.GetSyntax())
+                .OfType<ClassDeclarationSyntax>()
+                .Any(x => x.Modifiers.Any(m => m.IsKind(SyntaxKind.PartialKeyword)));
+            if (!isPartial)
+            {
+                result.CanGenerate = false;
+                if (result.Members.Count > 0)
+                {
+                    this.diagnostics.ReportTypeIsNotPartial(typeSymbol);
+                }
+            }
 
             return result;
         }
@@ -335,10 +349,21 @@ namespace PropertyChanged.SourceGenerator.Analysis
 
         private static IEnumerable<INamedTypeSymbol> TypeAndBaseTypes(INamedTypeSymbol type)
         {
-            for (var t = type; t != null; t = t.BaseType)
+            // Stop at 'object': no point in analysing that
+            for (var t = type; t!.SpecialType != SpecialType.System_Object; t = t.BaseType)
             {
                 yield return t;
             }
+        }
+
+        private static ITypeSymbol? GetMemberType(ISymbol member)
+        {
+            return member switch
+            {
+                IFieldSymbol field => field.Type,
+                IPropertySymbol property => property.Type,
+                _ => null,
+            };
         }
 
         private AttributeData? GetNotifyAttribute(ISymbol member)

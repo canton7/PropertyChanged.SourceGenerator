@@ -34,6 +34,7 @@ namespace PropertyChanged.SourceGenerator
             "INPC003",
             "Member with this name already exists",
             "Attempted to generate property '{0}' for member '{1}', but a member with that name already exists. Skipping this property");
+
         public void ReportMemberWithNameAlreadyExists(ISymbol symbol, string name)
         {
             this.AddDiagnostic(memberWithNameAlreadyExists, symbol.Locations, name, symbol.Name);
@@ -124,9 +125,37 @@ namespace PropertyChanged.SourceGenerator
             "INPC013",
             "Unable to find matching On{PropertyName}Changed",
             "Found one or more On{{PropertyName}}Changed methods called '{0}' for property '{1}', but none had the correct signature, or were inaccessible. Skipping");
-        public void RaiseInvalidOnPropertyNameChangedSignature(string name, string onChangedMethodName, List<IMethodSymbol> methods)
+        public void ReportInvalidOnPropertyNameChangedSignature(string name, string onChangedMethodName, IMethodSymbol method)
         {
-            this.AddDiagnostic(invalidOnPropertyNameChangedSignature, methods[0].Locations, onChangedMethodName, name);
+            this.AddDiagnostic(invalidOnPropertyNameChangedSignature, method.Locations, onChangedMethodName, name);
+        }
+
+        private static readonly DiagnosticDescriptor multipleIsChangedProperties = CreateDescriptor(
+            "INPC014",
+            "Multiple [IsChanged] proeprties",
+            "Found multiple [IsChanged] properties, but only one is allowed. Ignoring this one, and using '{0}'");
+        public void ReportMultipleIsChangedProperties(string usedPropertyName, AttributeData attribute, ISymbol member)
+        {
+            this.AddDiagnostic(multipleIsChangedProperties, AttributeLocations(attribute, member), usedPropertyName);
+        }
+
+        private static readonly DiagnosticDescriptor nonBooleanIsChangedProperty = CreateDescriptor(
+            "INPC015",
+            "[IsChanged] property does not return bool",
+            "[IsChanged] property '{0}' does not return a bool. Skipping");
+        public void ReportNonBooleanIsChangedProperty(ISymbol member)
+        {
+            this.AddDiagnostic(nonBooleanIsChangedProperty, member.Locations, member.Name);
+        }
+
+        private static readonly DiagnosticDescriptor isChangedDoesNotHaveSetter = CreateDescriptor(
+            "INPC016",
+            "[IsChanged] property does not have a setter",
+            "[IsChanged] property '{0}' does not have a setter. Skipping");
+
+        internal void ReportIsChangedDoesNotHaveSetter(ISymbol member)
+        {
+            this.AddDiagnostic(isChangedDoesNotHaveSetter, member.Locations, member.Name);
         }
 
         private static DiagnosticDescriptor CreateDescriptor(string code, string title, string messageFormat, DiagnosticSeverity severity = DiagnosticSeverity.Warning)

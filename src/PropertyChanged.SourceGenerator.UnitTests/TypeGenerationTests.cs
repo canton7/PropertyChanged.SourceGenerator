@@ -39,7 +39,7 @@ namespace Test.Foo
         }
 
         [Test]
-        public void RaisesIfTypeIsNotPartial()
+        public void RaisesIfTypeIsNotPartialAndHasNotifyProperties()
         {
             string input = @"
 using System.ComponentModel;

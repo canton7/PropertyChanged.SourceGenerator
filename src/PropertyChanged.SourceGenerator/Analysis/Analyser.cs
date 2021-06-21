@@ -11,8 +11,8 @@ namespace PropertyChanged.SourceGenerator.Analysis
     public partial class Analyser
     {
         private readonly DiagnosticReporter diagnostics;
-        private readonly Configuration config;
         private readonly Compilation compilation;
+        private readonly ConfigurationParser configurationParser;
         private readonly INamedTypeSymbol? inpcSymbol;
         private readonly INamedTypeSymbol? propertyChangedEventHandlerSymbol;
         private readonly INamedTypeSymbol? propertyChangedEventArgsSymbol;
@@ -21,11 +21,14 @@ namespace PropertyChanged.SourceGenerator.Analysis
         private readonly INamedTypeSymbol dependsOnAttributeSymbol;
         private readonly INamedTypeSymbol isChangedAttributeSymbol;
 
-        public Analyser(DiagnosticReporter diagnostics, Configuration config, Compilation compilation)
+        public Analyser(
+            DiagnosticReporter diagnostics,
+            Compilation compilation,
+            ConfigurationParser configurationParser)
         {
             this.diagnostics = diagnostics;
-            this.config = config;
             this.compilation = compilation;
+            this.configurationParser = configurationParser;
 
             this.inpcSymbol = compilation.GetTypeByMetadataName("System.ComponentModel.INotifyPropertyChanged");
             if (this.inpcSymbol == null)
@@ -100,13 +103,15 @@ namespace PropertyChanged.SourceGenerator.Analysis
             if (this.inpcSymbol == null)
                 throw new InvalidOperationException();
 
+            var config = this.configurationParser.Parse(typeSymbol.DeclaringSyntaxReferences.FirstOrDefault()?.SyntaxTree);
+
             var result = new TypeAnalysis()
             {
                 CanGenerate = true,
                 TypeSymbol = typeSymbol,
             };
 
-            if (!this.TryFindPropertyRaiseMethod(typeSymbol, result, baseTypeAnalyses))
+            if (!this.TryFindPropertyRaiseMethod(typeSymbol, result, baseTypeAnalyses, config))
             {
                 result.CanGenerate = false;
             }
@@ -125,11 +130,11 @@ namespace PropertyChanged.SourceGenerator.Analysis
                 switch (member)
                 {
                     case IFieldSymbol field when this.GetNotifyAttribute(field) is { } attribute:
-                        memberAnalysis = this.AnalyseField(field, attribute);
+                        memberAnalysis = this.AnalyseField(field, attribute, config);
                         break;
 
                     case IPropertySymbol property when this.GetNotifyAttribute(property) is { } attribute:
-                        memberAnalysis = this.AnalyseProperty(property, attribute);
+                        memberAnalysis = this.AnalyseProperty(property, attribute, config);
                         break;
 
                     case var _ when member is IFieldSymbol or IPropertySymbol:
@@ -167,16 +172,16 @@ namespace PropertyChanged.SourceGenerator.Analysis
             return result;
         }
 
-        private MemberAnalysis AnalyseField(IFieldSymbol field, AttributeData notifyAttribute)
+        private MemberAnalysis AnalyseField(IFieldSymbol field, AttributeData notifyAttribute, Configuration config)
         {
-            var result = this.AnalyseMember(field, field.Type, notifyAttribute);
+            var result = this.AnalyseMember(field, field.Type, notifyAttribute, config);
 
             return result;
         }
 
-        private MemberAnalysis AnalyseProperty(IPropertySymbol property, AttributeData notifyAttribute)
+        private MemberAnalysis AnalyseProperty(IPropertySymbol property, AttributeData notifyAttribute, Configuration config)
         {
-            var result = this.AnalyseMember(property, property.Type, notifyAttribute);
+            var result = this.AnalyseMember(property, property.Type, notifyAttribute, config);
 
             return result;
         }
@@ -184,7 +189,8 @@ namespace PropertyChanged.SourceGenerator.Analysis
         private MemberAnalysis AnalyseMember(
             ISymbol backingMember,
             ITypeSymbol type,
-            AttributeData notifyAttribute)
+            AttributeData notifyAttribute,
+            Configuration config)
         {
             string? explicitName = null;
             Accessibility getterAccessibility = Accessibility.Public;
@@ -215,7 +221,7 @@ namespace PropertyChanged.SourceGenerator.Analysis
                 setterAccessibility = Accessibility.ProtectedOrInternal;
             }
 
-            string name = explicitName ?? this.TransformName(backingMember);
+            string name = explicitName ?? this.TransformName(backingMember, config);
             var result = new MemberAnalysis()
             {
                 BackingMember = backingMember,
@@ -241,32 +247,32 @@ namespace PropertyChanged.SourceGenerator.Analysis
             return result;
         }
 
-        private string TransformName(ISymbol member)
+        private string TransformName(ISymbol member, Configuration config)
         {
             string name = member.Name;
-            foreach (string removePrefix in this.config.RemovePrefixes)
+            foreach (string removePrefix in config.RemovePrefixes)
             {
                 if (name.StartsWith(removePrefix))
                 {
                     name = name.Substring(removePrefix.Length);
                 }
             }
-            foreach (string removeSuffix in this.config.RemoveSuffixes)
+            foreach (string removeSuffix in config.RemoveSuffixes)
             {
                 if (name.EndsWith(removeSuffix))
                 {
                     name = name.Substring(0, name.Length - removeSuffix.Length);
                 }
             }
-            if (this.config.AddPrefix != null)
+            if (config.AddPrefix != null)
             {
-                name = this.config.AddPrefix + name;
+                name = config.AddPrefix + name;
             }
-            if (this.config.AddSuffix != null)
+            if (config.AddSuffix != null)
             {
-                name += this.config.AddSuffix;
+                name += config.AddSuffix;
             }
-            switch (this.config.FirstLetterCapitalisation)
+            switch (config.FirstLetterCapitalisation)
             {
                 case Capitalisation.None:
                     break;

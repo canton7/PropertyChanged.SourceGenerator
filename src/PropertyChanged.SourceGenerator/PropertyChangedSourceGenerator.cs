@@ -23,11 +23,11 @@ namespace PropertyChanged.SourceGenerator
             if (context.SyntaxContextReceiver is not SyntaxContextReceiver receiver)
                 return;
 
-            var config = new Configuration();
             var diagnostics = new DiagnosticReporter();
+            var configurationParser = new ConfigurationParser(context.AnalyzerConfigOptions, diagnostics);
             try
             {
-                var analyser = new Analyser(diagnostics, config, context.Compilation);
+                var analyser = new Analyser(diagnostics, context.Compilation, configurationParser);
 
                 // If we've got diagnostics here, bail
                 if (diagnostics.HasDiagnostics)

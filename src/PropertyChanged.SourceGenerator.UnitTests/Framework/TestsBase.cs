@@ -1,14 +1,18 @@
 ﻿using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
+using Microsoft.CodeAnalysis.Diagnostics;
+using Microsoft.CodeAnalysis.Text;
 using NUnit.Framework;
 using PropertyChanged.SourceGenerator.Analysis;
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.ComponentModel;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace PropertyChanged.SourceGenerator.UnitTests.Framework
@@ -43,7 +47,7 @@ namespace PropertyChanged.SourceGenerator.UnitTests.Framework
 
             var generator = new PropertyChangedSourceGenerator();
 
-            GeneratorDriver driver = CSharpGeneratorDriver.Create(generator);
+            GeneratorDriver driver = CSharpGeneratorDriver.Create(new[] { generator }, optionsProvider: new TestOptionsProvider());
             driver = driver.RunGeneratorsAndUpdateCompilation(inputCompilation, out var outputCompilation, out var diagnostics);
 
             return (driver, outputCompilation, diagnostics);
@@ -56,7 +60,7 @@ namespace PropertyChanged.SourceGenerator.UnitTests.Framework
             Assert.NotNull(type);
 
             var diagnostics = new DiagnosticReporter();
-            var analyser = new Analyser(diagnostics, new Configuration(), compilation);
+            var analyser = new Analyser(diagnostics, compilation, new ConfigurationParser(new TestOptionsProvider(), diagnostics));
             var typeAnalyses = analyser.Analyse(new HashSet<INamedTypeSymbol>(SymbolEqualityComparer.Default) { type! }).ToList();
 
             DiagnosticVerifier.VerifyDiagnostics(diagnostics.Diagnostics, Array.Empty<DiagnosticResult>(), 1);
@@ -201,5 +205,22 @@ namespace PropertyChanged.SourceGenerator.UnitTests.Framework
             this.Source = source;
             this.Rewriters = rewriters;
         }
+    }
+
+    public class TestConfigOptions : AnalyzerConfigOptions
+    {
+        public override bool TryGetValue(string key, [NotNullWhen(true)] out string? value)
+        {
+            value = null;
+            return false;
+        }
+    }
+
+    public class TestOptionsProvider : AnalyzerConfigOptionsProvider
+    {
+        public override AnalyzerConfigOptions GlobalOptions => new TestConfigOptions();
+
+        public override AnalyzerConfigOptions GetOptions(SyntaxTree tree) => new TestConfigOptions();
+        public override AnalyzerConfigOptions GetOptions(AdditionalText textFile) => new TestConfigOptions();
     }
 }

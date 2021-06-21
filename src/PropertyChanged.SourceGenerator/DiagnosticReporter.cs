@@ -44,6 +44,7 @@ namespace PropertyChanged.SourceGenerator
             "INPC004",
             "Another member has the same generated name as this one",
             "Member '{0}' will have the same generated property name '{1}' as member '{2}'. Skipping both properties");
+
         public void ReportAnotherMemberHasSameGeneratedName(ISymbol thisMember, ISymbol otherMember, string name)
         {
             this.AddDiagnostic(anotherMemberHasSameGeneratedName, thisMember.Locations, thisMember.Name, name, otherMember.Name);
@@ -153,9 +154,18 @@ namespace PropertyChanged.SourceGenerator
             "[IsChanged] property does not have a setter",
             "[IsChanged] property '{0}' does not have a setter. Skipping");
 
-        internal void ReportIsChangedDoesNotHaveSetter(ISymbol member)
+        public void ReportIsChangedDoesNotHaveSetter(ISymbol member)
         {
             this.AddDiagnostic(isChangedDoesNotHaveSetter, member.Locations, member.Name);
+        }
+
+        private static readonly DiagnosticDescriptor unknownFirstLetterCapitalisation = CreateDescriptor(
+            "INPC017",
+            "Unrecognised config value for propertychanged_first_letter_capitalization",
+            "Unrecognised value '{0}' for config value propertychanged_first_letter_capitalization. Expected 'upper_case', 'lower_case' or 'none'");
+        public void ReportUnknownFirstLetterCapitalisation(string firstLetterCapitalisation)
+        {
+            this.AddDiagnostic(unknownFirstLetterCapitalisation, (Location?)null, firstLetterCapitalisation);
         }
 
         private static DiagnosticDescriptor CreateDescriptor(string code, string title, string messageFormat, DiagnosticSeverity severity = DiagnosticSeverity.Warning)

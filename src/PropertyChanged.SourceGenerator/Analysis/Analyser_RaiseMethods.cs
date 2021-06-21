@@ -11,7 +11,8 @@ namespace PropertyChanged.SourceGenerator.Analysis
         private bool TryFindPropertyRaiseMethod(
             INamedTypeSymbol typeSymbol,
             TypeAnalysis typeAnalysis,
-            IReadOnlyList<TypeAnalysis> baseTypeAnalyses)
+            IReadOnlyList<TypeAnalysis> baseTypeAnalyses, 
+            Configuration config)
         {
             // Try and find out how we raise the PropertyChanged event
             // 1. If noone's defined the PropertyChanged event yet, we'll define it ourselves
@@ -38,7 +39,7 @@ namespace PropertyChanged.SourceGenerator.Analysis
             // just messed up the signature
             RaisePropertyChangedMethodSignature? signature = null;
             string? methodName = null;
-            foreach (string name in this.config.RaisePropertyChangedMethodNames)
+            foreach (string name in config.RaisePropertyChangedMethodNames)
             {
                 var methods = TypeAndBaseTypes(typeSymbol)
                     .SelectMany(x => x.GetMembers(name))
@@ -80,7 +81,7 @@ namespace PropertyChanged.SourceGenerator.Analysis
                 }
 
                 typeAnalysis.RequiresRaisePropertyChangedMethod = !isGeneratingAnyParent;
-                typeAnalysis.RaisePropertyChangedMethodName = this.config.RaisePropertyChangedMethodNames[0];
+                typeAnalysis.RaisePropertyChangedMethodName = config.RaisePropertyChangedMethodNames[0];
                 typeAnalysis.RaisePropertyChangedMethodSignature = RaisePropertyChangedMethodSignature.Default;
             }
 

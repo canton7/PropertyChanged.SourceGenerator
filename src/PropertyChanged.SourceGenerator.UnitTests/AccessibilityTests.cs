@@ -110,5 +110,71 @@ partial class SomeViewModel : global::System.ComponentModel.INotifyPropertyChang
                 Diagnostic("INPC005", @"Notify(Getter.Internal, Setter.Protected)").WithLocation(4, 6)
             ));
         }
+
+        [Test]
+        public void RaisesIfBackingFieldIsReadOnly()
+        {
+            string input = @"
+public partial class SomeViewModel
+{
+    [Notify]
+    private readonly int _foo;
+}";
+            string expected = @"
+partial class SomeViewModel : global::System.ComponentModel.INotifyPropertyChanged
+{
+}";
+
+            this.AssertThat(input, It.HasFile("SomeViewModel", expected, StandardRewriters)
+                .HasDiagnostics(
+                    // (5,26): Warning INPC018: Backing field '_foo' cannot be readonly. Skipping
+                    // _foo
+                    Diagnostic("INPC018", @"_foo").WithLocation(5, 26)
+            ));
+        }
+
+        [Test]
+        public void RaisesIfBackingPropertyIsGetterOnly()
+        {
+            string input = @"
+public partial class SomeViewModel
+{
+    [Notify]
+    private int _foo { get; }
+}";
+            string expected = @"
+partial class SomeViewModel : global::System.ComponentModel.INotifyPropertyChanged
+{
+}";
+
+            this.AssertThat(input, It.HasFile("SomeViewModel", expected, StandardRewriters)
+                .HasDiagnostics(
+                    // (5,17): Warning INPC019: Backing property '_foo' cannot be getter-only. Skipping
+                    // _foo
+                    Diagnostic("INPC019", @"_foo").WithLocation(5, 17)
+            ));
+        }
+
+        [Test]
+        public void RaisesIfBackingPropertyIsSetterOnly()
+        {
+            string input = @"
+public partial class SomeViewModel
+{
+    [Notify]
+    private int _foo { set { } }
+}";
+            string expected = @"
+partial class SomeViewModel : global::System.ComponentModel.INotifyPropertyChanged
+{
+}";
+
+            this.AssertThat(input, It.HasFile("SomeViewModel", expected, StandardRewriters)
+                .HasDiagnostics(
+                    // (5,17): Warning INPC019: Backing property '_foo' must have a getter and a setter. Skipping
+                    // _foo
+                    Diagnostic("INPC019", @"_foo").WithLocation(5, 17)
+            ));
+        }
     }
 }

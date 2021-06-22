@@ -144,6 +144,7 @@ namespace PropertyChanged.SourceGenerator
             "INPC015",
             "[IsChanged] property does not return bool",
             "[IsChanged] property '{0}' does not return a bool. Skipping");
+
         public void ReportNonBooleanIsChangedProperty(ISymbol member)
         {
             this.AddDiagnostic(nonBooleanIsChangedProperty, member.Locations, member.Name);
@@ -166,6 +167,24 @@ namespace PropertyChanged.SourceGenerator
         public void ReportUnknownFirstLetterCapitalisation(string firstLetterCapitalisation)
         {
             this.AddDiagnostic(unknownFirstLetterCapitalisation, (Location?)null, firstLetterCapitalisation);
+        }
+
+        private static readonly DiagnosticDescriptor readonlyBackingMember = CreateDescriptor(
+            "INPC018",
+            "Backing field cannot be readonly",
+            "Backing field '{0}' cannot be readonly. Skipping");
+        public void RaiseReadonlyBackingMember(IFieldSymbol field)
+        {
+            this.AddDiagnostic(readonlyBackingMember, field.Locations, field.Name);
+        }
+
+        private static readonly DiagnosticDescriptor backingPropertyMustHaveGetterAndSetter = CreateDescriptor(
+            "INPC019",
+            "Backing property must have a getter and a setter",
+            "Backing property '{0}' must have a getter and a setter. Skipping");
+        public void RaiseBackingPropertyMustHaveGetterAndSetter(IPropertySymbol property)
+        {
+            this.AddDiagnostic(backingPropertyMustHaveGetterAndSetter, property.Locations, property.Name);
         }
 
         private static DiagnosticDescriptor CreateDescriptor(string code, string title, string messageFormat, DiagnosticSeverity severity = DiagnosticSeverity.Warning)

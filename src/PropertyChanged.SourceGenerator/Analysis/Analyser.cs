@@ -172,21 +172,29 @@ namespace PropertyChanged.SourceGenerator.Analysis
             return result;
         }
 
-        private MemberAnalysis AnalyseField(IFieldSymbol field, AttributeData notifyAttribute, Configuration config)
+        private MemberAnalysis? AnalyseField(IFieldSymbol field, AttributeData notifyAttribute, Configuration config)
         {
+            if (field.IsReadOnly)
+            {
+                this.diagnostics.RaiseReadonlyBackingMember(field);
+                return null;
+            }
             var result = this.AnalyseMember(field, field.Type, notifyAttribute, config);
-
             return result;
         }
 
-        private MemberAnalysis AnalyseProperty(IPropertySymbol property, AttributeData notifyAttribute, Configuration config)
+        private MemberAnalysis? AnalyseProperty(IPropertySymbol property, AttributeData notifyAttribute, Configuration config)
         {
+            if (property.GetMethod == null || property.SetMethod == null)
+            {
+                this.diagnostics.RaiseBackingPropertyMustHaveGetterAndSetter(property);
+                return null;
+            }
             var result = this.AnalyseMember(property, property.Type, notifyAttribute, config);
-
             return result;
         }
 
-        private MemberAnalysis AnalyseMember(
+        private MemberAnalysis? AnalyseMember(
             ISymbol backingMember,
             ITypeSymbol type,
             AttributeData notifyAttribute,

@@ -92,5 +92,18 @@ partial class SomeViewModel<T> : global::System.ComponentModel.INotifyPropertyCh
 
             this.AssertThat(input, It.HasFile("SomeViewModel", expected, StandardRewriters));
         }
+
+        [Test]
+        public void DoesNotGenerateEmptyCache()
+        {
+            string input = @"
+public partial class SomeViewModel
+{
+    [Notify]
+    private int _foo;
+    protected void OnPropertyChanged(string propertyName) => PropertyChanged?.Invoke(this, null);
+}";
+            this.AssertThat(input, It.DoesNotHaveFile("PropertyChangedEventArgsCache"));
+        }
     }
 }

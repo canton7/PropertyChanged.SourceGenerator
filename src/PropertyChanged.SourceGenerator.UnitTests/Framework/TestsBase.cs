@@ -111,6 +111,12 @@ namespace PropertyChanged.SourceGenerator.UnitTests.Framework
 
                     Assert.AreEqual(expectedFile.Source.Trim().Replace("\r\n", "\n"), actual);
                 }
+
+                foreach (string expectedMissingFile in expectation.ExpectedMissingFiles)
+                {
+                    var generatedTree = runResult.GeneratedTrees.FirstOrDefault(x => Path.GetFileNameWithoutExtension(x.FilePath) == expectedMissingFile);
+                    Assert.Null(generatedTree, $"Unexpected file with name {expectedMissingFile}");
+                }
             }
 
             //Assert.AreEqual(2, outputCompilation.SyntaxTrees.Count());
@@ -153,20 +159,27 @@ namespace PropertyChanged.SourceGenerator.UnitTests.Framework
     {
         public ImmutableList<DiagnosticResult> ExpectedDiagnostics { get; }
         public ImmutableList<FileExpectation> ExpectedFiles { get; }
+        public ImmutableList<string> ExpectedMissingFiles { get; }
         public ImmutableList<string> AllowedCompilationDiagnostics { get; }
 
         public Expectation()
-            : this(ImmutableList<DiagnosticResult>.Empty, ImmutableList<FileExpectation>.Empty, ImmutableList<string>.Empty)
+            : this(
+                  ImmutableList<DiagnosticResult>.Empty,
+                  ImmutableList<FileExpectation>.Empty,
+                  ImmutableList<string>.Empty,
+                  ImmutableList<string>.Empty)
         {
         }
 
         private Expectation(
             ImmutableList<DiagnosticResult> expectedDiagnostics,
             ImmutableList<FileExpectation> expectedFiles,
+            ImmutableList<string> expectedMissingFiles,
             ImmutableList<string> allowedCompilationDiagnostics)
         {
             this.ExpectedDiagnostics = expectedDiagnostics;
             this.ExpectedFiles = expectedFiles;
+            this.ExpectedMissingFiles = expectedMissingFiles;
             this.AllowedCompilationDiagnostics = allowedCompilationDiagnostics;
         }
 
@@ -178,18 +191,39 @@ namespace PropertyChanged.SourceGenerator.UnitTests.Framework
             if (this.ExpectedFiles.Any(x => x.Name == name))
                 throw new ArgumentException("Already have a file with that name", nameof(name));
 
-            return new Expectation(this.ExpectedDiagnostics, this.ExpectedFiles.Add(
-                new FileExpectation(name, source, rewriters.ToImmutableList())), this.AllowedCompilationDiagnostics);
+            return new Expectation(
+                this.ExpectedDiagnostics,
+                this.ExpectedFiles.Add(
+                new FileExpectation(name, source, rewriters.ToImmutableList())),
+                this.ExpectedMissingFiles,
+                this.AllowedCompilationDiagnostics);
         }
 
         public Expectation HasDiagnostics(params DiagnosticResult[] expectediagnostics)
         {
-            return new Expectation(this.ExpectedDiagnostics.AddRange(expectediagnostics), this.ExpectedFiles, this.AllowedCompilationDiagnostics);
+            return new Expectation(
+                this.ExpectedDiagnostics.AddRange(expectediagnostics),
+                this.ExpectedFiles,
+                this.ExpectedMissingFiles,
+                this.AllowedCompilationDiagnostics);
+        }
+
+        public Expectation DoesNotHaveFile(string name)
+        {
+            return new Expectation(
+                this.ExpectedDiagnostics,
+                this.ExpectedFiles,
+                this.ExpectedMissingFiles.Add(name),
+                this.AllowedCompilationDiagnostics);
         }
 
         public Expectation AllowCompilationDiagnostics(params string[] compilationDiagnostics)
         {
-            return new Expectation(this.ExpectedDiagnostics, this.ExpectedFiles, this.AllowedCompilationDiagnostics.AddRange(compilationDiagnostics));
+            return new Expectation(
+                this.ExpectedDiagnostics,
+                this.ExpectedFiles,
+                this.ExpectedMissingFiles,
+                this.AllowedCompilationDiagnostics.AddRange(compilationDiagnostics));
         }
     }
 

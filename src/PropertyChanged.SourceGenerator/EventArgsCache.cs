@@ -14,6 +14,8 @@ namespace PropertyChanged.SourceGenerator
         private readonly Dictionary<Key, string> propertyNameToCacheName = new();
         private readonly HashSet<string> cacheNames = new(StringComparer.Ordinal);
 
+        public bool IsEmpty => cacheNames.Count == 0;
+
         public string GetOrAdd(string? propertyName)
         {
             if (this.propertyNameToCacheName.TryGetValue(propertyName, out string cacheName))

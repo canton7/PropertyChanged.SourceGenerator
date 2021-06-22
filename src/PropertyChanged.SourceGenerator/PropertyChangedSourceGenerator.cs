@@ -46,9 +46,12 @@ namespace PropertyChanged.SourceGenerator
                     }
                 }
 
-                var nameCacheGenerator = new Generator(eventArgsCache);
-                nameCacheGenerator.GenerateNameCache();
-                context.AddSource("PropertyChangedEventArgsCache", SourceText.From(nameCacheGenerator.ToString(), Encoding.UTF8));
+                if (!eventArgsCache.IsEmpty)
+                {
+                    var nameCacheGenerator = new Generator(eventArgsCache);
+                    nameCacheGenerator.GenerateNameCache();
+                    context.AddSource("PropertyChangedEventArgsCache", SourceText.From(nameCacheGenerator.ToString(), Encoding.UTF8));
+                }
             }
             finally
             {

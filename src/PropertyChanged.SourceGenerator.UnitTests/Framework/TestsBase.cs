@@ -1,4 +1,5 @@
-﻿using Microsoft.CodeAnalysis;
+﻿using Basic.Reference.Assemblies;
+using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.Diagnostics;
 using Microsoft.CodeAnalysis.Text;
@@ -31,9 +32,7 @@ namespace PropertyChanged.SourceGenerator.UnitTests.Framework
 
             var inputCompilation = CSharpCompilation.Create("TestCompilation",
                 syntaxTrees,
-                AppDomain.CurrentDomain.GetAssemblies()
-                    .Where(x => !x.IsDynamic && !string.IsNullOrWhiteSpace(x.Location))
-                    .Select(x => MetadataReference.CreateFromFile(x.Location)),
+                ReferenceAssemblies.Net50,
                 new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary,
                     nullableContextOptions: nullableContextOptions));
             return inputCompilation;

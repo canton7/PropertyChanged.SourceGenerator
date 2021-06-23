@@ -14,7 +14,7 @@ namespace PropertyChanged.SourceGenerator
     public class Configuration
     {
         public string[] RaisePropertyChangedMethodNames { get; set; } = new[] {
-            "RaisePropertyChanged", "NotifyOfPropertyChange", "NotifyPropertyChanged", "OnPropertyChanged", 
+            "OnPropertyChanged", "RaisePropertyChanged", "NotifyOfPropertyChange", "NotifyPropertyChanged", 
         };
 
         public string[] RemovePrefixes { get; set; } = new[] { "_" };

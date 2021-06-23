@@ -15,7 +15,7 @@ namespace PropertyChanged.SourceGenerator.UnitTests.Framework
 
         public override SyntaxNode? VisitMethodDeclaration(MethodDeclarationSyntax node)
         {
-            if (node.Identifier.ValueText == "RaisePropertyChanged")
+            if (node.Identifier.ValueText == "OnPropertyChanged")
             {
                 return null;
             }

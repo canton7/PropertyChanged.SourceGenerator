@@ -76,8 +76,8 @@ partial class Base : global::System.ComponentModel.INotifyPropertyChanged
             if (!global::System.Collections.Generic.EqualityComparer<string>.Default.Equals(value, this._foo))
             {
                 this._foo = value;
-                this.RaisePropertyChanged(global::PropertyChanged.SourceGenerator.Internal.PropertyChangedEventArgsCache.Foo);
-                this.RaisePropertyChanged(global::PropertyChanged.SourceGenerator.Internal.PropertyChangedEventArgsCache.Bar);
+                this.OnPropertyChanged(global::PropertyChanged.SourceGenerator.Internal.PropertyChangedEventArgsCache.Foo);
+                this.OnPropertyChanged(global::PropertyChanged.SourceGenerator.Internal.PropertyChangedEventArgsCache.Bar);
             }
         }
     }
@@ -114,8 +114,8 @@ partial class SomeViewModel : global::System.ComponentModel.INotifyPropertyChang
             if (!global::System.Collections.Generic.EqualityComparer<string>.Default.Equals(value, this._foo))
             {
                 this._foo = value;
-                this.RaisePropertyChanged(global::PropertyChanged.SourceGenerator.Internal.PropertyChangedEventArgsCache.Foo);
-                this.RaisePropertyChanged(global::PropertyChanged.SourceGenerator.Internal.PropertyChangedEventArgsCache.Bar);
+                this.OnPropertyChanged(global::PropertyChanged.SourceGenerator.Internal.PropertyChangedEventArgsCache.Foo);
+                this.OnPropertyChanged(global::PropertyChanged.SourceGenerator.Internal.PropertyChangedEventArgsCache.Bar);
             }
         }
     }
@@ -127,7 +127,7 @@ partial class SomeViewModel : global::System.ComponentModel.INotifyPropertyChang
             if (!global::System.Collections.Generic.EqualityComparer<string>.Default.Equals(value, this._bar))
             {
                 this._bar = value;
-                this.RaisePropertyChanged(global::PropertyChanged.SourceGenerator.Internal.PropertyChangedEventArgsCache.Bar);
+                this.OnPropertyChanged(global::PropertyChanged.SourceGenerator.Internal.PropertyChangedEventArgsCache.Bar);
             }
         }
     }
@@ -158,8 +158,8 @@ partial class SomeViewModel : global::System.ComponentModel.INotifyPropertyChang
             if (!global::System.Collections.Generic.EqualityComparer<string>.Default.Equals(value, this._foo))
             {
                 this._foo = value;
-                this.RaisePropertyChanged(global::PropertyChanged.SourceGenerator.Internal.PropertyChangedEventArgsCache.Foo);
-                this.RaisePropertyChanged(global::PropertyChanged.SourceGenerator.Internal.PropertyChangedEventArgsCache.Bar);
+                this.OnPropertyChanged(global::PropertyChanged.SourceGenerator.Internal.PropertyChangedEventArgsCache.Foo);
+                this.OnPropertyChanged(global::PropertyChanged.SourceGenerator.Internal.PropertyChangedEventArgsCache.Bar);
             }
         }
     }
@@ -193,8 +193,8 @@ partial class Derived
             if (!global::System.Collections.Generic.EqualityComparer<string>.Default.Equals(value, this._bar))
             {
                 this._bar = value;
-                this.RaisePropertyChanged(global::PropertyChanged.SourceGenerator.Internal.PropertyChangedEventArgsCache.Bar);
-                this.RaisePropertyChanged(global::PropertyChanged.SourceGenerator.Internal.PropertyChangedEventArgsCache.Foo);
+                this.OnPropertyChanged(global::PropertyChanged.SourceGenerator.Internal.PropertyChangedEventArgsCache.Bar);
+                this.OnPropertyChanged(global::PropertyChanged.SourceGenerator.Internal.PropertyChangedEventArgsCache.Foo);
             }
         }
     }
@@ -227,8 +227,8 @@ partial class Derived : global::System.ComponentModel.INotifyPropertyChanged
             if (!global::System.Collections.Generic.EqualityComparer<string>.Default.Equals(value, this._bar))
             {
                 this._bar = value;
-                this.RaisePropertyChanged(global::PropertyChanged.SourceGenerator.Internal.PropertyChangedEventArgsCache.Bar);
-                this.RaisePropertyChanged(global::PropertyChanged.SourceGenerator.Internal.PropertyChangedEventArgsCache.Foo);
+                this.OnPropertyChanged(global::PropertyChanged.SourceGenerator.Internal.PropertyChangedEventArgsCache.Bar);
+                this.OnPropertyChanged(global::PropertyChanged.SourceGenerator.Internal.PropertyChangedEventArgsCache.Foo);
             }
         }
     }
@@ -259,10 +259,10 @@ partial class SomeViewModel : global::System.ComponentModel.INotifyPropertyChang
             if (!global::System.Collections.Generic.EqualityComparer<string>.Default.Equals(value, this._foo))
             {
                 this._foo = value;
-                this.RaisePropertyChanged(global::PropertyChanged.SourceGenerator.Internal.PropertyChangedEventArgsCache.Foo);
-                this.RaisePropertyChanged(global::PropertyChanged.SourceGenerator.Internal.PropertyChangedEventArgsCache.Null);
-                this.RaisePropertyChanged(global::PropertyChanged.SourceGenerator.Internal.PropertyChangedEventArgsCache.Empty);
-                this.RaisePropertyChanged(global::PropertyChanged.SourceGenerator.Internal.PropertyChangedEventArgsCache.Item__);
+                this.OnPropertyChanged(global::PropertyChanged.SourceGenerator.Internal.PropertyChangedEventArgsCache.Foo);
+                this.OnPropertyChanged(global::PropertyChanged.SourceGenerator.Internal.PropertyChangedEventArgsCache.Null);
+                this.OnPropertyChanged(global::PropertyChanged.SourceGenerator.Internal.PropertyChangedEventArgsCache.Empty);
+                this.OnPropertyChanged(global::PropertyChanged.SourceGenerator.Internal.PropertyChangedEventArgsCache.Item__);
             }
         }
     }
@@ -308,7 +308,7 @@ partial class SomeViewModel : global::System.ComponentModel.INotifyPropertyChang
             if (!global::System.Collections.Generic.EqualityComparer<string>.Default.Equals(value, this._foo))
             {
                 this._foo = value;
-                this.RaisePropertyChanged(global::PropertyChanged.SourceGenerator.Internal.PropertyChangedEventArgsCache.Foo);
+                this.OnPropertyChanged(global::PropertyChanged.SourceGenerator.Internal.PropertyChangedEventArgsCache.Foo);
             }
         }
     }
@@ -333,7 +333,7 @@ public partial class SomeViewModel
 
     public List<SomeViewModel> Bar { get; set; }
 
-    public void RaisePropertyChanged(string propertyName, object oldValue, object newValue) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+    public void OnPropertyChanged(string propertyName, object oldValue, object newValue) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
 }";
             string expected = @"
 partial class SomeViewModel : global::System.ComponentModel.INotifyPropertyChanged
@@ -348,8 +348,8 @@ partial class SomeViewModel : global::System.ComponentModel.INotifyPropertyChang
                 string old_Foo = this.Foo;
                 global::System.Collections.Generic.List<global::SomeViewModel> old_Bar = this.Bar;
                 this._foo = value;
-                this.RaisePropertyChanged(@""Foo"", old_Foo, this.Foo);
-                this.RaisePropertyChanged(@""Bar"", old_Bar, this.Bar);
+                this.OnPropertyChanged(@""Foo"", old_Foo, this.Foo);
+                this.OnPropertyChanged(@""Bar"", old_Bar, this.Bar);
             }
         }
     }
@@ -367,7 +367,7 @@ public partial class SomeViewModel
     [Notify, AlsoNotify(""Item[]"", ""NonExistent"", """")]
     private string _foo;
 
-    public void RaisePropertyChanged(string propertyName, object oldValue, object newValue) { }
+    public void OnPropertyChanged(string propertyName, object oldValue, object newValue) { }
 }";
             string expected = @"
 partial class SomeViewModel : global::System.ComponentModel.INotifyPropertyChanged
@@ -381,10 +381,10 @@ partial class SomeViewModel : global::System.ComponentModel.INotifyPropertyChang
             {
                 string old_Foo = this.Foo;
                 this._foo = value;
-                this.RaisePropertyChanged(@""Foo"", old_Foo, this.Foo);
-                this.RaisePropertyChanged(@"""", (object)null, (object)null);
-                this.RaisePropertyChanged(@""Item[]"", (object)null, (object)null);
-                this.RaisePropertyChanged(@""NonExistent"", (object)null, (object)null);
+                this.OnPropertyChanged(@""Foo"", old_Foo, this.Foo);
+                this.OnPropertyChanged(@"""", (object)null, (object)null);
+                this.OnPropertyChanged(@""Item[]"", (object)null, (object)null);
+                this.OnPropertyChanged(@""NonExistent"", (object)null, (object)null);
             }
         }
     }
@@ -422,9 +422,9 @@ partial class SomeViewModel : global::System.ComponentModel.INotifyPropertyChang
             if (!global::System.Collections.Generic.EqualityComparer<string>.Default.Equals(value, this._foo))
             {
                 this._foo = value;
-                this.RaisePropertyChanged(global::PropertyChanged.SourceGenerator.Internal.PropertyChangedEventArgsCache.Foo);
-                this.RaisePropertyChanged(global::PropertyChanged.SourceGenerator.Internal.PropertyChangedEventArgsCache.Null);
-                this.RaisePropertyChanged(global::PropertyChanged.SourceGenerator.Internal.PropertyChangedEventArgsCache.Empty);
+                this.OnPropertyChanged(global::PropertyChanged.SourceGenerator.Internal.PropertyChangedEventArgsCache.Foo);
+                this.OnPropertyChanged(global::PropertyChanged.SourceGenerator.Internal.PropertyChangedEventArgsCache.Null);
+                this.OnPropertyChanged(global::PropertyChanged.SourceGenerator.Internal.PropertyChangedEventArgsCache.Empty);
             }
         }
     }

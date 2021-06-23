@@ -63,7 +63,7 @@ partial class SomeViewModel
 {
     public event global::System.ComponentModel.PropertyChangedEventHandler PropertyChanged;
     public string Foo { get; set; }
-    protected virtual void RaisePropertyChanged(global::System.ComponentModel.PropertyChangedEventArgs eventArgs)
+    protected virtual void OnPropertyChanged(global::System.ComponentModel.PropertyChangedEventArgs eventArgs)
     {
         this.PropertyChanged?.Invoke(this, eventArgs);
     }
@@ -87,7 +87,7 @@ public partial class SomeViewModel : INotifyPropertyChanged
 partial class SomeViewModel
 {
     public string Foo { get; set; }
-    protected virtual void RaisePropertyChanged(global::System.ComponentModel.PropertyChangedEventArgs eventArgs)
+    protected virtual void OnPropertyChanged(global::System.ComponentModel.PropertyChangedEventArgs eventArgs)
     {
         this.PropertyChanged?.Invoke(this, eventArgs);
     }
@@ -126,7 +126,7 @@ using System.ComponentModel;
 public class Base : INotifyPropertyChanged
 {
     public event PropertyChangedEventHandler PropertyChanged;
-    private void RaisePropertyChanged(string name) { }
+    private void OnPropertyChanged(string name) { }
 }
 public partial class Derived : Base
 {
@@ -286,7 +286,7 @@ using System.ComponentModel;
 public partial class SomeViewModel
 {
     public event PropertyChangedEventHandler PropertyChanged;
-    internal void RaisePropertyChanged(string name, string other) =>
+    internal void OnPropertyChanged(string name, string other) =>
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
     [Notify]
     private string _foo;
@@ -300,22 +300,22 @@ public partial class SomeViewModel
         }
 
         [Test]
-        public void PrefersMethodEarlierInListBadSignatureToOneLaterInListWithGoodSignature()
+        public void PrefersMethodEarlierInListWithBadSignatureToOneLaterInListWithGoodSignature()
         {
             string input = @"
 using System.ComponentModel;
 public partial class SomeViewModel
 {
     public event PropertyChangedEventHandler PropertyChanged;
-    internal void RaisePropertyChanged(string name, string other) =>
+    internal void OnPropertyChanged(string name, string other) =>
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
-    private void OnPropertyChanged(string name) { }
+    private void RaisePropertyChanged(string name) { }
     [Notify]
     private string _foo;
 }";
 
             this.AssertThat(input, It.HasDiagnostics(
-                // (3,22): Warning INPC006: Found one or more methods called 'RaisePropertyChanged' to raise the PropertyChanged event, but they had an unrecognised signatures or were inaccessible
+                // (3,22): Warning INPC006: Found one or more methods called 'OnPropertyChanged' to raise the PropertyChanged event, but they had an unrecognised signatures or were inaccessible
                 // SomeViewModel
                 Diagnostic("INPC006", @"SomeViewModel").WithLocation(3, 22)
             ));
@@ -340,7 +340,7 @@ public partial class C : B
 {
     [Notify]
     private string _bar;
-    protected void RaisePropertyChanged(string name) { }
+    protected void OnPropertyChanged(string name) { }
 }";
             string expectedB = @"
 partial class B
@@ -369,7 +369,7 @@ partial class C
             if (!global::System.Collections.Generic.EqualityComparer<string>.Default.Equals(value, this._bar))
             {
                 this._bar = value;
-                this.RaisePropertyChanged(@""Bar"");
+                this.OnPropertyChanged(@""Bar"");
             }
         }
     }

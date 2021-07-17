@@ -5,13 +5,13 @@
 [![Build status](https://ci.appveyor.com/api/projects/status/r989lw0mclb6jmja?svg=true)](https://ci.appveyor.com/project/canton7/propertychanged-sourcegenerator)
 
 Implementing `INotifyPropertyChanged` is annoying.
-PropertyChanged.SourceGenerator hooks into your compilation process to automatically generate the boilerplate for you, automatically.
+PropertyChanged.SourceGenerator hooks into your compilation process to generate the boilerplate for you, automatically.
 
 PropertyChanged.SourceGenerator works well if you're using an MVVM framework or going without, and supports various time-saving features such as:
 
- - Automatically notifying dependent properties
- - Calling hooks when particular properties change
- - Keeping track of whether any properties have changed
+ - Automatically notifying dependent properties.
+ - Calling hooks when particular properties change.
+ - Keeping track of whether any properties have changed.
 
 ### Table of Contents
 
@@ -43,7 +43,7 @@ Installation
 [PropertyChanged.SourceGenerator is available on NuGet](https://www.nuget.org/packages/PropertyChanged.SourceGenerator).
 You'll need to be running Visual Studio 2019 16.9 or higher, or be building using the .NET SDK 5.0.200 or higher (your project doesn't have to target .NET 5, you just need to be building using a newish version of the .NET SDK).
 
-These dependencies may change in future versions, see [Versioning](#versioning).
+These dependencies may change in future minor versions, see [Versioning](#versioning).
 
 
 Quick Start
@@ -59,10 +59,9 @@ public partial class MyViewModel
 ```
 
 Make sure your ViewModel is `partial`, and define the backing fields for your properties, decorated with `[Notify]`.
-When you build your project, PropertyChanged.SourceGenerator will create another partial class which looks something like:
+When you build your project, PropertyChanged.SourceGenerator will create a partial class which looks something like:
 
 ```cs
-using PropertyChanged.SourceGenerator;
 partial class MyViewModel : INotifyPropertyChanged
 {
 	public event PropertyChangedEventHandler PropertyChanged;
@@ -95,7 +94,7 @@ What happened there?
 3. For each field decorated with `[Notify]`, it generated property with the same name (but with the leading `_` removed and the first letter capitalised) which used that field as its backing field. That property implemented `INotifyPropertyChanged`.
 4. It noticed that `FullName` depended on `LastName`, so raised the `PropertyChanged` event for `FullName` whenever `LastName` changed.
 
-**Note**: It's really important that you don't refer to the backing fields after you've defined them: let PropertyChanged.SourceGenerator generate the corresponding property, and then always use the property.
+**Note**: It's really important that you don't refer to the backing fields after you've defined them: let PropertyChanged.SourceGenerator generate the corresponding properties, and then always use those propertues.
 
 
 Versioning
@@ -121,7 +120,7 @@ If it isn't, you'll get a warning.
 
 Your ViewModel can implement `INotifyPropertyChanged`, or not, or it can implement parts of it (such as implementing the interface but not defining the `PropertyChanged` event), or it can extend from a base class which implements `INotifyPropertyChanged`: PropertyChanged.SourceGenerator will figure it out and fill in the gaps.
 
-If you've got a `ViewModel` base class which implements `INotifyPropertyChanged` (perhaps as part of an MVVM framework), PropertyChanged.SourceGenerator will try and find a suitable method to call to raise the `PropertyChanged` event.
+If you've got a `ViewModel` base class which implements `INotifyPropertyChanged` (perhaps as part of an MVVM framework), PropertyChanged.SourceGenerator will try and find a suitable method to call in order to raise the `PropertyChanged` event.
 It will look for a method called `OnPropertyChanged`, `RaisePropertyChanged`, `NotifyOfPropertyChange`, or `NotifyPropertyChanged`, which covers all of the major MVVM frameworks (although this is configurable, see [Configuration](#configuration)), with one of the following signatures:
 
  - `void OnPropertyChanged(PropertyChangedEventArgs args)`
@@ -162,7 +161,7 @@ partial class MyViewModel
 			if (!EqualityComparer<int>.Default.Equals(_foo, value))
 			{
 				_foo = value;
-				OnPropertyChanged("Foo");
+				OnPropertyChanged(EventArgsCache.Foo);
 			}
 		}
 	}
@@ -190,7 +189,7 @@ public partial class MyViewModel : INotifyPropertyChanged
 }
 ```
 
-and PropertyChanged.SourceGenerator will generate a property called `FOO`.
+PropertyChanged.SourceGenerator will generate a property called `FOO`.
 
 
 ### Property Accessibility
@@ -219,7 +218,7 @@ partial class MyViewModel
 	public int Foo
 	{
 		get => _foo
-		private set => { /* ... */ }
+		private set { /* ... */ }
 	}
 
 	protected string Bar
@@ -285,15 +284,15 @@ partial class MyViewModel : INotifyPropertyChanged
 }
 ```
 
-Note that this can only work when a property getter accesses a property which is generated by PropertyChanged.SourceGenerator, on the same instance.
+Note that this can only work when a property getter accesses a property which is generated by PropertyChanged.SourceGenerator, on the same class instance.
 It can't work for getters which access properties on other types, or other instances of that type, or which are defined on base types.
-It also only works if you reference the generated property, not its backing field (i.e. `LastName`, not `_lastName` above).
+It also only works if you reference the generated property and not its backing field (i.e. `LastName`, not `_lastName` above).
 
 
 ### Manual Dependencies with `[DependsOn]`
 
 If automatic dependencies aren't working for you, you can also specify dependencies manually using the `[DependsOn]` attribute.
-`[DependsOn]` takes the names of one or more generated properties, and means that a PropertyChanged event will be raised if any of those properties is set.
+`[DependsOn]` takes the names of one or more generated properties, and means that a PropertyChanged event will be raised if any of those properties are set.
 
 For example:
 
@@ -361,8 +360,8 @@ If you define a method called `OnFirstNameChanged` in the same class, that metho
 
 This method can have two signatures:
 
- - `On{PropertyName}Changed()`
- - `On{PropertyName}Changed(T oldValue, T newValue)` where `T` is the type of the property with name `PropertyName`.
+ - `On{PropertyName}Changed()`.
+ - `On{PropertyName}Changed(T oldValue, T newValue)` where `T` is the type of the property called `PropertyName`.
 
 For example:
 
@@ -459,7 +458,7 @@ propertychanged.remove_suffix =
 # How the first letter of the generated property name should be capitalised
 # Valid values: none, upper_case, lower_Case
 # Default: 'upper_case'
-propertychanged.first_letter_capitalisation = upper_case
+propertychanged.first_letter_capitalization = upper_case
 ```
 
 
@@ -474,7 +473,7 @@ The names of the pre-existing methods which it searches for, and the name of the
 [*.cs]
 
 # A ';' separated list of method names to search for when finding a method to raise the
-# PropertyChanged event. If none is found, the first name listed here is used.
+# PropertyChanged event. If none is found, the first name listed here is used to generate one.
 # Default: 'OnPropertyChanged;RaisePropertyChanged;NotifyOfPropertyChange;NotifyPropertyChanged'
 propertychanged.onpropertychanged_method_name = OnPropertyChanged;RaisePropertyChanged;NotifyOfPropertyChange;NotifyPropertyChanged
 ```
@@ -483,8 +482,8 @@ propertychanged.onpropertychanged_method_name = OnPropertyChanged;RaisePropertyC
 Contributing
 ------------
 
-It's great that you want to get involved!
-Please [open a discussion](https://github.com/canton7/PropertyChanged.SourceGenerator/discussions/new) before doing any serious amount of work, so we can agree an approach before you waste any time.
+It's great that you want to get involved, thank you!
+Please [open a discussion](https://github.com/canton7/PropertyChanged.SourceGenerator/discussions/new) before doing any serious amount of work, so we can agree an approach before you get started.
 
 Open a feature branch based on `develop` (**not** `master`), and make sure that you submit any Pull Requests to the `develop` branch.
 
@@ -498,4 +497,6 @@ Here are some of the differences:
  - PropertyChanged.Fody is able to rewrite your code, which PropertyChanged.SourceGenerator can only add to it (due to the design of Source Generators). This means that PropertyChanged.Fody is able to insert event-raising code directly into your property setters, whereas PropertyChanged.SourceGenerator needs to generate the whole property itself.
  - PropertyChanged.Fody supports some functionality which PropertyChanged.SourceGenerator does not, such as global interception. Please [let me know](https://github.com/canton7/PropertyChanged.SourceGenerator/discussions/new) if you need a bit of functionality which PropertyChanged.SourceGenerator doesn't yet support.
  - PropertyChanged.SourceGenerator supports some functionality which PropertyChanged.Fody does not, such as letting you define `On{PropertyName}Changed` methods which accept the old and new values of the property.
+ - PropertyChanged.Fody uses a variety of methods to locate a suitable method to compare a property's old and new value; PropertyChanged.SourceGenerator just uses `EqualityComparer<T>.Default`.
  - I don't [expect you to pay](https://github.com/Fody/Home/blob/master/pages/licensing-patron-faq.md) to use PropertyChanged.SourceGenerator, and will never close an issue or refuse a contribution because you're not giving me money.
+ 

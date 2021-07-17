@@ -1,3 +1,3 @@
 [*.cs]
-propertychanged_add_prefix = Property
-propertychanged_first_letter_capitalization = lower_case
+propertychanged.add_prefix = Property
+propertychanged.first_letter_capitalization = lower_case

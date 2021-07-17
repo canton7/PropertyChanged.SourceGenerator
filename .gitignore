@@ -1,0 +1,6 @@
+coverage
+coverage.xml
+.vs
+bin
+obj
+NuGet

@@ -9,7 +9,7 @@
 
     <VersionPrefix>0.0.0</VersionPrefix>
     <PackageId>PropertyChanged.SourceGenerator</PackageId>
-    <PackageTags>INPC;INotifyPropertyChanged;SourceGenerator</PackageTags>
+    <PackageTags>INPC;INotifyPropertyChanged;SourceGenerator;MVVM;Binding</PackageTags>
     <Copyright>Copyright © Antony Male 2021</Copyright>
     <PackageIcon>icon.png</PackageIcon>
     <PackageProjectUrl>https://github.com/canton7/PropertyChanged.SourceGenerator</PackageProjectUrl>
@@ -17,8 +17,8 @@
     <RepositoryType>git</RepositoryType>
     <RepositoryUrl>https://github.com/canton7/PropertyChanged.SourceGenerator</RepositoryUrl>
     <Authors>Antony Male</Authors>
-    <Description>Powerful Source Generator which generates INotifyPropertyChanged implementations.
-Automatic and manual dependencies between properties, get notified when specific properties change, and more.</Description>
+    <Description>Powerful INotifyPropertyChanged Source Generator, which generates INPC boilerplate for you as part of your build.
+Supports features such as automatic and manual dependencies between properties, notifications when specific properties change, and more.</Description>
     <DevelopmentDependency>true</DevelopmentDependency>
   </PropertyGroup>
 

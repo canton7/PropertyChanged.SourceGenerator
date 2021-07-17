@@ -11,7 +11,7 @@
     <PackageId>PropertyChanged.SourceGenerator</PackageId>
     <PackageTags>INPC;INotifyPropertyChanged;SourceGenerator</PackageTags>
     <Copyright>Copyright © Antony Male 2021</Copyright>
-    <!--<PackageIcon>icon.png</PackageIcon>-->
+    <PackageIcon>icon.png</PackageIcon>
     <PackageProjectUrl>https://github.com/canton7/PropertyChanged.SourceGenerator</PackageProjectUrl>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <RepositoryType>git</RepositoryType>
@@ -27,6 +27,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <None Include="..\..\icon.png" Pack="true" PackagePath="" Visible="false" />
     <None Include="$(OutputPath)\$(AssemblyName).dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
   </ItemGroup>
 </Project>

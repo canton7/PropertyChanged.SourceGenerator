@@ -17,7 +17,8 @@
     <RepositoryType>git</RepositoryType>
     <RepositoryUrl>https://github.com/canton7/PropertyChanged.SourceGenerator</RepositoryUrl>
     <Authors>Antony Male</Authors>
-    <Description>TODO</Description>
+    <Description>Powerful Source Generator which generates INotifyPropertyChanged implementations.
+Automatic and manual dependencies between properties, get notified when specific properties change, and more.</Description>
     <DevelopmentDependency>true</DevelopmentDependency>
   </PropertyGroup>
 

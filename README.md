@@ -1,5 +1,8 @@
-PropertyChanged.SourceGenerator
-===============================
+![Project Icon](icon-small.png) PropertyChanged.SourceGenerator
+===============================================================
+
+[![NuGet](https://img.shields.io/nuget/v/PropertyChanged.SourceGenerator.svg)](https://www.nuget.org/packages/PropertyChanged.SourceGenerator/)
+[![Build status](https://ci.appveyor.com/api/projects/status/r989lw0mclb6jmja?svg=true)](https://ci.appveyor.com/project/canton7/propertychanged-sourcegenerator)
 
 Implementing `INotifyPropertyChanged` is annoying.
 PropertyChanged.SourceGenerator hooks into your compilation process to automatically generate the boilerplate for you, automatically.

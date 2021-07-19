@@ -339,7 +339,7 @@ public partial class MyViewModel
 Property Changed Hooks
 ----------------------
 
-Hooks are a way for you to be told when a generated property is changed, without needing to subscribe to subscribe to a type's own PropertyChanged event.
+Hooks are a way for you to be told when a generated property is changed, without needing to subscribe to a type's own PropertyChanged event.
 
 
 ### Type Hooks with `OnPropertyChanged`

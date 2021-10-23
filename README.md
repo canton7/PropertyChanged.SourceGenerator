@@ -45,6 +45,15 @@ You'll need to be running Visual Studio 2019 16.9 or higher, or be building usin
 
 These dependencies may change in future minor versions, see [Versioning](#versioning).
 
+If you're using WPF, you may need to add this to your csproj, see [dotnet/wpf#3404](https://github.com/dotnet/wpf/issues/3404).
+
+```xml
+<PropertyGroup>
+    <IncludePackageReferencesDuringMarkupCompilation>true</IncludePackageReferencesDuringMarkupCompilation>
+</PropertyGroup>
+```
+
+
 
 Quick Start
 -----------

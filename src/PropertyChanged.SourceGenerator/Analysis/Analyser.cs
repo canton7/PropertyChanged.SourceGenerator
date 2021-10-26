@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using Microsoft.CodeAnalysis;
@@ -64,17 +65,22 @@ namespace PropertyChanged.SourceGenerator.Analysis
 
             void Analyse(INamedTypeSymbol typeSymbol)
             {
+                // Make sure it's not e.g. C<Foo>, rather C<T>
+                Debug.Assert(SymbolEqualityComparer.Default.Equals(typeSymbol, typeSymbol.OriginalDefinition));
+
                 // If we've already analysed this one, return
                 if (results.ContainsKey(typeSymbol))
                     return;
 
                 // If we haven't analysed its base type yet, do that now. This will then happen recursively
                 // Special System.Object, as we'll hit it a lot
+                // Use OriginalDefinition here, in case the child inerits from e.g. Base<Foo>: we want to analyse
+                // Base<T>
                 if (typeSymbol.BaseType != null
                     && typeSymbol.BaseType.SpecialType != SpecialType.System_Object
-                    && !results.ContainsKey(typeSymbol.BaseType))
+                    && !results.ContainsKey(typeSymbol.BaseType.OriginalDefinition))
                 {
-                    Analyse(typeSymbol.BaseType);
+                    Analyse(typeSymbol.BaseType.OriginalDefinition);
                 }
 
                 // If we're not actually supposed to analyse this type, bail. We have to do this after the base
@@ -85,7 +91,7 @@ namespace PropertyChanged.SourceGenerator.Analysis
 
                 // Right, we know we've analysed all of the base types by now. Fetch them
                 var baseTypes = new List<TypeAnalysis>();
-                for (var t = typeSymbol.BaseType; t != null && t.SpecialType != SpecialType.System_Object; t = t.BaseType)
+                for (var t = typeSymbol.BaseType?.OriginalDefinition; t != null && t.SpecialType != SpecialType.System_Object; t = t.BaseType?.OriginalDefinition)
                 {
                     if (results.TryGetValue(t, out var baseTypeAnalysis))
                     {

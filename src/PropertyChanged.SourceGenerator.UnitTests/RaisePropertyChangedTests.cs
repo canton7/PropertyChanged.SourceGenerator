@@ -377,5 +377,31 @@ partial class C
 
             this.AssertThat(input, It.HasFile("B", expectedB).HasFile("C", expectedC));
         }
+
+        [Test]
+        public void FindsGenericBaseClasses()
+        {
+            // https://github.com/canton7/PropertyChanged.SourceGenerator/issues/3
+
+            string input = @"
+public partial class A<T>
+{
+    [Notify]
+private string _foo;
+}
+public partial class B : A<string>
+{
+    [Notify]
+    private string _bar;
+}";
+            // It doesn't generate a new RaisePropertyChanged method
+            string expected = @"
+partial class B
+{
+    public string Bar { get; set; }
+}";
+
+            this.AssertThat(input, It.HasFile("B", expected, RemovePropertiesRewriter.Instance));
+        }
     }
 }

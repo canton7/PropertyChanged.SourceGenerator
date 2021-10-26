@@ -434,7 +434,7 @@ Configuration
 
 Various aspects of PropertyChanged.SourceGenerator's behaviour can be configured through a [`.editorconfig` file](https://docs.microsoft.com/en-us/visualstudio/ide/create-portable-custom-editor-options).
 
-If you have done already, great!
+If you have one already, great!
 If not simply add a file called `.editorconfig` in the folder which contains your `.csproj` file (if you want those settings to apply to a single project), or next to your `.sln` file (to apply them to all projects in the solution).
 There are various other ways to combine settings from different `.editorconfig` files, see the MSDN documentation.
 

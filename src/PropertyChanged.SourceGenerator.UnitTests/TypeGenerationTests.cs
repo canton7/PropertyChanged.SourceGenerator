@@ -105,5 +105,54 @@ public partial class SomeViewModel
 }";
             this.AssertThat(input, It.DoesNotHaveFile("PropertyChangedEventArgsCache"));
         }
+
+        [Test]
+        public void HandlesPartialNestedTypes()
+        {
+            // https://github.com/canton7/PropertyChanged.SourceGenerator/issues/2
+
+            string input = @"
+partial class A
+{
+    partial class B
+    {
+        partial class C
+        {
+            [Notify] private string _field;
+        }
+    }
+}";
+            string expected = @"
+partial class A
+{
+    partial class B
+    {
+        partial class C : global::System.ComponentModel.INotifyPropertyChanged
+        {
+            public string Field { get; set; }
+        }
+    }
+}";
+
+            this.AssertThat(input, It.HasFile("C", expected, StandardRewriters));
+        }
+
+        [Test]
+        public void ComplainsIfOuterTypeIsNotPartial()
+        {
+            string input = @"
+public class A
+{
+    partial class C
+    {
+        [Notify] private string _field;
+    }
+}";
+
+            this.AssertThat(input, It.HasDiagnostics(
+                // (2,14): Warning INPC020: Type 'A' must be partial in order for PropertyChanged.SourceGenerator to generate properties for inner type 'C'
+                // A
+                Diagnostic("INPC020", @"A").WithLocation(2, 14)));
+        }
     }
 }

@@ -162,11 +162,7 @@ namespace PropertyChanged.SourceGenerator.Analysis
             this.ResolveAlsoNotify(result, baseTypeAnalyses);
             this.ResolveDependsOn(result);
 
-            bool isPartial = typeSymbol.DeclaringSyntaxReferences
-                .Select(x => x.GetSyntax())
-                .OfType<ClassDeclarationSyntax>()
-                .Any(x => x.Modifiers.Any(m => m.IsKind(SyntaxKind.PartialKeyword)));
-            if (!isPartial)
+            if (!IsPartial(typeSymbol))
             {
                 result.CanGenerate = false;
                 if (result.Members.Count > 0)
@@ -174,6 +170,24 @@ namespace PropertyChanged.SourceGenerator.Analysis
                     this.diagnostics.ReportTypeIsNotPartial(typeSymbol);
                 }
             }
+
+            for (var outerType = typeSymbol.ContainingType; outerType != null; outerType = outerType.ContainingType)
+            {
+                if (!IsPartial(outerType))
+                {
+                    result.CanGenerate = false;
+                    if (result.Members.Count > 0)
+                    {
+                        this.diagnostics.ReportOuterTypeIsNotPartial(outerType, typeSymbol);
+                    }
+                }
+            }
+
+            bool IsPartial(INamedTypeSymbol type) =>
+                type.DeclaringSyntaxReferences
+                    .Select(x => x.GetSyntax())
+                    .OfType<ClassDeclarationSyntax>()
+                    .Any(x => x.Modifiers.Any(m => m.IsKind(SyntaxKind.PartialKeyword)));
 
             return result;
         }

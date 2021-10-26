@@ -50,6 +50,18 @@ namespace PropertyChanged.SourceGenerator
 
         private void GenerateType(TypeAnalysis typeAnalysis)
         {
+            var outerTypes = new List<INamedTypeSymbol>();
+            for (var outerType = typeAnalysis.TypeSymbol.ContainingType; outerType != null; outerType = outerType.ContainingType)
+            {
+                outerTypes.Add(outerType);
+            }
+            foreach (var outerType in outerTypes.AsEnumerable().Reverse())
+            {
+                this.writer.WriteLine($"partial {outerType.ToDisplayString(SymbolDisplayFormats.TypeDeclaration)}");
+                this.writer.WriteLine("{");
+                this.writer.Indent++;
+            }
+
             this.writer.Write($"partial {typeAnalysis.TypeSymbol.ToDisplayString(SymbolDisplayFormats.TypeDeclaration)}");
             if (!typeAnalysis.HasInpcInterface)
             {
@@ -87,6 +99,12 @@ namespace PropertyChanged.SourceGenerator
 
             this.writer.Indent--;
             this.writer.WriteLine("}");
+
+            for (int i = 0; i < outerTypes.Count; i++)
+            {
+                this.writer.Indent--;
+                this.writer.WriteLine("}");
+            }
         }
 
         private void GenerateMember(TypeAnalysis type, MemberAnalysis member)

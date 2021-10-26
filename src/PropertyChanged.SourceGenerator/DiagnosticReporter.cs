@@ -187,6 +187,15 @@ namespace PropertyChanged.SourceGenerator
             this.AddDiagnostic(backingPropertyMustHaveGetterAndSetter, property.Locations, property.Name);
         }
 
+        private static readonly DiagnosticDescriptor outerTypeIsNotPartial = CreateDescriptor(
+            "INPC020",
+            "Outer type is not partial",
+            "Type '{0}' must be partial in order for PropertyChanged.SourceGenerator to generate properties for inner type '{1}'");
+        public void ReportOuterTypeIsNotPartial(INamedTypeSymbol outerType, INamedTypeSymbol innerType)
+        {
+            this.AddDiagnostic(outerTypeIsNotPartial, outerType.Locations, outerType.Name, innerType.Name);
+        }
+
         private static DiagnosticDescriptor CreateDescriptor(string code, string title, string messageFormat, DiagnosticSeverity severity = DiagnosticSeverity.Warning)
         {
             string[] tags = severity == DiagnosticSeverity.Error ? new[] { WellKnownDiagnosticTags.NotConfigurable } : Array.Empty<string>();

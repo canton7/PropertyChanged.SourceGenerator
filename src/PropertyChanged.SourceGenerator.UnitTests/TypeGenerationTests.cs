@@ -154,5 +154,45 @@ public class A
                 // A
                 Diagnostic("INPC020", @"A").WithLocation(2, 14)));
         }
+
+        [Test]
+        public void HandlesTwoClassesSameNameDifferentNamespaces()
+        {
+            string input = @"
+namespace NS1
+{
+    partial class SomeViewModel
+    {
+        [Notify] string _a;
+    }
+}
+
+namespace NS2
+{
+    partial class SomeViewModel
+    {
+        [Notify] string _a;
+    }
+}";
+            string expected1 = @"
+namespace NS1
+{
+    partial class SomeViewModel : global::System.ComponentModel.INotifyPropertyChanged
+    {
+        public string A { get; set; }
+    }
+}";
+            string expected2 = @"
+namespace NS2
+{
+    partial class SomeViewModel : global::System.ComponentModel.INotifyPropertyChanged
+    {
+        public string A { get; set; }
+    }
+}";
+            this.AssertThat(input,
+                It.HasFile("SomeViewModel", expected1, StandardRewriters)
+                    .HasFile("SomeViewModel2", expected2, StandardRewriters));
+        }
     }
 }

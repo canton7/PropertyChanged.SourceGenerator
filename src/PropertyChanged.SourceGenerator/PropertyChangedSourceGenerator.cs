@@ -25,6 +25,8 @@ namespace PropertyChanged.SourceGenerator
 
             var diagnostics = new DiagnosticReporter();
             var configurationParser = new ConfigurationParser(context.AnalyzerConfigOptions, diagnostics);
+            var fileNames = new HashSet<string>();
+
             try
             {
                 var analyser = new Analyser(diagnostics, context.Compilation, configurationParser);
@@ -42,7 +44,7 @@ namespace PropertyChanged.SourceGenerator
                     {
                         var generator = new Generator(eventArgsCache);
                         generator.Generate(analysis!);
-                        context.AddSource(analysis!.TypeSymbol.Name, SourceText.From(generator.ToString(), Encoding.UTF8));
+                        AddSource(analysis!.TypeSymbol.Name, generator.ToString());
                     }
                 }
 
@@ -50,7 +52,7 @@ namespace PropertyChanged.SourceGenerator
                 {
                     var nameCacheGenerator = new Generator(eventArgsCache);
                     nameCacheGenerator.GenerateNameCache();
-                    context.AddSource("PropertyChangedEventArgsCache", SourceText.From(nameCacheGenerator.ToString(), Encoding.UTF8));
+                    AddSource("PropertyChangedEventArgsCache", nameCacheGenerator.ToString());
                 }
             }
             finally
@@ -59,6 +61,24 @@ namespace PropertyChanged.SourceGenerator
                 {
                     context.ReportDiagnostic(diagnostic);
                 }
+            }
+
+            void AddSource(string hintName, string sourceText)
+            {
+                string fileName = hintName;
+                if (!fileNames.Add(fileName))
+                {
+                    for (int i = 2; ; i++)
+                    {
+                        fileName = hintName + i;
+                        if (fileNames.Add(fileName))
+                        {
+                            break;
+                        }
+                    }
+                }
+
+                context.AddSource(fileName, SourceText.From(sourceText, Encoding.UTF8));
             }
         }
     }

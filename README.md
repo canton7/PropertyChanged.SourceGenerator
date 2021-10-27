@@ -45,6 +45,15 @@ You'll need to be running Visual Studio 2019 16.9 or higher, or be building usin
 
 These dependencies may change in future minor versions, see [Versioning](#versioning).
 
+If you're using WPF, you may need to add this to your csproj, see [dotnet/wpf#3404](https://github.com/dotnet/wpf/issues/3404).
+
+```xml
+<PropertyGroup>
+    <IncludePackageReferencesDuringMarkupCompilation>true</IncludePackageReferencesDuringMarkupCompilation>
+</PropertyGroup>
+```
+
+
 
 Quick Start
 -----------
@@ -53,8 +62,8 @@ Quick Start
 using PropertyChanged.SourceGenerator;
 public partial class MyViewModel
 {
-	[Notify] private string _lastName;
-	public string FullName => $"Dr. {LastName}";
+    [Notify] private string _lastName;
+    public string FullName => $"Dr. {LastName}";
 }
 ```
 
@@ -64,26 +73,26 @@ When you build your project, PropertyChanged.SourceGenerator will create a parti
 ```cs
 partial class MyViewModel : INotifyPropertyChanged
 {
-	public event PropertyChangedEventHandler PropertyChanged;
+    public event PropertyChangedEventHandler PropertyChanged;
 
-	public string LastName
-	{
-		get => _lastName;
-		set
-		{
-			if (!EqualityComparer<string>.Default.Equals(_lastName, value))
-			{
-				_lastName = value;
-				OnPropertyChanged(EventArgsCache.LastName);
-				OnPropertyChanged(EventArgsCache.FullName);
-			}
-		}
-	}
+    public string LastName
+    {
+        get => _lastName;
+        set
+        {
+            if (!EqualityComparer<string>.Default.Equals(_lastName, value))
+            {
+                _lastName = value;
+                OnPropertyChanged(EventArgsCache.LastName);
+                OnPropertyChanged(EventArgsCache.FullName);
+            }
+        }
+    }
 
-	protected virtual void OnPropertyChanged(PropertyChangedEventArgs args)
-	{
-		PropertyChanged?.Invoke(args);
-	}
+    protected virtual void OnPropertyChanged(PropertyChangedEventArgs args)
+    {
+        PropertyChanged?.Invoke(args);
+    }
 }
 ```
 
@@ -144,7 +153,7 @@ If you write:
 using PropertyChanged.SourceGenerator;
 public partial class MyViewModel : INotifyPropertyChanged
 {
-	[Notify] private int _foo;
+    [Notify] private int _foo;
 }
 ```
 
@@ -153,20 +162,20 @@ PropertyChanged.SourceGenerator will generate something like:
 ```cs
 partial class MyViewModel
 {
-	public int Foo
-	{
-		get => _foo,
-		set
-		{
-			if (!EqualityComparer<int>.Default.Equals(_foo, value))
-			{
-				_foo = value;
-				OnPropertyChanged(EventArgsCache.Foo);
-			}
-		}
-	}
+    public int Foo
+    {
+        get => _foo,
+        set
+        {
+            if (!EqualityComparer<int>.Default.Equals(_foo, value))
+            {
+                _foo = value;
+                OnPropertyChanged(EventArgsCache.Foo);
+            }
+        }
+    }
 
-	// PropertyChanged event, OnPropertyChanged method, etc.
+    // PropertyChanged event, OnPropertyChanged method, etc.
 }
 ```
 
@@ -185,7 +194,7 @@ If you want to manually specify the name of a particular property, you can pass 
 using PropertyChanged.SourceGenerator;
 public partial class MyViewModel : INotifyPropertyChanged
 {
-	[Notify("FOO")] private int _foo;
+    [Notify("FOO")] private int _foo;
 }
 ```
 
@@ -202,11 +211,11 @@ This isn't always what you want, so it's possible to override this by passing `G
 using PropertyChanged.SourceGenerator;
 public partial class MyViewModel : INotifyPropertyChanged
 {
-	[Notify(Setter.Private)]
-	private int _foo;
+    [Notify(Setter.Private)]
+    private int _foo;
 
-	[Notify(Getter.PrivateProtected, Setter.Protected)]
-	private string _bar;
+    [Notify(Getter.PrivateProtected, Setter.Protected)]
+    private string _bar;
 }
 ```
 
@@ -215,17 +224,17 @@ This generates:
 ```cs
 partial class MyViewModel
 {
-	public int Foo
-	{
-		get => _foo
-		private set { /* ... */ }
-	}
+    public int Foo
+    {
+        get => _foo
+        private set { /* ... */ }
+    }
 
-	protected string Bar
-	{
-		private protected get => _bar,
-		set { /* ... */ }
-	}
+    protected string Bar
+    {
+        private protected get => _bar,
+        set { /* ... */ }
+    }
 }
 ```
 
@@ -239,9 +248,9 @@ Sometimes, you have properties which depend on other properties, for example:
 using PropertyChanged.SourceGenerator;
 public partial class MyViewModel
 {
-	[Notify] private string _firstName;
-	[Notify] private string _lastName;
-	public string FullName => $"{FirstName} {LastName}";
+    [Notify] private string _firstName;
+    [Notify] private string _lastName;
+    public string FullName => $"{FirstName} {LastName}";
 }
 ```
 
@@ -258,8 +267,8 @@ For example, if you write:
 using PropertyChanged.SourceGenerator;
 public partial class MyViewModel
 {
-	[Notify] private string _lastName;
-	public string FullName => $"Dr. {LastName}";
+    [Notify] private string _lastName;
+    public string FullName => $"Dr. {LastName}";
 }
 ```
 
@@ -268,19 +277,19 @@ PropertyChanged.SourceGenerator will notice that the getter for `FullName` acces
 ```cs
 partial class MyViewModel : INotifyPropertyChanged
 {
-	public string LastName
-	{
-		get => _lastName;
-		set
-		{
-			if (!EqualityComparer<string>.Default.Equals(_lastName, value))
-			{
-				_lastName = value;
-				OnPropertyChanged(EventArgsCache.LastName);
-				OnPropertyChanged(EventArgsCache.FullName); // <-- Here
-			}
-		}
-	}
+    public string LastName
+    {
+        get => _lastName;
+        set
+        {
+            if (!EqualityComparer<string>.Default.Equals(_lastName, value))
+            {
+                _lastName = value;
+                OnPropertyChanged(EventArgsCache.LastName);
+                OnPropertyChanged(EventArgsCache.FullName); // <-- Here
+            }
+        }
+    }
 }
 ```
 
@@ -300,11 +309,11 @@ For example:
 using PropertyChanged.SourceGenerator;
 public partial class MyViewModel
 {
-	[Notify] private string _firstName;
-	[Notify] private string _lastName;
+    [Notify] private string _firstName;
+    [Notify] private string _lastName;
 
-	[DependsOn(nameof(FirstName), nameof(LastName))]
-	public string FullName { get; set; }
+    [DependsOn(nameof(FirstName), nameof(LastName))]
+    public string FullName { get; set; }
 }
 ```
 
@@ -328,10 +337,10 @@ For example:
 using PropertyChanged.SourceGenerator;
 public partial class MyViewModel
 {
-	[Notify, AlsoNotify(nameof(FullName))] private string _firstName;
-	[Notify, AlsoNotify(nameof(FullName))] private string _lastName;
+    [Notify, AlsoNotify(nameof(FullName))] private string _firstName;
+    [Notify, AlsoNotify(nameof(FullName))] private string _lastName;
 
-	public string FullName { get; set; }
+    public string FullName { get; set; }
 }
 ```
 
@@ -339,7 +348,7 @@ public partial class MyViewModel
 Property Changed Hooks
 ----------------------
 
-Hooks are a way for you to be told when a generated property is changed, without needing to subscribe to subscribe to a type's own PropertyChanged event.
+Hooks are a way for you to be told when a generated property is changed, without needing to subscribe to a type's own PropertyChanged event.
 
 
 ### Type Hooks with `OnPropertyChanged`
@@ -369,18 +378,18 @@ For example:
 using PropertyChanged.SourceGenerator;
 public partial class MyViewModel
 {
-	[Notify] private string _firstName;
-	[Notify] private string _lastName;
+    [Notify] private string _firstName;
+    [Notify] private string _lastName;
 
-	private void OnFirstNameChanged(string oldValue, string newValue)
-	{
-		// ...
-	} 
+    private void OnFirstNameChanged(string oldValue, string newValue)
+    {
+        // ...
+    } 
 
-	private void OnLastNameChanged()
-	{
-		// ...
-	}
+    private void OnLastNameChanged()
+    {
+        // ...
+    }
 }
 ```
 
@@ -398,8 +407,8 @@ For example:
 using PropertyChanged.SourceGenerator;
 public partial class MyViewModel
 {
-	[IsChanged] public bool IsChanged { get; private set; }
-	[Notify] private string _firstName;
+    [IsChanged] public bool IsChanged { get; private set; }
+    [Notify] private string _firstName;
 }
 
 var vm = new MyViewModel();
@@ -415,7 +424,7 @@ That `bool IsChanged` property can also be generated by PropertyChanged.SourceGe
 using PropertyChanged.SourceGenerator;
 public partial class MyViewModel
 {
-	[Notify, IsChanged] private bool _isChanged;
+    [Notify, IsChanged] private bool _isChanged;
 }
 ```
 
@@ -425,7 +434,7 @@ Configuration
 
 Various aspects of PropertyChanged.SourceGenerator's behaviour can be configured through a [`.editorconfig` file](https://docs.microsoft.com/en-us/visualstudio/ide/create-portable-custom-editor-options).
 
-If you have done already, great!
+If you have one already, great!
 If not simply add a file called `.editorconfig` in the folder which contains your `.csproj` file (if you want those settings to apply to a single project), or next to your `.sln` file (to apply them to all projects in the solution).
 There are various other ways to combine settings from different `.editorconfig` files, see the MSDN documentation.
 

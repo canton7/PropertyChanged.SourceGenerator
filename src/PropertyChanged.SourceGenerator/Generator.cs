@@ -118,6 +118,14 @@ namespace PropertyChanged.SourceGenerator
 
             var (propertyAccessibility, getterAccessibility, setterAccessibility) = CalculateAccessibilities(member);
 
+            if (member.DocComment != null)
+            {
+                foreach (string line in member.DocComment)
+                {
+                    this.writer.WriteLine($"/// {line}");
+                }
+            }
+
             this.writer.WriteLine($"{propertyAccessibility}{member.Type.ToDisplayString(SymbolDisplayFormats.MethodOrPropertyReturnType)} {member.Name}");
             this.writer.WriteLine("{");
             this.writer.Indent++;

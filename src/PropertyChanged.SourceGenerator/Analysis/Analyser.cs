@@ -1,8 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
-using System.Text;
+using System.Xml;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -258,6 +259,7 @@ namespace PropertyChanged.SourceGenerator.Analysis
                 GetterAccessibility = getterAccessibility,
                 SetterAccessibility = setterAccessibility,
                 OnPropertyNameChanged = this.FindOnPropertyNameChangedMethod(backingMember.ContainingType, name, type, backingMember.ContainingType),
+                DocComment = ParseDocComment(backingMember.GetDocumentationCommentXml()),
             };
 
             if (type.IsReferenceType)
@@ -403,6 +405,48 @@ namespace PropertyChanged.SourceGenerator.Analysis
         private AttributeData? GetNotifyAttribute(ISymbol member)
         {
             return member.GetAttributes().SingleOrDefault(x => SymbolEqualityComparer.Default.Equals(x.AttributeClass, this.notifyAttributeSymbol));
+        }
+
+        private static string[]? ParseDocComment(string? xml)
+        {
+            // XML doc comments come wrapped in <member ...> ... </member>
+            // Remove this root, and strip leading whitespace from the children
+
+            if (string.IsNullOrWhiteSpace(xml))
+                return null;
+
+            using (var sr = new StringReader(xml))
+            using (var reader = XmlReader.Create(sr))
+            {
+                reader.MoveToContent();
+                string comment = reader.ReadInnerXml().Trim('\n');
+
+                string[] lines = comment.Split('\n');
+                if (lines.Length == 0)
+                {
+                    return null;
+                }
+
+                string leadingWhitespace = "";
+                for (int i = 0; i < lines[0].Length; i++)
+                {
+                    if (lines[0][i] != ' ')
+                    {
+                        leadingWhitespace = lines[0].Substring(0, i);
+                        break;
+                    }
+                }
+
+                for (int i = 0; i < lines.Length; i++)
+                {
+                    if (lines[i].StartsWith(leadingWhitespace))
+                    {
+                        lines[i] = lines[i].Substring(leadingWhitespace.Length);
+                    }
+                }
+
+                return lines;
+            }
         }
     }
 }

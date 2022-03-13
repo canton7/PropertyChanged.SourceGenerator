@@ -22,6 +22,7 @@ PropertyChanged.SourceGenerator works well if you're using an MVVM framework or 
 1. [Defining Properties](#defining-properties)
    1. [Property Names](#property-names)
    1. [Property Accessibility](#property-accessibility)
+   1. [Property Doc Comments](#property-doc-comments)
 1. [Property Dependencies](#property-dependencies)
    1. [Automatic Dependencies](#automatic-dependencies)
    1. [Manual Dependencies with `[DependsOn]`](#manual-dependencies-with-dependson)
@@ -234,6 +235,38 @@ partial class MyViewModel
     {
         private protected get => _bar,
         set { /* ... */ }
+    }
+}
+```
+
+
+### Property Doc Comments
+
+Any XML doc comments applied to your field will be copied to the generated property.
+Note that any such comments must appear *before* the `[Notify]` attribute.
+
+```cs
+using PropertyChanged.SourceGenerator;
+public partial class MyViewModel
+{
+    /// <summary>
+    /// The Foo property
+    /// </summary>
+    [Notify] private int _foo;
+}
+```
+
+Generates:
+
+```cs
+partial class MyViewModel
+{
+    /// <summary>
+    /// The Foo property
+    /// </summary>
+    public int Foo
+    {
+        // ...
     }
 }
 ```

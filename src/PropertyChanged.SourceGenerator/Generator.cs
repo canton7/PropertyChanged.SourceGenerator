@@ -175,7 +175,7 @@ namespace PropertyChanged.SourceGenerator
             }
         }
 
-        private void GenerateOldVariableIfNecessary(TypeAnalysis type, IMember member)
+        private void GenerateOldVariableIfNecessary<T>(TypeAnalysis type, T member) where T : IMember
         {
             if (member.IsCallable &&
                 (type.RaisePropertyChangedMethodSignature.HasOldAndNew ||
@@ -215,7 +215,7 @@ namespace PropertyChanged.SourceGenerator
             this.writer.WriteLine(");");
         }
 
-        private void GenerateOnPropertyNameChangedIfNecessary(IMember member)
+        private void GenerateOnPropertyNameChangedIfNecessary<T>(T member) where T : IMember
         {
             if (member.OnPropertyNameChanged != null)
             {

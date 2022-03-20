@@ -38,22 +38,19 @@ namespace PropertyChanged.SourceGenerator.Analysis
             // it is. One we've found any method with a name we're looking for, stop: it's most likely they've 
             // just messed up the signature
             RaisePropertyChangedMethodSignature? signature = null;
-            string? methodName = null;
+            IMethodSymbol? method = null;
             foreach (string name in config.RaisePropertyChangedMethodNames)
             {
+                // We don't filter on IsOverride. That means if there is an override, we'll pick it up before the
+                // base type. This matters, because we check whether we found an override further down.
                 var methods = TypeAndBaseTypes(typeSymbol)
                     .SelectMany(x => x.GetMembers(name))
                     .OfType<IMethodSymbol>()
-                    .Where(x => !x.IsOverride && !x.IsStatic)
+                    .Where(x => !x.IsStatic)
                     .ToList();
                 if (methods.Count > 0)
                 {
-                    signature = FindCallableOverload(methods);
-                    if (signature != null)
-                    {
-                        methodName = name;
-                    }
-                    else
+                    if (!TryFindCallableOverload(methods, out method, out signature))
                     {
                         this.diagnostics.ReportCouldNotFindCallableRaisePropertyChangedOverload(typeSymbol, name);
                         return false;
@@ -65,9 +62,24 @@ namespace PropertyChanged.SourceGenerator.Analysis
             if (signature != null)
             {
                 // We found a method which we know how to call
-                typeAnalysis.RequiresRaisePropertyChangedMethod = false;
-                typeAnalysis.RaisePropertyChangedMethodName = methodName!;
-                typeAnalysis.RaisePropertyChangedMethodSignature = signature.Value;
+                // Users aren't supposed to define their own overrides of this method: they're supposed to define
+                // a hook which we call. So if this method was defined on the type we're currently analysing,
+                // raise a warning.
+                if (SymbolEqualityComparer.Default.Equals(method!.ContainingType, typeSymbol))
+                {
+                    if (method.IsOverride)
+                    {
+                        this.diagnostics.ReportUserDefinedRaisePropertyChangedMethodOverride(method);
+                    }
+                    typeAnalysis.RaisePropertyChangedMethod.Type = RaisePropertyChangedMethodType.None;
+                }
+                else
+                {
+                    typeAnalysis.RaisePropertyChangedMethod.Type = RaisePropertyChangedMethodType.Override;
+                }
+
+                typeAnalysis.RaisePropertyChangedMethod.Name = method!.Name;
+                typeAnalysis.RaisePropertyChangedMethod.Signature = signature.Value;
             }
             else
             {
@@ -80,54 +92,62 @@ namespace PropertyChanged.SourceGenerator.Analysis
                     return false;
                 }
 
-                typeAnalysis.RequiresRaisePropertyChangedMethod = !isGeneratingAnyParent;
-                typeAnalysis.RaisePropertyChangedMethodName = config.RaisePropertyChangedMethodNames[0];
-                typeAnalysis.RaisePropertyChangedMethodSignature = RaisePropertyChangedMethodSignature.Default;
+                typeAnalysis.RaisePropertyChangedMethod.Type = isGeneratingAnyParent
+                    ? RaisePropertyChangedMethodType.None
+                    : RaisePropertyChangedMethodType.Virtual;
+                typeAnalysis.RaisePropertyChangedMethod.Name = config.RaisePropertyChangedMethodNames[0];
+                typeAnalysis.RaisePropertyChangedMethod.Signature = RaisePropertyChangedMethodSignature.Default;
             }
 
             return true;
 
-            RaisePropertyChangedMethodSignature? FindCallableOverload(List<IMethodSymbol> methods)
+            bool TryFindCallableOverload(List<IMethodSymbol> methods, out IMethodSymbol method, out RaisePropertyChangedMethodSignature? signature)
             {
                 methods.RemoveAll(x => !this.IsAccessibleNormalMethod(x, typeSymbol));
 
                 // We care about the order in which we choose an overload, which unfortunately means we're quadratic
-                if (methods.Any(x => x.Parameters.Length == 1 &&
+                if ((method = methods.FirstOrDefault(x => x.Parameters.Length == 1 &&
                     SymbolEqualityComparer.Default.Equals(x.Parameters[0].Type, this.propertyChangedEventArgsSymbol) &&
-                    IsNormalParameter(x.Parameters[0])))
+                    IsNormalParameter(x.Parameters[0]))) != null)
                 {
-                    return new RaisePropertyChangedMethodSignature(RaisePropertyChangedNameType.PropertyChangedEventArgs, hasOldAndNew: false);
+                    signature = new RaisePropertyChangedMethodSignature(RaisePropertyChangedNameType.PropertyChangedEventArgs, hasOldAndNew: false, method.DeclaredAccessibility);
+                    return true;
                 }
 
-                if (methods.Any(x => x.Parameters.Length == 1 &&
+                if ((method = methods.FirstOrDefault(x => x.Parameters.Length == 1 &&
                     x.Parameters[0].Type.SpecialType == SpecialType.System_String &&
-                    IsNormalParameter(x.Parameters[0])))
+                    IsNormalParameter(x.Parameters[0]))) != null)
                 {
-                    return new RaisePropertyChangedMethodSignature(RaisePropertyChangedNameType.String, hasOldAndNew: false);
+                    signature = new RaisePropertyChangedMethodSignature(RaisePropertyChangedNameType.String, hasOldAndNew: false, method.DeclaredAccessibility);
+                    return true;
                 }
 
-                if (methods.Any(x => x.Parameters.Length == 3 &&
+                if ((method = methods.FirstOrDefault(x => x.Parameters.Length == 3 &&
                     SymbolEqualityComparer.Default.Equals(x.Parameters[0].Type, this.propertyChangedEventArgsSymbol) &&
                     IsNormalParameter(x.Parameters[0]) &&
                     x.Parameters[1].Type.SpecialType == SpecialType.System_Object &&
                     IsNormalParameter(x.Parameters[1]) &&
                     x.Parameters[2].Type.SpecialType == SpecialType.System_Object &&
-                    IsNormalParameter(x.Parameters[2])))
+                    IsNormalParameter(x.Parameters[2]))) != null)
                 {
-                    return new RaisePropertyChangedMethodSignature(RaisePropertyChangedNameType.PropertyChangedEventArgs, hasOldAndNew: true);
+                    signature = new RaisePropertyChangedMethodSignature(RaisePropertyChangedNameType.PropertyChangedEventArgs, hasOldAndNew: true, method.DeclaredAccessibility);
+                    return true;
                 }
-                if (methods.Any(x => x.Parameters.Length == 3 &&
+
+                if ((method = methods.FirstOrDefault(x => x.Parameters.Length == 3 &&
                     x.Parameters[0].Type.SpecialType == SpecialType.System_String &&
                     IsNormalParameter(x.Parameters[0]) &&
                     x.Parameters[1].Type.SpecialType == SpecialType.System_Object &&
                     IsNormalParameter(x.Parameters[1]) &&
                     x.Parameters[2].Type.SpecialType == SpecialType.System_Object &&
-                    IsNormalParameter(x.Parameters[2])))
+                    IsNormalParameter(x.Parameters[2]))) != null)
                 {
-                    return new RaisePropertyChangedMethodSignature(RaisePropertyChangedNameType.String, hasOldAndNew: true);
+                    signature = new RaisePropertyChangedMethodSignature(RaisePropertyChangedNameType.String, hasOldAndNew: true, method.DeclaredAccessibility);
+                    return true;
                 }
 
-                return null;
+                signature = default;
+                return false;
             }
         }
 

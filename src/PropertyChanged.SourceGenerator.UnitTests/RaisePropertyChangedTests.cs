@@ -379,6 +379,29 @@ partial class C
         }
 
         [Test]
+        public void RaisesIfUserDefinedOverrideFound()
+        {
+            string input = @"
+using System.ComponentModel;
+public partial class Base : INotifyPropertyChanged
+{
+    public event PropertyChangedEventHandler PropertyChanged;
+    protected virtual void OnPropertyChanged(string name) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
+}
+
+public partial class Derived : Base
+{
+    [Notify] private string _bar;
+    protected override void OnPropertyChanged(string name) { }
+}";
+
+            this.AssertThat(input, It.HasDiagnostics(
+                // (12,29): Warning INPC021: Method 'OnPropertyChanged' must not be overridden. Functionality such as automatic dependencies on base properties will not work. Define a method called TODO instead
+                // OnPropertyChanged
+                Diagnostic("INPC021", @"OnPropertyChanged").WithLocation(12, 29)));
+        }
+
+        [Test]
         public void FindsGenericBaseClasses()
         {
             // https://github.com/canton7/PropertyChanged.SourceGenerator/issues/3

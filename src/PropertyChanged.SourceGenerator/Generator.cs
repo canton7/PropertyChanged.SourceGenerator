@@ -87,7 +87,14 @@ namespace PropertyChanged.SourceGenerator
             {
                 Trace.Assert(typeAnalysis.RaisePropertyChangedMethodSignature.NameType == RaisePropertyChangedNameType.PropertyChangedEventArgs &&
                     typeAnalysis.RaisePropertyChangedMethodSignature.HasOldAndNew == false);
-                this.writer.WriteLine($"protected virtual void {typeAnalysis.RaisePropertyChangedMethodName}(global::System.ComponentModel.PropertyChangedEventArgs eventArgs)");
+                if (typeAnalysis.IsSealed)
+                {
+                    this.writer.WriteLine($"private void {typeAnalysis.RaisePropertyChangedMethodName}(global::System.ComponentModel.PropertyChangedEventArgs eventArgs)");
+                }
+                else
+                {
+                    this.writer.WriteLine($"protected virtual void {typeAnalysis.RaisePropertyChangedMethodName}(global::System.ComponentModel.PropertyChangedEventArgs eventArgs)");
+                }
                 this.writer.WriteLine("{");
                 this.writer.Indent++;
 

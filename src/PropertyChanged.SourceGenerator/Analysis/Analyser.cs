@@ -128,6 +128,7 @@ namespace PropertyChanged.SourceGenerator.Analysis
             result.HasInpcInterface = baseTypeAnalyses.Any(x => x.CanGenerate)
                 || typeSymbol.AllInterfaces.Contains(this.inpcSymbol, SymbolEqualityComparer.Default);
             result.NullableContext = this.compilation.Options.NullableContextOptions;
+            result.IsSealed = typeSymbol.IsSealed;
 
             this.ResoveInheritedIsChanged(result, baseTypeAnalyses);
 

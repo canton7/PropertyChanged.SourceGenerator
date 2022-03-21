@@ -18,6 +18,7 @@ namespace PropertyChanged.SourceGenerator.Analysis
         public RaisePropertyChangedMethodSignature RaisePropertyChangedMethodSignature { get; set; }
         public List<MemberAnalysis> Members { get; } = new();
         public NullableContextOptions NullableContext { get; set; }
+        public bool IsSealed { get; set; }
 
     }
 }

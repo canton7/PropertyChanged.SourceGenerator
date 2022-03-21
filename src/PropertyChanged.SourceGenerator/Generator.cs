@@ -142,31 +142,6 @@ namespace PropertyChanged.SourceGenerator
             this.writer.WriteLine("{");
             this.writer.Indent++;
 
-            if (baseDependsOn.Count > 0)
-            {
-                this.writer.WriteLine($"switch ({propertyNameAccessor})");
-                this.writer.WriteLine("{");
-                this.writer.Indent++;
-
-                foreach (var group in baseDependsOn)
-                {
-                    this.writer.WriteLine($"case \"{group.Key}\":");
-                    this.writer.WriteLine("{");
-                    this.writer.Indent++;
-                    foreach (var (_, notifyProperty) in group)
-                    {
-                        this.GenerateOnPropertyNameChangedIfNecessary(notifyProperty, hasOldVariable: false);
-                        this.GenerateRaiseEvent(typeAnalysis, notifyProperty.Name, notifyProperty.IsCallable);
-                    }
-                    this.writer.WriteLine("break;");
-                    this.writer.Indent--;
-                    this.writer.WriteLine("}");
-                }
-
-                this.writer.Indent--;
-                this.writer.WriteLine("}");
-            }
-
             switch (method.Type)
             {
                 case RaisePropertyChangedMethodType.Virtual:
@@ -184,6 +159,29 @@ namespace PropertyChanged.SourceGenerator
                     break;
                 case RaisePropertyChangedMethodType.None:
                     break;
+            }
+
+            if (baseDependsOn.Count > 0)
+            {
+                this.writer.WriteLine($"switch ({propertyNameAccessor})");
+                this.writer.WriteLine("{");
+                this.writer.Indent++;
+
+                foreach (var group in baseDependsOn)
+                {
+                    this.writer.WriteLine($"case {EscapeString(group.Key)}:");
+                    this.writer.Indent++;
+                    foreach (var (_, notifyProperty) in group)
+                    {
+                        this.GenerateOnPropertyNameChangedIfNecessary(notifyProperty, hasOldVariable: false);
+                        this.GenerateRaiseEvent(typeAnalysis, notifyProperty.Name, notifyProperty.IsCallable, hasOldVariable: false);
+                    }
+                    this.writer.WriteLine("break;");
+                    this.writer.Indent--;
+                }
+
+                this.writer.Indent--;
+                this.writer.WriteLine("}");
             }
 
             this.writer.Indent--;
@@ -233,11 +231,11 @@ namespace PropertyChanged.SourceGenerator
             this.writer.WriteLine($"{backingMemberReference} = value;");
 
             this.GenerateOnPropertyNameChangedIfNecessary(member, hasOldVariable: true);
-            this.GenerateRaiseEvent(type, member.Name, isCallable: true);
+            this.GenerateRaiseEvent(type, member.Name, isCallable: true, hasOldVariable: true);
             foreach (var alsoNotify in member.AlsoNotify.OrderBy(x => x.Name))
             {
                 this.GenerateOnPropertyNameChangedIfNecessary(alsoNotify, hasOldVariable: true);
-                this.GenerateRaiseEvent(type, alsoNotify.Name, alsoNotify.IsCallable);
+                this.GenerateRaiseEvent(type, alsoNotify.Name, alsoNotify.IsCallable, hasOldVariable: true);
             }
 
             if (type.IsChangedPropertyName != null && type.IsChangedPropertyName != member.Name)
@@ -268,7 +266,7 @@ namespace PropertyChanged.SourceGenerator
             }
         }
 
-        private void GenerateRaiseEvent(TypeAnalysis type, string? propertyName, bool isCallable)
+        private void GenerateRaiseEvent(TypeAnalysis type, string? propertyName, bool isCallable, bool hasOldVariable)
         {
             this.writer.Write($"this.{type.RaisePropertyChangedMethod.Name}(");
 
@@ -288,7 +286,16 @@ namespace PropertyChanged.SourceGenerator
             {
                 if (isCallable)
                 {
-                    this.writer.Write($", old_{propertyName}, this.{propertyName}");
+                    this.writer.Write(", ");
+                    if (hasOldVariable)
+                    {
+                        this.writer.Write($"old_{propertyName}");
+                    }
+                    else
+                    {
+                        this.writer.Write("(object)null");
+                    }
+                    this.writer.Write($", this.{propertyName}");
                 }
                 else
                 {

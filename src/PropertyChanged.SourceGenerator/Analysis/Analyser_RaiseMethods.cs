@@ -73,9 +73,14 @@ namespace PropertyChanged.SourceGenerator.Analysis
                     }
                     typeAnalysis.RaisePropertyChangedMethod.Type = RaisePropertyChangedMethodType.None;
                 }
-                else
+                else if (method.IsVirtual || method.IsOverride)
                 {
                     typeAnalysis.RaisePropertyChangedMethod.Type = RaisePropertyChangedMethodType.Override;
+                }
+                else
+                {
+                    this.diagnostics.ReportRaisePropertyMethodIsNonVirtual(method);
+                    typeAnalysis.RaisePropertyChangedMethod.Type = RaisePropertyChangedMethodType.None;
                 }
 
                 typeAnalysis.RaisePropertyChangedMethod.Name = method!.Name;

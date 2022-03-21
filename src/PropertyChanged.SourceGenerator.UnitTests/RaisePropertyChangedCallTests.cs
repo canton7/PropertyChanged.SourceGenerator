@@ -9,7 +9,7 @@ using PropertyChanged.SourceGenerator.UnitTests.Framework;
 namespace PropertyChanged.SourceGenerator.UnitTests
 {
     [TestFixture]
-    public class RaisePropertyChangedTests : TestsBase
+    public class RaisePropertyChangedCallTests : TestsBase
     {
         [Test]
         public void GeneratesInpcInterfaceIfNotSpecified()
@@ -46,99 +46,6 @@ partial class SomeViewModel
 }";
 
             this.AssertThat(input, It.HasFile("SomeViewModel", expected, StandardRewriters));
-        }
-
-        [Test]
-        public void GeneratesEventAndRaisePropertyChangedIfNotDefined()
-        {
-            string input = @"
-using System.ComponentModel;
-public partial class SomeViewModel : INotifyPropertyChanged
-{
-    [Notify]
-    private string _foo;
-}";
-            string expected = @"
-partial class SomeViewModel
-{
-    public event global::System.ComponentModel.PropertyChangedEventHandler PropertyChanged;
-    public string Foo { get; set; }
-    protected virtual void OnPropertyChanged(global::System.ComponentModel.PropertyChangedEventArgs eventArgs)
-    {
-        this.PropertyChanged?.Invoke(this, eventArgs);
-    }
-}";
-
-            this.AssertThat(input, It.HasFile("SomeViewModel", expected, RemovePropertiesRewriter.Instance));
-        }
-
-        [Test]
-        public void GeneratesRaisePropertyChangedIfNotDefined()
-        {
-            string input = @"
-using System.ComponentModel;
-public partial class SomeViewModel : INotifyPropertyChanged
-{
-    public event PropertyChangedEventHandler PropertyChanged;
-    [Notify]
-    private string _foo;
-}";
-            string expected = @"
-partial class SomeViewModel
-{
-    public string Foo { get; set; }
-    protected virtual void OnPropertyChanged(global::System.ComponentModel.PropertyChangedEventArgs eventArgs)
-    {
-        this.PropertyChanged?.Invoke(this, eventArgs);
-    }
-}";
-
-            this.AssertThat(input, It.HasFile("SomeViewModel", expected, RemovePropertiesRewriter.Instance));
-        }
-
-        [Test]
-        public void RaisesIfEventButNoRaiseMethodOnBaseClass()
-        {
-            string input = @"
-using System.ComponentModel;
-public class Base : INotifyPropertyChanged
-{
-    public event PropertyChangedEventHandler PropertyChanged;
-}
-public partial class Derived : Base
-{
-    [Notify]
-    private string _foo;
-}";
-            
-            this.AssertThat(input, It.HasDiagnostics(
-                // (7,22): Warning INPC007: Could not find any suitable methods to raise the PropertyChanged event defined on a base class
-                // Derived
-                Diagnostic("INPC007", @"Derived").WithLocation(7, 22)
-            ));
-        }
-
-        [Test]
-        public void RaisesIfMethodOnBaseClassIsPrivate()
-        {
-            string input = @"
-using System.ComponentModel;
-public class Base : INotifyPropertyChanged
-{
-    public event PropertyChangedEventHandler PropertyChanged;
-    private void OnPropertyChanged(string name) { }
-}
-public partial class Derived : Base
-{
-    [Notify]
-    private string _foo;
-}";
-
-            this.AssertThat(input, It.HasDiagnostics(
-                // (8,22): Warning INPC006: Found one or more methods called 'RaisePropertyChanged' to raise the PropertyChanged event, but they had an unrecognised signatures or were inaccessible
-                // Derived
-                Diagnostic("INPC006", @"Derived").WithLocation(8, 22)
-            ));
         }
 
         [Test]
@@ -329,7 +236,7 @@ using System.ComponentModel;
 public class A : INotifyPropertyChanged
 {
     public event PropertyChangedEventHandler PropertyChanged;
-    protected void NotifyOfPropertyChange(PropertyChangedEventArgs ea) => PropertyChanged?.Invoke(this, ea);
+    protected virtual void NotifyOfPropertyChange(PropertyChangedEventArgs ea) => PropertyChanged?.Invoke(this, ea);
 }
 public partial class B : A
 {

@@ -190,10 +190,19 @@ namespace PropertyChanged.SourceGenerator
         private static readonly DiagnosticDescriptor userDefinedRaisePropertyChangedMethodOverride = CreateDescriptor(
             "INPC021",
             "Do not define your own overrides of the method to raise PropertyChanged events",
-            "Method '{0}' must not be overridden. Functionality such as automatic dependencies on base properties will not work. Define a method called TODO instead");
+            "Method '{0}' must not be overridden. Functionality such as dependencies on base properties will not work. Define a method called TODO instead");
         public void ReportUserDefinedRaisePropertyChangedMethodOverride(IMethodSymbol method)
         {
             this.AddDiagnostic(userDefinedRaisePropertyChangedMethodOverride, method.Locations, method.Name);
+        }
+
+        private static readonly DiagnosticDescriptor raisePropertyMethodIsNonVirtual = CreateDescriptor(
+            "INPC022",
+            "Method to raise PropertyChanged events must be virtual",
+            "Method '{0}' is non-virtual. Functionality such as dependencies on base properties will not work. Please make this method virtual");
+        public void ReportRaisePropertyMethodIsNonVirtual(IMethodSymbol method)
+        {
+            this.AddDiagnostic(raisePropertyMethodIsNonVirtual, method.Locations, method.Name);
         }
 
         private static DiagnosticDescriptor CreateDescriptor(string code, string title, string messageFormat, DiagnosticSeverity severity = DiagnosticSeverity.Warning)

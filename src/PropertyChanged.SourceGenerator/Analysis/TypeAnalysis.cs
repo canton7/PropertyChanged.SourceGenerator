@@ -11,8 +11,8 @@ namespace PropertyChanged.SourceGenerator.Analysis
         public INamedTypeSymbol TypeSymbol { get; set; } = null!;
         public bool HasInpcInterface { get; set; }
         public bool RequiresEvent { get; set; }
-        private RaisePropertyChangedMethodInfo _raisePropertyChangedMethod;
-        public ref RaisePropertyChangedMethodInfo RaisePropertyChangedMethod => ref this._raisePropertyChangedMethod;
+        private RaisePropertyChangedMethodInfo raisePropertyChangedMethod;
+        public ref RaisePropertyChangedMethodInfo RaisePropertyChangedMethod => ref this.raisePropertyChangedMethod;
         public OnPropertyNameChangedInfo? OnAnyPropertyChangedInfo { get; set; }
         public string? IsChangedPropertyName { get; set; }
         public bool IsChangedSetterIsPrivate { get; set; }

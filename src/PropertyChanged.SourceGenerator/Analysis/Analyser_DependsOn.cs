@@ -58,7 +58,7 @@ namespace PropertyChanged.SourceGenerator.Analysis
 
                     if (alsoNotifyMember != null)
                     {
-                        if (lookups.TryGet(dependsOn, out var dependsOnMember))
+                        if (lookups.TryGet(dependsOn!, out var dependsOnMember))
                         {
                             // Is this the name of a property we're generating on this type?
                             dependsOnMember.AddAlsoNotify(alsoNotifyMember.Value);
@@ -66,7 +66,11 @@ namespace PropertyChanged.SourceGenerator.Analysis
                         else
                         {
                             // We'll assume it'll pass through RaisePropertyChanged
-                            typeAnalysis.RaisePropertyChangedMethod.AddDependsOn(dependsOn, alsoNotifyMember.Value);
+                            if (typeAnalysis.RaisePropertyChangedMethod.Type == RaisePropertyChangedMethodType.None)
+                            {
+                                this.diagnostics.ReportDependsOnSpecifiedButRaisepropertyChangedMethodCannotBeOverridden(attribute, member, dependsOn!, typeAnalysis.RaisePropertyChangedMethod.Name);
+                            }
+                            typeAnalysis.RaisePropertyChangedMethod.AddDependsOn(dependsOn!, alsoNotifyMember.Value);
                         }
                     }
                 }

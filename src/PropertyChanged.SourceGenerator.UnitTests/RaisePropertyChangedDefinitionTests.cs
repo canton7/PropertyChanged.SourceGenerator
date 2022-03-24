@@ -128,7 +128,12 @@ partial class Derived
             this.AssertThat(input, It.HasFile("Derived", expected, RemovePropertiesRewriter.Instance).HasDiagnostics(
                 // (6,20): Warning INPC022: Method 'OnPropertyChanged' is non-virtual. Functionality such as dependencies on base properties will not work. Please make this method virtual
                 // OnPropertyChanged
-                Diagnostic("INPC022", @"OnPropertyChanged").WithLocation(6, 20)));
+                Diagnostic("INPC022", @"OnPropertyChanged").WithLocation(6, 20),
+
+                // (10,14): Warning INPC023: [DependsOn("Bar")] specified, but this will not be raised because the method to raise PropertyChanged events 'OnPropertyChanged' cannot defined or overridden by the source generator
+                // DependsOn("Bar")
+                Diagnostic("INPC023", @"DependsOn(""Bar"")").WithLocation(10, 14)
+            ));
         }
 
         [Test]

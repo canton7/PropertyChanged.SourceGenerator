@@ -53,25 +53,10 @@ public partial class SomeViewModel
     [DependsOn(""Foo"")]
     private string _bar
 }";
-            this.AssertNotifiesFromRaisePropertyChanged(input, "SomeViewModel", "Foo", "Bar");
+            this.AssertNotifiesFromBase(input, "SomeViewModel", "Foo", "Bar");
         }
 
         [Test]
-        public void NotifiedNonGeneratedProperty()
-        {
-            string input = @"
-public partial class SomeViewModel
-{
-    public string Foo { get; set; }
-
-    [Notify]
-    [DependsOn(""Foo"")]
-    private string _bar
-}";
-            this.AssertNotifiesFromRaisePropertyChanged(input, "SomeViewModel", "Foo", "Bar");
-        }
-
-            [Test]
         public void RaisesIfAppliedToFieldWithoutNotify()
         {
             string input = @"

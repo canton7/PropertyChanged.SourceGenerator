@@ -145,10 +145,10 @@ namespace PropertyChanged.SourceGenerator.UnitTests.Framework
             Assert.That(member!.AlsoNotify.Select(x => x.Name), Has.Member(propertyName));
         }
 
-        protected void AssertNotifiesFromRaisePropertyChanged(string input, string type, string memberName, string propertyName)
+        protected void AssertNotifiesFromBase(string input, string type, string memberName, string propertyName)
         {
             var analysis = this.Analyse(input, type);
-            Assert.That(analysis.RaisePropertyChangedMethod.DependsOn
+            Assert.That(analysis.RaisePropertyChangedMethod.BaseDependsOn
                 .Where(x => x.baseProperty == memberName).Select(x => x.notifyProperty.Name), Has.Member(propertyName));
         }
 
@@ -160,7 +160,7 @@ namespace PropertyChanged.SourceGenerator.UnitTests.Framework
             {
                 Assert.IsEmpty(member!.AlsoNotify);
             }
-            Assert.IsEmpty(analysis.RaisePropertyChangedMethod.DependsOn.Where(x => x.notifyProperty.Name == memberName));
+            Assert.IsEmpty(analysis.RaisePropertyChangedMethod.BaseDependsOn.Where(x => x.notifyProperty.Name == memberName));
         }
     }
 

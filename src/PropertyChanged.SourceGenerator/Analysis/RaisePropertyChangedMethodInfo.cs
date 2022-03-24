@@ -15,7 +15,7 @@ namespace PropertyChanged.SourceGenerator.Analysis
             this.baseDependsOn ??= new();
             this.baseDependsOn.Add((baseProperty, notifyProperty));
         }
-        public IEnumerable<(string baseProperty, AlsoNotifyMember notifyProperty)> DependsOn =>
+        public IEnumerable<(string baseProperty, AlsoNotifyMember notifyProperty)> BaseDependsOn =>
             this.baseDependsOn ?? Enumerable.Empty<(string, AlsoNotifyMember)>();
     }
 }

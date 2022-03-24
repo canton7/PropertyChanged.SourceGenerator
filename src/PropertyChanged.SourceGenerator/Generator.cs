@@ -98,7 +98,7 @@ namespace PropertyChanged.SourceGenerator
         private void GenerateRaisePropertyChangedMethod(TypeAnalysis typeAnalysis)
         {
             var method = typeAnalysis.RaisePropertyChangedMethod;
-            var baseDependsOn = method.DependsOn.ToLookup(x => x.baseProperty);
+            var baseDependsOn = method.BaseDependsOn.ToLookup(x => x.baseProperty);
             if (method.Type == RaisePropertyChangedMethodType.None ||
                 (method.Type == RaisePropertyChangedMethodType.Override &&
                 baseDependsOn.Count == 0 &&

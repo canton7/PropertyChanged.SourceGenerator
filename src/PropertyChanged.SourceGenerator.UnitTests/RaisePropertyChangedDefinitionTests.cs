@@ -410,5 +410,27 @@ partial class Derived
 
             this.AssertThat(input, It.HasFile("Derived", expected, RemovePropertiesRewriter.Instance));
         }
+
+        [Test]
+        public void HandlesSealedClass()
+        {
+            string input = @"
+public sealed partial class SomeViewModel
+{
+    [Notify] string _foo;
+}";
+            string expected = @"
+partial class SomeViewModel : global::System.ComponentModel.INotifyPropertyChanged
+{
+    public event global::System.ComponentModel.PropertyChangedEventHandler PropertyChanged;
+    public string Foo { get; set; }
+    private void OnPropertyChanged(global::System.ComponentModel.PropertyChangedEventArgs eventArgs)
+    {
+        this.PropertyChanged?.Invoke(this, eventArgs);
+    }
+}";
+
+            this.AssertThat(input, It.HasFile("SomeViewModel", expected, RemovePropertiesRewriter.Instance));
+        }
     }
 }

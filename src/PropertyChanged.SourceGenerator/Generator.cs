@@ -117,6 +117,7 @@ namespace PropertyChanged.SourceGenerator
                     this.writer.Write("override ");
                     break;
                 case RaisePropertyChangedMethodType.None:
+                case RaisePropertyChangedMethodType.NonVirtual:
                     break;
             }
             this.writer.Write($"void {method.Name}(");
@@ -168,6 +169,7 @@ namespace PropertyChanged.SourceGenerator
             switch (method.Type)
             {
                 case RaisePropertyChangedMethodType.Virtual:
+                case RaisePropertyChangedMethodType.NonVirtual:
                     // If we're generating our own, we always use PropertyChangedEventArgs
                     Trace.Assert(method.Signature.NameType == RaisePropertyChangedNameType.PropertyChangedEventArgs);
                     this.writer.WriteLine("this.PropertyChanged?.Invoke(this, eventArgs);");

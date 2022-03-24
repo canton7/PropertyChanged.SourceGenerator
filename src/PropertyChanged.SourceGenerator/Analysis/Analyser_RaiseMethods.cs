@@ -122,14 +122,16 @@ namespace PropertyChanged.SourceGenerator.Analysis
                 }
                 else
                 {
-                    typeAnalysis.RaisePropertyChangedMethod.Type = RaisePropertyChangedMethodType.Virtual;
+                    typeAnalysis.RaisePropertyChangedMethod.Type = typeSymbol.IsSealed
+                        ? RaisePropertyChangedMethodType.NonVirtual
+                        : RaisePropertyChangedMethodType.Virtual;
                 }
 
                 typeAnalysis.RaisePropertyChangedMethod.Name = config.RaisePropertyChangedMethodNames[0];
                 typeAnalysis.RaisePropertyChangedMethod.Signature = new RaisePropertyChangedMethodSignature(
                     RaisePropertyChangedNameType.PropertyChangedEventArgs,
                     hasOldAndNew: typeAnalysis.OnAnyPropertyChangedInfo?.Signature == OnPropertyNameChangedSignature.OldAndNew,
-                    Accessibility.Protected);
+                    typeSymbol.IsSealed ? Accessibility.Private : Accessibility.Protected);
             }
 
             return true;

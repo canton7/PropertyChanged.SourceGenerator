@@ -5,5 +5,6 @@
         None,
         Virtual,
         Override,
+        NonVirtual,
     }
 }

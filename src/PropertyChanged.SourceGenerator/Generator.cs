@@ -142,6 +142,27 @@ namespace PropertyChanged.SourceGenerator
             this.writer.WriteLine("{");
             this.writer.Indent++;
 
+            if (typeAnalysis.OnAnyPropertyChangedInfo is { } onAnyPropertyChangedInfo)
+            {
+                this.writer.Write($"this.{onAnyPropertyChangedInfo.Name}({propertyNameAccessor}");
+                switch (onAnyPropertyChangedInfo.Signature)
+                {
+                    case OnPropertyNameChangedSignature.Parameterless:
+                        break;
+                    case OnPropertyNameChangedSignature.OldAndNew:
+                        if (method.Signature.HasOldAndNew)
+                        {
+                            this.writer.Write(", oldValue, newValue");
+                        }
+                        else
+                        {
+                            this.writer.Write(", (object)null, (object)null");
+                        }
+                        break;
+                }
+                this.writer.WriteLine(");");
+            }
+
             switch (method.Type)
             {
                 case RaisePropertyChangedMethodType.Virtual:

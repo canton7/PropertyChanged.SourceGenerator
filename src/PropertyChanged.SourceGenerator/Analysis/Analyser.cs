@@ -112,24 +112,25 @@ namespace PropertyChanged.SourceGenerator.Analysis
 
             var config = this.configurationParser.Parse(typeSymbol.DeclaringSyntaxReferences.FirstOrDefault()?.SyntaxTree);
 
-            var result = new TypeAnalysis()
+            var typeAnalysis = new TypeAnalysis()
             {
                 CanGenerate = true,
                 TypeSymbol = typeSymbol,
             };
 
-            if (!this.TryFindPropertyRaiseMethod(typeSymbol, result, baseTypeAnalyses, config))
+            if (!this.TryFindPropertyRaiseMethod(typeAnalysis, baseTypeAnalyses, config))
             {
-                result.CanGenerate = false;
+                typeAnalysis.CanGenerate = false;
             }
+            this.FindOnAnyPropertyChangedMethod(typeAnalysis);
 
             // If we've got any base types we're generating partial types for , that will have the INPC interface
             // and event on, for sure
-            result.HasInpcInterface = baseTypeAnalyses.Any(x => x.CanGenerate)
+            typeAnalysis.HasInpcInterface = baseTypeAnalyses.Any(x => x.CanGenerate)
                 || typeSymbol.AllInterfaces.Contains(this.inpcSymbol, SymbolEqualityComparer.Default);
-            result.NullableContext = this.compilation.Options.NullableContextOptions;
+            typeAnalysis.NullableContext = this.compilation.Options.NullableContextOptions;
 
-            this.ResoveInheritedIsChanged(result, baseTypeAnalyses);
+            this.ResoveInheritedIsChanged(typeAnalysis, baseTypeAnalyses);
 
             foreach (var member in typeSymbol.GetMembers())
             {
@@ -151,22 +152,22 @@ namespace PropertyChanged.SourceGenerator.Analysis
 
                 if (memberAnalysis != null)
                 {
-                    result.Members.Add(memberAnalysis);
+                    typeAnalysis.Members.Add(memberAnalysis);
                 }
 
-                this.ResolveIsChangedMember(result, member, memberAnalysis);
+                this.ResolveIsChangedMember(typeAnalysis, member, memberAnalysis);
             }
 
             // Now that we've got all members, we can do inter-member analysis
 
-            this.ReportPropertyNameCollisions(result, baseTypeAnalyses);
-            this.ResolveAlsoNotify(result, baseTypeAnalyses);
-            this.ResolveDependsOn(result);
+            this.ReportPropertyNameCollisions(typeAnalysis, baseTypeAnalyses);
+            this.ResolveAlsoNotify(typeAnalysis, baseTypeAnalyses);
+            this.ResolveDependsOn(typeAnalysis);
 
             if (!IsPartial(typeSymbol))
             {
-                result.CanGenerate = false;
-                if (result.Members.Count > 0)
+                typeAnalysis.CanGenerate = false;
+                if (typeAnalysis.Members.Count > 0)
                 {
                     this.diagnostics.ReportTypeIsNotPartial(typeSymbol);
                 }
@@ -176,8 +177,8 @@ namespace PropertyChanged.SourceGenerator.Analysis
             {
                 if (!IsPartial(outerType))
                 {
-                    result.CanGenerate = false;
-                    if (result.Members.Count > 0)
+                    typeAnalysis.CanGenerate = false;
+                    if (typeAnalysis.Members.Count > 0)
                     {
                         this.diagnostics.ReportOuterTypeIsNotPartial(outerType, typeSymbol);
                     }
@@ -190,7 +191,7 @@ namespace PropertyChanged.SourceGenerator.Analysis
                     .OfType<ClassDeclarationSyntax>()
                     .Any(x => x.Modifiers.Any(m => m.IsKind(SyntaxKind.PartialKeyword)));
 
-            return result;
+            return typeAnalysis;
         }
 
         private MemberAnalysis? AnalyseField(IFieldSymbol field, AttributeData notifyAttribute, Configuration config)

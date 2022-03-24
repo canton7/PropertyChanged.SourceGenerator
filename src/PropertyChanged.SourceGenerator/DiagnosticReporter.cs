@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using Microsoft.CodeAnalysis;
+using PropertyChanged.SourceGenerator.Analysis;
 
 namespace PropertyChanged.SourceGenerator
 {
@@ -190,7 +191,7 @@ namespace PropertyChanged.SourceGenerator
         private static readonly DiagnosticDescriptor userDefinedRaisePropertyChangedMethodOverride = CreateDescriptor(
             "INPC021",
             "Do not define your own overrides of the method to raise PropertyChanged events",
-            "Method '{0}' must not be overridden. Functionality such as dependencies on base properties will not work. Define a method called TODO instead");
+            "Method '{0}' must not be overridden. Functionality such as dependencies on base properties will not work. Define a method called '" + Analyser.OnAnyPropertyChangedMethodName + "' instead");
         public void ReportUserDefinedRaisePropertyChangedMethodOverride(IMethodSymbol method)
         {
             this.AddDiagnostic(userDefinedRaisePropertyChangedMethodOverride, method.Locations, method.Name);

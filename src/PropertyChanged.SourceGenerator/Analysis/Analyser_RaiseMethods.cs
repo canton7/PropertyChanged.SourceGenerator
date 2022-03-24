@@ -8,12 +8,15 @@ namespace PropertyChanged.SourceGenerator.Analysis
 {
     public partial class Analyser
     {
+        public const string OnAnyPropertyChangedMethodName = "OnAnyPropertyChanged";
+
         private bool TryFindPropertyRaiseMethod(
-            INamedTypeSymbol typeSymbol,
             TypeAnalysis typeAnalysis,
             IReadOnlyList<TypeAnalysis> baseTypeAnalyses, 
             Configuration config)
         {
+            var typeSymbol = typeAnalysis.TypeSymbol;
+
             // Try and find out how we raise the PropertyChanged event
             // 1. If noone's defined the PropertyChanged event yet, we'll define it ourselves
             // 2. Otherwise, try and find a method to raise the event:
@@ -153,6 +156,55 @@ namespace PropertyChanged.SourceGenerator.Analysis
 
                 signature = default;
                 return false;
+            }
+        }
+
+        private void FindOnAnyPropertyChangedMethod(TypeAnalysis typeAnalysis)
+        {
+            var methods = typeAnalysis.TypeSymbol.GetMembers(OnAnyPropertyChangedMethodName)
+                .OfType<IMethodSymbol>()
+                .Where(x => !x.IsOverride && !x.IsStatic)
+                .ToList();
+
+            if (methods.Count > 0)
+            {
+                // FindCallableOverload might remove some...
+                var firstMethod = methods[0];
+                var signature = FindCallableOverload(methods);
+                if (signature != null)
+                {
+                    typeAnalysis.OnAnyPropertyChangedInfo = new OnPropertyNameChangedInfo(OnAnyPropertyChangedMethodName, signature.Value);
+                }
+                else
+                {
+                    // TODO: Raise if it requires OldAndNew, but our RaisePropertyChangedMethod doesn't have this
+                    //this.diagnostics.ReportInvalidOnPropertyNameChangedSignature(name, OnAnyPropertyChangedMethodName, firstMethod);
+                }
+            }
+
+            OnPropertyNameChangedSignature? FindCallableOverload(List<IMethodSymbol> methods)
+            {
+                methods.RemoveAll(x => !this.IsAccessibleNormalMethod(x, typeAnalysis.TypeSymbol));
+
+                if (methods.Any(x => x.Parameters.Length == 3 &&
+                    IsNormalParameter(x.Parameters[0]) &&
+                    x.Parameters[0].Type.SpecialType == SpecialType.System_String &&
+                    IsNormalParameter(x.Parameters[1]) &&
+                    x.Parameters[1].Type.SpecialType == SpecialType.System_Object &&
+                    IsNormalParameter(x.Parameters[2]) &&
+                    x.Parameters[2].Type.SpecialType == SpecialType.System_Object))
+                {
+                    return OnPropertyNameChangedSignature.OldAndNew;
+                }
+
+                if (methods.Any(x => x.Parameters.Length == 1 &&
+                    IsNormalParameter(x.Parameters[0]) &&
+                    x.Parameters[0].Type.SpecialType == SpecialType.System_String))
+                {
+                    return OnPropertyNameChangedSignature.Parameterless;
+                }
+
+                return null;
             }
         }
 

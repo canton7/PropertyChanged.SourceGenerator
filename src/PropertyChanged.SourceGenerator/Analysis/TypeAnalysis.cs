@@ -13,6 +13,7 @@ namespace PropertyChanged.SourceGenerator.Analysis
         public bool RequiresEvent { get; set; }
         private RaisePropertyChangedMethodInfo _raisePropertyChangedMethod;
         public ref RaisePropertyChangedMethodInfo RaisePropertyChangedMethod => ref this._raisePropertyChangedMethod;
+        public OnPropertyNameChangedInfo? OnAnyPropertyChangedInfo { get; set; }
         public string? IsChangedPropertyName { get; set; }
         public bool IsChangedSetterIsPrivate { get; set; }
         public List<MemberAnalysis> Members { get; } = new();

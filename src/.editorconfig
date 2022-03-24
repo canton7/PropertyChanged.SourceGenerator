@@ -162,7 +162,7 @@ csharp_preserve_single_line_blocks = true
 dotnet_naming_style.pascal_case.capitalization = pascal_case
 
 # Style: camel case style
-dotnet_name_style.camel_case.capitalization = camel_case
+dotnet_naming_style.camel_case.capitalization = camel_case
 
 # Symbols: non-private members
 dotnet_naming_symbols.non_private_members.applicable_kinds = property,field,event

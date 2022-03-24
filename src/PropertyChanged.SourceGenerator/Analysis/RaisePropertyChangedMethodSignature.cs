@@ -18,9 +18,6 @@ namespace PropertyChanged.SourceGenerator.Analysis
         public bool HasOldAndNew { get; }
         public Accessibility Accessibility { get; }
 
-        public static RaisePropertyChangedMethodSignature Default =>
-            new(RaisePropertyChangedNameType.PropertyChangedEventArgs, hasOldAndNew: false, Accessibility.Protected);
-
         public RaisePropertyChangedMethodSignature(RaisePropertyChangedNameType nameType, bool hasOldAndNew, Accessibility accessibility)
         {
             this.NameType = nameType;

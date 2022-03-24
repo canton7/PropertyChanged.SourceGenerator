@@ -116,7 +116,7 @@ namespace PropertyChanged.SourceGenerator
 
         private static readonly DiagnosticDescriptor invalidOnPropertyNameChangedSignature = CreateDescriptor(
             "INPC013",
-            "Unable to find matching On{PropertyName}Changed",
+            "On{PropertyName}Changed method signature not recognised",
             "Found one or more On{{PropertyName}}Changed methods called '{0}' for property '{1}', but none had the correct signature, or were inaccessible. Skipping");
         public void ReportInvalidOnPropertyNameChangedSignature(string name, string onChangedMethodName, IMethodSymbol method)
         {
@@ -213,6 +213,33 @@ namespace PropertyChanged.SourceGenerator
         public void ReportDependsOnSpecifiedButRaisepropertyChangedMethodCannotBeOverridden(AttributeData dependsOnAttribute, ISymbol member, string dependsOn, string raisePropertyChangedMethodName)
         {
             this.AddDiagnostic(dependsOnSpecifiedButRaisepropertyChangedMethodCannotBeOverridden, AttributeLocations(dependsOnAttribute, member), dependsOn, raisePropertyChangedMethodName);
+        }
+
+        private static readonly DiagnosticDescriptor invalidOnAnyPropertyChangedSignature = CreateDescriptor(
+            "INPC024",
+            "OnAnyPropertyChanged method signature not recognised",
+            "Found one or more OnAnyPropertyChanged methods, but none had the correct signature, or were inaccessible. Skipping");
+        public void ReportInvalidOnAnyPropertyChangedChangedSignature(IMethodSymbol method)
+        {
+            this.AddDiagnostic(invalidOnAnyPropertyChangedSignature, method.Locations);
+        }
+
+        private static readonly DiagnosticDescriptor cannotPopulateOnAnyPropertyChangedOldAndNew = CreateDescriptor(
+            "INPC025",
+            "OnAnyPropertyChanged method has 'oldValue' and 'newValue' parameters, but the method to raise PropertyChanged events does not",
+            "The OnAnyPropertyChanged method has 'oldValue' and 'newValue' parameters, but the '{0}' method defined in a base class does not. Please add these parameters to '{0}'");
+        public void ReportCannotPopulateOnAnyPropertyChangedOldAndNew(IMethodSymbol method, string raisePropertyChangedMethodName)
+        {
+            this.AddDiagnostic(cannotPopulateOnAnyPropertyChangedOldAndNew, method.Locations, raisePropertyChangedMethodName);
+        }
+
+        private static readonly DiagnosticDescriptor cannotCallOnAnyPropertyChangedBecauseRaisePropertyChangedIsNonVirtual = CreateDescriptor(
+            "INPC026",
+            "OnAnyPropertyChanged method cannot be called, because the method to raise PropertyChanged events is non-virtual",
+            "OnAnyPropertyChanged method will not be called because the method to raise PropertyChanged events '{0}' cannot defined or overridden by the source generator");
+        public void ReportCannotCallOnAnyPropertyChangedBecauseRaisePropertyChangedIsNonVirtual(IMethodSymbol method, string raisePropertyChangedMethodName)
+        {
+            this.AddDiagnostic(cannotCallOnAnyPropertyChangedBecauseRaisePropertyChangedIsNonVirtual, method.Locations, raisePropertyChangedMethodName);
         }
 
         private static DiagnosticDescriptor CreateDescriptor(string code, string title, string messageFormat, DiagnosticSeverity severity = DiagnosticSeverity.Warning)

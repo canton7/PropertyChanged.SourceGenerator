@@ -1,2 +1,0 @@
- - OnAnyPropertyChanged book, again raise if no OnPropertyChanged can be generated
- - Raise if DependsOn used on a property which isn't Notify?

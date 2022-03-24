@@ -62,9 +62,13 @@ namespace PropertyChanged.SourceGenerator.Analysis
                 }
             }
 
+            // Get this populated now -- we'll need to adjust our behaviour based on what we find
+            this.FindOnAnyPropertyChangedMethod(typeAnalysis, out var onAnyPropertyChangedMethod);
+
             if (signature != null)
             {
-                // We found a method which we know how to call
+                // We found a method which we know how to call.
+
                 // Users aren't supposed to define their own overrides of this method: they're supposed to define
                 // a hook which we call. So if this method was defined on the type we're currently analysing,
                 // raise a warning.
@@ -83,7 +87,17 @@ namespace PropertyChanged.SourceGenerator.Analysis
                 else
                 {
                     this.diagnostics.ReportRaisePropertyMethodIsNonVirtual(method);
+                    if (typeAnalysis.OnAnyPropertyChangedInfo != null)
+                    {
+                        this.diagnostics.ReportCannotCallOnAnyPropertyChangedBecauseRaisePropertyChangedIsNonVirtual(onAnyPropertyChangedMethod!, method.Name);
+                    }
                     typeAnalysis.RaisePropertyChangedMethod.Type = RaisePropertyChangedMethodType.None;
+                }
+
+                if (typeAnalysis.OnAnyPropertyChangedInfo?.Signature == OnPropertyNameChangedSignature.OldAndNew &&
+                    !signature.Value.HasOldAndNew)
+                {
+                    this.diagnostics.ReportCannotPopulateOnAnyPropertyChangedOldAndNew(onAnyPropertyChangedMethod!, method.Name);
                 }
 
                 typeAnalysis.RaisePropertyChangedMethod.Name = method!.Name;
@@ -100,11 +114,22 @@ namespace PropertyChanged.SourceGenerator.Analysis
                     return false;
                 }
 
-                typeAnalysis.RaisePropertyChangedMethod.Type = isGeneratingAnyParent
-                    ? RaisePropertyChangedMethodType.None
-                    : RaisePropertyChangedMethodType.Virtual;
+                if (isGeneratingAnyParent)
+                {
+                    typeAnalysis.RaisePropertyChangedMethod.Type = typeAnalysis.OnAnyPropertyChangedInfo == null
+                        ? RaisePropertyChangedMethodType.None
+                        : RaisePropertyChangedMethodType.Override;
+                }
+                else
+                {
+                    typeAnalysis.RaisePropertyChangedMethod.Type = RaisePropertyChangedMethodType.Virtual;
+                }
+
                 typeAnalysis.RaisePropertyChangedMethod.Name = config.RaisePropertyChangedMethodNames[0];
-                typeAnalysis.RaisePropertyChangedMethod.Signature = RaisePropertyChangedMethodSignature.Default;
+                typeAnalysis.RaisePropertyChangedMethod.Signature = new RaisePropertyChangedMethodSignature(
+                    RaisePropertyChangedNameType.PropertyChangedEventArgs,
+                    hasOldAndNew: typeAnalysis.OnAnyPropertyChangedInfo?.Signature == OnPropertyNameChangedSignature.OldAndNew,
+                    Accessibility.Protected);
             }
 
             return true;
@@ -159,8 +184,10 @@ namespace PropertyChanged.SourceGenerator.Analysis
             }
         }
 
-        private void FindOnAnyPropertyChangedMethod(TypeAnalysis typeAnalysis)
+        private void FindOnAnyPropertyChangedMethod(TypeAnalysis typeAnalysis, out IMethodSymbol? method)
         {
+            method = null;
+
             var methods = typeAnalysis.TypeSymbol.GetMembers(OnAnyPropertyChangedMethodName)
                 .OfType<IMethodSymbol>()
                 .Where(x => !x.IsOverride && !x.IsStatic)
@@ -170,36 +197,34 @@ namespace PropertyChanged.SourceGenerator.Analysis
             {
                 // FindCallableOverload might remove some...
                 var firstMethod = methods[0];
-                var signature = FindCallableOverload(methods);
-                if (signature != null)
+                if (FindCallableOverload(methods, out method) is { } signature)
                 {
-                    typeAnalysis.OnAnyPropertyChangedInfo = new OnPropertyNameChangedInfo(OnAnyPropertyChangedMethodName, signature.Value);
+                    typeAnalysis.OnAnyPropertyChangedInfo = new OnPropertyNameChangedInfo(OnAnyPropertyChangedMethodName, signature);
                 }
                 else
                 {
-                    // TODO: Raise if it requires OldAndNew, but our RaisePropertyChangedMethod doesn't have this
-                    //this.diagnostics.ReportInvalidOnPropertyNameChangedSignature(name, OnAnyPropertyChangedMethodName, firstMethod);
+                    this.diagnostics.ReportInvalidOnAnyPropertyChangedChangedSignature(firstMethod);
                 }
             }
 
-            OnPropertyNameChangedSignature? FindCallableOverload(List<IMethodSymbol> methods)
+            OnPropertyNameChangedSignature? FindCallableOverload(List<IMethodSymbol> methods, out IMethodSymbol method)
             {
                 methods.RemoveAll(x => !this.IsAccessibleNormalMethod(x, typeAnalysis.TypeSymbol));
 
-                if (methods.Any(x => x.Parameters.Length == 3 &&
+                if ((method = methods.FirstOrDefault(x => x.Parameters.Length == 3 &&
                     IsNormalParameter(x.Parameters[0]) &&
                     x.Parameters[0].Type.SpecialType == SpecialType.System_String &&
                     IsNormalParameter(x.Parameters[1]) &&
                     x.Parameters[1].Type.SpecialType == SpecialType.System_Object &&
                     IsNormalParameter(x.Parameters[2]) &&
-                    x.Parameters[2].Type.SpecialType == SpecialType.System_Object))
+                    x.Parameters[2].Type.SpecialType == SpecialType.System_Object)) != null)
                 {
                     return OnPropertyNameChangedSignature.OldAndNew;
                 }
 
-                if (methods.Any(x => x.Parameters.Length == 1 &&
+                if ((method = methods.FirstOrDefault(x => x.Parameters.Length == 1 &&
                     IsNormalParameter(x.Parameters[0]) &&
-                    x.Parameters[0].Type.SpecialType == SpecialType.System_String))
+                    x.Parameters[0].Type.SpecialType == SpecialType.System_String)) != null)
                 {
                     return OnPropertyNameChangedSignature.Parameterless;
                 }
@@ -233,10 +258,9 @@ namespace PropertyChanged.SourceGenerator.Analysis
             {
                 // FindCallableOverload might remove some...
                 var firstMethod = methods[0];
-                var signature = FindCallableOverload(methods);
-                if (signature != null)
+                if (FindCallableOverload(methods) is { } signature)
                 {
-                    result = new OnPropertyNameChangedInfo(onChangedMethodName, signature.Value);
+                    result = new OnPropertyNameChangedInfo(onChangedMethodName, signature);
                 }
                 else
                 {

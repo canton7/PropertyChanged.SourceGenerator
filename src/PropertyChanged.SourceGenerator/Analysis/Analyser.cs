@@ -122,7 +122,6 @@ namespace PropertyChanged.SourceGenerator.Analysis
             {
                 typeAnalysis.CanGenerate = false;
             }
-            this.FindOnAnyPropertyChangedMethod(typeAnalysis);
 
             // If we've got any base types we're generating partial types for , that will have the INPC interface
             // and event on, for sure

@@ -36,29 +36,42 @@ namespace PropertyChanged.SourceGenerator.Analysis
                 var dependsOnValues = ExtractAttributeStringParams(attribute);
                 foreach (string? dependsOn in dependsOnValues)
                 {
-                    // This must be the name of a property we're generating
-                    if (dependsOn != null && lookups.TryGet(dependsOn, out var dependsOnMember))
+                    if (string.IsNullOrWhiteSpace(dependsOn))
+                        continue;
+
+                    AlsoNotifyMember? alsoNotifyMember = null;
+                    // If we're generating this property, make sure we use the generated name...
+                    if (lookups.TryGet(member, out var memberAnalysis))
                     {
-                        // If we're generating this property, make sure we use the generated name...
-                        if (lookups.TryGet(member, out var memberAnalysis))
-                        {
-                            dependsOnMember.AddAlsoNotify(AlsoNotifyMember.FromMemberAnalysis(memberAnalysis));
-                        }
-                        else if (member is IPropertySymbol property)
-                        {
-                            dependsOnMember.AddAlsoNotify(AlsoNotifyMember.FromProperty(
-                                property,
-                                this.FindOnPropertyNameChangedMethod(typeAnalysis.TypeSymbol, property)));
-                        }
-                        else
-                        {
-                            // If we're not generating anything from this, and it's not a property, raise
-                            this.diagnostics.RaiseDependsOnAppliedToFieldWithoutNotify(attribute, member);
-                        }
+                        alsoNotifyMember = AlsoNotifyMember.FromMemberAnalysis(memberAnalysis);
+                    }
+                    else if (member is IPropertySymbol property)
+                    {
+                        alsoNotifyMember = AlsoNotifyMember.FromProperty(property,
+                            this.FindOnPropertyNameChangedMethod(typeAnalysis.TypeSymbol, property));
                     }
                     else
                     {
-                        this.diagnostics.RaiseDependsOnPropertyDoesNotExist(dependsOn, attribute, member);
+                        // If we're not generating anything from this, and it's not a property, raise
+                        this.diagnostics.RaiseDependsOnAppliedToFieldWithoutNotify(attribute, member);
+                    }
+
+                    if (alsoNotifyMember != null)
+                    {
+                        if (lookups.TryGet(dependsOn!, out var dependsOnMember))
+                        {
+                            // Is this the name of a property we're generating on this type?
+                            dependsOnMember.AddAlsoNotify(alsoNotifyMember.Value);
+                        }
+                        else
+                        {
+                            // We'll assume it'll pass through RaisePropertyChanged
+                            if (typeAnalysis.RaisePropertyChangedMethod.Type == RaisePropertyChangedMethodType.None)
+                            {
+                                this.diagnostics.ReportDependsOnSpecifiedButRaisepropertyChangedMethodCannotBeOverridden(attribute, member, dependsOn!, typeAnalysis.RaisePropertyChangedMethod.Name);
+                            }
+                            typeAnalysis.RaisePropertyChangedMethod.AddDependsOn(dependsOn!, alsoNotifyMember.Value);
+                        }
                     }
                 }
             }
@@ -113,8 +126,18 @@ namespace PropertyChanged.SourceGenerator.Analysis
                     else if (typeAnalysis.TypeSymbol.GetMembers().OfType<IPropertySymbol>()
                         .FirstOrDefault(x => x.Name == node.Identifier.ValueText) is { } dependsOn)
                     {
-                        // Is it another property, which might itself have a body we need to analyse?
+                        // Is it another property defined on the same type, which might itself have a body
+                        // we need to analyse?
                         this.ResolveAutoDependsOn(typeAnalysis, notifyProperty, dependsOn, lookups);
+                    }
+                    else if (TypeAndBaseTypes(typeAnalysis.TypeSymbol.BaseType!).SelectMany(x => x.GetMembers().OfType<IPropertySymbol>())
+                        .FirstOrDefault(x => x.Name == node.Identifier.ValueText) is { } baseProperty)
+                    {
+                        // Is it another property defined on a base type? We'll need to stick it in
+                        // the RaisePropertyChanged method
+                        typeAnalysis.RaisePropertyChangedMethod.AddDependsOn(baseProperty.Name, AlsoNotifyMember.FromProperty(
+                            notifyProperty,
+                            this.FindOnPropertyNameChangedMethod(typeAnalysis.TypeSymbol, notifyProperty)));
                     }
                 }
             }

@@ -2,25 +2,24 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace PropertyChanged.SourceGenerator
+namespace PropertyChanged.SourceGenerator;
+
+public enum Capitalisation
 {
-    public enum Capitalisation
-    {
-        None,
-        Uppercase,
-        Lowercase,
-    }
+    None,
+    Uppercase,
+    Lowercase,
+}
 
-    public class Configuration
-    {
-        public string[] RaisePropertyChangedMethodNames { get; set; } = new[] {
-            "OnPropertyChanged", "RaisePropertyChanged", "NotifyOfPropertyChange", "NotifyPropertyChanged", 
-        };
+public class Configuration
+{
+    public string[] RaisePropertyChangedMethodNames { get; set; } = new[] {
+        "OnPropertyChanged", "RaisePropertyChanged", "NotifyOfPropertyChange", "NotifyPropertyChanged", 
+    };
 
-        public string[] RemovePrefixes { get; set; } = new[] { "_" };
-        public string[] RemoveSuffixes { get; set; } = Array.Empty<string>();
-        public string? AddPrefix { get; set; } = null;
-        public string? AddSuffix { get; set; } = null;
-        public Capitalisation FirstLetterCapitalisation { get; set; } = Capitalisation.Uppercase; 
-    }
+    public string[] RemovePrefixes { get; set; } = new[] { "_" };
+    public string[] RemoveSuffixes { get; set; } = Array.Empty<string>();
+    public string? AddPrefix { get; set; } = null;
+    public string? AddSuffix { get; set; } = null;
+    public Capitalisation FirstLetterCapitalisation { get; set; } = Capitalisation.Uppercase; 
 }

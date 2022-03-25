@@ -6,15 +6,15 @@ using System.Threading.Tasks;
 using NUnit.Framework;
 using PropertyChanged.SourceGenerator.UnitTests.Framework;
 
-namespace PropertyChanged.SourceGenerator.UnitTests
+namespace PropertyChanged.SourceGenerator.UnitTests;
+
+[TestFixture]
+public class DocTests : TestsBase
 {
-    [TestFixture]
-    public class DocTests : TestsBase
+    [Test]
+    public void CopiesDocs()
     {
-        [Test]
-        public void CopiesDocs()
-        {
-            string input = @"
+        string input = @"
 public partial class SomeViewModel
 {
     /// <summary>
@@ -26,7 +26,7 @@ public partial class SomeViewModel
     /// </description>
     [Notify] private string _foo;
 }";
-            string expected = @"
+        string expected = @"
 partial class SomeViewModel : global::System.ComponentModel.INotifyPropertyChanged
 {
     /// <summary>
@@ -39,7 +39,6 @@ partial class SomeViewModel : global::System.ComponentModel.INotifyPropertyChang
     public string Foo { get; set; }
 }";
 
-            this.AssertThat(input, It.HasFile("SomeViewModel", expected, StandardRewriters));
-        }
+        this.AssertThat(input, It.HasFile("SomeViewModel", expected, StandardRewriters));
     }
 }

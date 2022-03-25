@@ -7,30 +7,29 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
-namespace PropertyChanged.SourceGenerator.UnitTests.Framework
+namespace PropertyChanged.SourceGenerator.UnitTests.Framework;
+
+public class RemoveInpcMembersRewriter : CSharpSyntaxRewriter
 {
-    public class RemoveInpcMembersRewriter : CSharpSyntaxRewriter
+    public static RemoveInpcMembersRewriter Instance { get; } = new();
+
+    public override SyntaxNode? VisitMethodDeclaration(MethodDeclarationSyntax node)
     {
-        public static RemoveInpcMembersRewriter Instance { get; } = new();
-
-        public override SyntaxNode? VisitMethodDeclaration(MethodDeclarationSyntax node)
+        if (node.Identifier.ValueText == "OnPropertyChanged")
         {
-            if (node.Identifier.ValueText == "OnPropertyChanged")
-            {
-                return null;
-            }
-
-            return base.VisitMethodDeclaration(node);
+            return null;
         }
 
-        public override SyntaxNode? VisitEventFieldDeclaration(EventFieldDeclarationSyntax node) 
-        {
-            if (node.Declaration.Variables.Any(x => x.Identifier.ValueText == "PropertyChanged"))
-            {
-                return null;
-            }
+        return base.VisitMethodDeclaration(node);
+    }
 
-            return base.VisitEventFieldDeclaration(node);
+    public override SyntaxNode? VisitEventFieldDeclaration(EventFieldDeclarationSyntax node) 
+    {
+        if (node.Declaration.Variables.Any(x => x.Identifier.ValueText == "PropertyChanged"))
+        {
+            return null;
         }
+
+        return base.VisitEventFieldDeclaration(node);
     }
 }

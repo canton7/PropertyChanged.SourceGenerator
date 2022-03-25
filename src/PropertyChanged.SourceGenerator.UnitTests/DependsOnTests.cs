@@ -7,15 +7,15 @@ using System.Threading.Tasks;
 using NUnit.Framework;
 using PropertyChanged.SourceGenerator.UnitTests.Framework;
 
-namespace PropertyChanged.SourceGenerator.UnitTests
+namespace PropertyChanged.SourceGenerator.UnitTests;
+
+[TestFixture]
+public class DependsOnTests : TestsBase
 {
-    [TestFixture]
-    public class DependsOnTests : TestsBase
+    [Test]
+    public void NotifiesDependsOnProperty()
     {
-        [Test]
-        public void NotifiesDependsOnProperty()
-        {
-            string input = @"
+        string input = @"
 public partial class SomeViewModel
 {
     [Notify]
@@ -24,13 +24,13 @@ public partial class SomeViewModel
     [DependsOn(""Foo"")]
     public string Bar { get; set; }
 }";
-            this.AssertNotifies(input, "SomeViewModel", "Foo", "Bar");
-        }
+        this.AssertNotifies(input, "SomeViewModel", "Foo", "Bar");
+    }
 
-        [Test]
-        public void NotifiesGeneratedDependsOnProperty()
-        {
-            string input = @"
+    [Test]
+    public void NotifiesGeneratedDependsOnProperty()
+    {
+        string input = @"
 public partial class SomeViewModel
 {
     [Notify]
@@ -40,26 +40,26 @@ public partial class SomeViewModel
     [DependsOn(""Foo"")]
     private string _bar;
 }";
-            this.AssertNotifies(input, "SomeViewModel", "Foo", "Bar");
-        }
+        this.AssertNotifies(input, "SomeViewModel", "Foo", "Bar");
+    }
 
-        [Test]
-        public void NotifiesPropertyWhichDoesNotExist()
-        {
-            string input = @"
+    [Test]
+    public void NotifiesPropertyWhichDoesNotExist()
+    {
+        string input = @"
 public partial class SomeViewModel
 {
     [Notify]
     [DependsOn(""Foo"")]
     private string _bar
 }";
-            this.AssertNotifiesFromBase(input, "SomeViewModel", "Foo", "Bar");
-        }
+        this.AssertNotifiesFromBase(input, "SomeViewModel", "Foo", "Bar");
+    }
 
-        [Test]
-        public void RaisesIfAppliedToFieldWithoutNotify()
-        {
-            string input = @"
+    [Test]
+    public void RaisesIfAppliedToFieldWithoutNotify()
+    {
+        string input = @"
 public partial class SomeViewModel
 {
     [Notify]
@@ -69,29 +69,29 @@ public partial class SomeViewModel
     private string _bar;
 }";
 
-            this.AssertThat(input, It.HasDiagnostics(
-                // (7,6): Warning INPC011: [DependsOn] must only be applied to fields which also have [Notify]
-                // DependsOn("Foo")
-                Diagnostic("INPC011", @"DependsOn(""Foo"")").WithLocation(7, 6)
-            ));
-        }
+        this.AssertThat(input, It.HasDiagnostics(
+            // (7,6): Warning INPC011: [DependsOn] must only be applied to fields which also have [Notify]
+            // DependsOn("Foo")
+            Diagnostic("INPC011", @"DependsOn(""Foo"")").WithLocation(7, 6)
+        ));
+    }
 
-        [Test]
-        public void IgnoresEmptyAndNullNames()
-        {
-            string input = @"
+    [Test]
+    public void IgnoresEmptyAndNullNames()
+    {
+        string input = @"
 public partial class SomeViewModel
 {
     [DependsOn("""", null)]
     private string _foo;
 }";
-            this.AssertDoesNotNotify(input, "SomeViewModel", "Foo");
-        }
+        this.AssertDoesNotNotify(input, "SomeViewModel", "Foo");
+    }
 
-        [Test]
-        public void RaisesIfPropertyChangedMethodIsSpecifiedByUser()
-        {
-            string input = @"
+    [Test]
+    public void RaisesIfPropertyChangedMethodIsSpecifiedByUser()
+    {
+        string input = @"
 using System.ComponentModel;
 public partial class SomeViewModel : INotifyPropertyChanged
 {
@@ -101,16 +101,16 @@ public partial class SomeViewModel : INotifyPropertyChanged
     [Notify, DependsOn(""Foo"")]
     private string _bar;
 }";
-            this.AssertThat(input, It.HasDiagnostics(
-                // (8,14): Warning INPC023: [DependsOn("Foo")] specified, but this will not be raised because the method to raise PropertyChanged events 'OnPropertyChanged' cannot defined or overridden by the source generator
-                // DependsOn("Foo")
-                Diagnostic("INPC023", @"DependsOn(""Foo"")").WithLocation(8, 14)));
-        }
+        this.AssertThat(input, It.HasDiagnostics(
+            // (8,14): Warning INPC023: [DependsOn("Foo")] specified, but this will not be raised because the method to raise PropertyChanged events 'OnPropertyChanged' cannot defined or overridden by the source generator
+            // DependsOn("Foo")
+            Diagnostic("INPC023", @"DependsOn(""Foo"")").WithLocation(8, 14)));
+    }
 
-        [Test]
-        public void RaisesIfPropertyChangedMethodIsPrivate()
-        {
-            string input = @"
+    [Test]
+    public void RaisesIfPropertyChangedMethodIsPrivate()
+    {
+        string input = @"
 using System.ComponentModel;
 public partial class Base : INotifyPropertyChanged
 {
@@ -122,15 +122,14 @@ public partial class Derived : Base
     [Notify, DependsOn(""Foo"")]
     private string _bar;
 }";
-            this.AssertThat(input, It.HasDiagnostics(
-                // (6,20): Warning INPC022: Method 'OnPropertyChanged' is non-virtual. Functionality such as dependencies on base properties will not work. Please make this method virtual
-                // OnPropertyChanged
-                Diagnostic("INPC022", @"OnPropertyChanged").WithLocation(6, 20),
+        this.AssertThat(input, It.HasDiagnostics(
+            // (6,20): Warning INPC022: Method 'OnPropertyChanged' is non-virtual. Functionality such as dependencies on base properties will not work. Please make this method virtual
+            // OnPropertyChanged
+            Diagnostic("INPC022", @"OnPropertyChanged").WithLocation(6, 20),
 
-                // (10,14): Warning INPC023: [DependsOn("Foo")] specified, but this will not be raised because the method to raise PropertyChanged events 'OnPropertyChanged' cannot defined or overridden by the source generator
-                // DependsOn("Foo")
-                Diagnostic("INPC023", @"DependsOn(""Foo"")").WithLocation(10, 14)
-            ));
-        }
+            // (10,14): Warning INPC023: [DependsOn("Foo")] specified, but this will not be raised because the method to raise PropertyChanged events 'OnPropertyChanged' cannot defined or overridden by the source generator
+            // DependsOn("Foo")
+            Diagnostic("INPC023", @"DependsOn(""Foo"")").WithLocation(10, 14)
+        ));
     }
 }

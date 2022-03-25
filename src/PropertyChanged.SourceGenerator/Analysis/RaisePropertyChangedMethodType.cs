@@ -1,10 +1,9 @@
-﻿namespace PropertyChanged.SourceGenerator.Analysis
+﻿namespace PropertyChanged.SourceGenerator.Analysis;
+
+public enum RaisePropertyChangedMethodType
 {
-    public enum RaisePropertyChangedMethodType
-    {
-        None,
-        Virtual,
-        Override,
-        NonVirtual,
-    }
+    None,
+    Virtual,
+    Override,
+    NonVirtual,
 }

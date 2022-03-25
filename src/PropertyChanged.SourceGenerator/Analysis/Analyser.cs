@@ -1,8 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
-using System.Text;
+using System.Xml;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -111,24 +112,24 @@ namespace PropertyChanged.SourceGenerator.Analysis
 
             var config = this.configurationParser.Parse(typeSymbol.DeclaringSyntaxReferences.FirstOrDefault()?.SyntaxTree);
 
-            var result = new TypeAnalysis()
+            var typeAnalysis = new TypeAnalysis()
             {
                 CanGenerate = true,
                 TypeSymbol = typeSymbol,
             };
 
-            if (!this.TryFindPropertyRaiseMethod(typeSymbol, result, baseTypeAnalyses, config))
+            if (!this.TryFindPropertyRaiseMethod(typeAnalysis, baseTypeAnalyses, config))
             {
-                result.CanGenerate = false;
+                typeAnalysis.CanGenerate = false;
             }
 
             // If we've got any base types we're generating partial types for , that will have the INPC interface
             // and event on, for sure
-            result.HasInpcInterface = baseTypeAnalyses.Any(x => x.CanGenerate)
+            typeAnalysis.HasInpcInterface = baseTypeAnalyses.Any(x => x.CanGenerate)
                 || typeSymbol.AllInterfaces.Contains(this.inpcSymbol, SymbolEqualityComparer.Default);
-            result.NullableContext = this.compilation.Options.NullableContextOptions;
+            typeAnalysis.NullableContext = this.compilation.Options.NullableContextOptions;
 
-            this.ResoveInheritedIsChanged(result, baseTypeAnalyses);
+            this.ResoveInheritedIsChanged(typeAnalysis, baseTypeAnalyses);
 
             foreach (var member in typeSymbol.GetMembers())
             {
@@ -150,22 +151,22 @@ namespace PropertyChanged.SourceGenerator.Analysis
 
                 if (memberAnalysis != null)
                 {
-                    result.Members.Add(memberAnalysis);
+                    typeAnalysis.Members.Add(memberAnalysis);
                 }
 
-                this.ResolveIsChangedMember(result, member, memberAnalysis);
+                this.ResolveIsChangedMember(typeAnalysis, member, memberAnalysis);
             }
 
             // Now that we've got all members, we can do inter-member analysis
 
-            this.ReportPropertyNameCollisions(result, baseTypeAnalyses);
-            this.ResolveAlsoNotify(result, baseTypeAnalyses);
-            this.ResolveDependsOn(result);
+            this.ReportPropertyNameCollisions(typeAnalysis, baseTypeAnalyses);
+            this.ResolveAlsoNotify(typeAnalysis, baseTypeAnalyses);
+            this.ResolveDependsOn(typeAnalysis);
 
             if (!IsPartial(typeSymbol))
             {
-                result.CanGenerate = false;
-                if (result.Members.Count > 0)
+                typeAnalysis.CanGenerate = false;
+                if (typeAnalysis.Members.Count > 0)
                 {
                     this.diagnostics.ReportTypeIsNotPartial(typeSymbol);
                 }
@@ -175,8 +176,8 @@ namespace PropertyChanged.SourceGenerator.Analysis
             {
                 if (!IsPartial(outerType))
                 {
-                    result.CanGenerate = false;
-                    if (result.Members.Count > 0)
+                    typeAnalysis.CanGenerate = false;
+                    if (typeAnalysis.Members.Count > 0)
                     {
                         this.diagnostics.ReportOuterTypeIsNotPartial(outerType, typeSymbol);
                     }
@@ -189,7 +190,7 @@ namespace PropertyChanged.SourceGenerator.Analysis
                     .OfType<ClassDeclarationSyntax>()
                     .Any(x => x.Modifiers.Any(m => m.IsKind(SyntaxKind.PartialKeyword)));
 
-            return result;
+            return typeAnalysis;
         }
 
         private MemberAnalysis? AnalyseField(IFieldSymbol field, AttributeData notifyAttribute, Configuration config)
@@ -258,6 +259,7 @@ namespace PropertyChanged.SourceGenerator.Analysis
                 GetterAccessibility = getterAccessibility,
                 SetterAccessibility = setterAccessibility,
                 OnPropertyNameChanged = this.FindOnPropertyNameChangedMethod(backingMember.ContainingType, name, type, backingMember.ContainingType),
+                DocComment = ParseDocComment(backingMember.GetDocumentationCommentXml()),
             };
 
             if (type.IsReferenceType)
@@ -403,6 +405,48 @@ namespace PropertyChanged.SourceGenerator.Analysis
         private AttributeData? GetNotifyAttribute(ISymbol member)
         {
             return member.GetAttributes().SingleOrDefault(x => SymbolEqualityComparer.Default.Equals(x.AttributeClass, this.notifyAttributeSymbol));
+        }
+
+        private static string[]? ParseDocComment(string? xml)
+        {
+            // XML doc comments come wrapped in <member ...> ... </member>
+            // Remove this root, and strip leading whitespace from the children
+
+            if (string.IsNullOrWhiteSpace(xml))
+                return null;
+
+            using (var sr = new StringReader(xml))
+            using (var reader = XmlReader.Create(sr))
+            {
+                reader.MoveToContent();
+                string comment = reader.ReadInnerXml().Trim('\n');
+
+                string[] lines = comment.Split('\n');
+                if (lines.Length == 0)
+                {
+                    return null;
+                }
+
+                string leadingWhitespace = "";
+                for (int i = 0; i < lines[0].Length; i++)
+                {
+                    if (lines[0][i] != ' ')
+                    {
+                        leadingWhitespace = lines[0].Substring(0, i);
+                        break;
+                    }
+                }
+
+                for (int i = 0; i < lines.Length; i++)
+                {
+                    if (lines[i].StartsWith(leadingWhitespace))
+                    {
+                        lines[i] = lines[i].Substring(leadingWhitespace.Length);
+                    }
+                }
+
+                return lines;
+            }
         }
     }
 }

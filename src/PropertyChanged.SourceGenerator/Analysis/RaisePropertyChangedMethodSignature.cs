@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 using System.Threading;
+using Microsoft.CodeAnalysis;
 
 namespace PropertyChanged.SourceGenerator.Analysis
 {
@@ -15,14 +16,13 @@ namespace PropertyChanged.SourceGenerator.Analysis
     {
         public RaisePropertyChangedNameType NameType { get; }
         public bool HasOldAndNew { get; }
+        public Accessibility Accessibility { get; }
 
-        public static RaisePropertyChangedMethodSignature Default =>
-            new(RaisePropertyChangedNameType.PropertyChangedEventArgs, hasOldAndNew: false);
-
-        public RaisePropertyChangedMethodSignature(RaisePropertyChangedNameType nameType, bool hasOldAndNew)
+        public RaisePropertyChangedMethodSignature(RaisePropertyChangedNameType nameType, bool hasOldAndNew, Accessibility accessibility)
         {
             this.NameType = nameType;
             this.HasOldAndNew = hasOldAndNew;
+            this.Accessibility = accessibility;
         }
     }
 }

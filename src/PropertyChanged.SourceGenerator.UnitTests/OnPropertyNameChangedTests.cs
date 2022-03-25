@@ -399,7 +399,9 @@ public partial class SomeViewModel
     [Notify]
     private int _foo;
     public int Bar => this.Foo + 2;
+    public string Baz => $""Test: {Bar}"";
     private void OnBarChanged(int oldValue, int newValue) { }
+    private void OnBazChanged(string oldValue, string newValue) { }
 }";
             string expected = @"
 partial class SomeViewModel : global::System.ComponentModel.INotifyPropertyChanged
@@ -412,10 +414,13 @@ partial class SomeViewModel : global::System.ComponentModel.INotifyPropertyChang
             if (!global::System.Collections.Generic.EqualityComparer<int>.Default.Equals(value, this._foo))
             {
                 int old_Bar = this.Bar;
+                string old_Baz = this.Baz;
                 this._foo = value;
                 this.OnPropertyChanged(global::PropertyChanged.SourceGenerator.Internal.PropertyChangedEventArgsCache.Foo);
                 this.OnBarChanged(old_Bar, this.Bar);
                 this.OnPropertyChanged(global::PropertyChanged.SourceGenerator.Internal.PropertyChangedEventArgsCache.Bar);
+                this.OnBazChanged(old_Baz, this.Baz);
+                this.OnPropertyChanged(global::PropertyChanged.SourceGenerator.Internal.PropertyChangedEventArgsCache.Baz);
             }
         }
     }

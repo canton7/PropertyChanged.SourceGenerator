@@ -180,5 +180,22 @@ public partial class SomeViewModel
             this.AssertNotifies(input, "SomeViewModel", "Foo", "Thing");
             this.AssertDoesNotNotify(input, "SomeViewModel", "Bar");
         }
+
+        [Test]
+        public void ResolvesAutoDependsOnRecursively()
+        {
+            string input = @"
+public partial class SomeViewModel
+{
+    [Notify]
+    private string _foo;
+    public string Baz => this.Bar;
+    public string Bar => this.Foo;
+}";
+
+            this.AssertNotifies(input, "SomeViewModel", "Foo", "Bar");
+            this.AssertNotifies(input, "SomeViewModel", "Foo", "Baz");
+
+        }
     }
 }

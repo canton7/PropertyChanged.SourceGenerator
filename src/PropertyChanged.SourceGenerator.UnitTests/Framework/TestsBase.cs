@@ -142,15 +142,25 @@ namespace PropertyChanged.SourceGenerator.UnitTests.Framework
             var analysis = this.Analyse(input, type);
             var member = analysis.Members.FirstOrDefault(x => x.Name == memberName);
             Assert.NotNull(member);
-            Assert.That(member!.AlsoNotify.Select(x => x.Name), Is.EquivalentTo(new[] { propertyName }));
+            Assert.That(member!.AlsoNotify.Select(x => x.Name), Has.Member(propertyName));
         }
 
-        protected void AssertDoesNotNotify(string input, string type, string memberName)
+        protected void AssertNotifiesFromBase(string input, string type, string memberName, string propertyName)
+        {
+            var analysis = this.Analyse(input, type);
+            Assert.That(analysis.RaisePropertyChangedMethod.BaseDependsOn
+                .Where(x => x.baseProperty == memberName).Select(x => x.notifyProperty.Name), Has.Member(propertyName));
+        }
+
+        protected void AssertDoesNotNotify(string input, string type, string? memberName)
         {
             var analysis = this.Analyse(input, type);
             var member = analysis.Members.FirstOrDefault(x => x.Name == memberName);
-            Assert.NotNull(member);
-            Assert.IsEmpty(member!.AlsoNotify);
+            if (member != null)
+            {
+                Assert.IsEmpty(member!.AlsoNotify);
+            }
+            Assert.IsEmpty(analysis.RaisePropertyChangedMethod.BaseDependsOn.Where(x => x.notifyProperty.Name == memberName));
         }
     }
 

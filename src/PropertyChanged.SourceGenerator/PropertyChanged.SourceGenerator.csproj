@@ -12,6 +12,7 @@
     <PackageTags>INPC;INotifyPropertyChanged;SourceGenerator;MVVM;Binding</PackageTags>
     <Copyright>Copyright © Antony Male 2021</Copyright>
     <PackageIcon>icon.png</PackageIcon>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
     <PackageProjectUrl>https://github.com/canton7/PropertyChanged.SourceGenerator</PackageProjectUrl>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <RepositoryType>git</RepositoryType>
@@ -32,6 +33,7 @@ Supports features such as automatic and manual dependencies between properties, 
 
   <ItemGroup>
     <None Include="..\..\icon.png" Pack="true" PackagePath="" Visible="false" />
+    <None Include="..\..\README.md" Pack="true" PackagePath="" Visible="false" />
     <None Include="$(OutputPath)\$(AssemblyName).dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
   </ItemGroup>
 </Project>

@@ -106,17 +106,45 @@ public partial class Analyser
     }
 
     private TypeAnalysis Analyse(INamedTypeSymbol typeSymbol, List<TypeAnalysis> baseTypeAnalyses)
-    {
-        if (this.inpcSymbol == null)
-            throw new InvalidOperationException();
-
-        var config = this.configurationParser.Parse(typeSymbol.DeclaringSyntaxReferences.FirstOrDefault()?.SyntaxTree);
-
+    { 
         var typeAnalysis = new TypeAnalysis()
         {
             CanGenerate = true,
             TypeSymbol = typeSymbol,
         };
+
+        if (baseTypeAnalyses.FirstOrDefault()?.HadException == true)
+        {
+            // If we failed to analyse the base type because of an exception, we don't stand a chance. Bail now.
+            this.diagnostics.ReportUnhandledExceptionOnParent(typeSymbol);
+            typeAnalysis.HadException = true;
+            typeAnalysis.CanGenerate = false;
+        }
+        else
+        {
+            try
+            {
+                this.AnalyseInner(typeAnalysis, baseTypeAnalyses);
+            }
+            catch (Exception e)
+            {
+                this.diagnostics.ReportUnhandledException(typeSymbol, e);
+                typeAnalysis.HadException = true;
+                typeAnalysis.CanGenerate = false;
+            }
+        }
+
+        return typeAnalysis;
+    }
+
+    private void AnalyseInner(TypeAnalysis typeAnalysis, List<TypeAnalysis> baseTypeAnalyses)
+    {
+        var typeSymbol = typeAnalysis.TypeSymbol;
+
+        if (this.inpcSymbol == null)
+            throw new InvalidOperationException();
+
+        var config = this.configurationParser.Parse(typeSymbol.DeclaringSyntaxReferences.FirstOrDefault()?.SyntaxTree);
 
         if (!this.TryFindPropertyRaiseMethod(typeAnalysis, baseTypeAnalyses, config))
         {
@@ -189,8 +217,6 @@ public partial class Analyser
                 .Select(x => x.GetSyntax())
                 .OfType<ClassDeclarationSyntax>()
                 .Any(x => x.Modifiers.Any(m => m.IsKind(SyntaxKind.PartialKeyword)));
-
-        return typeAnalysis;
     }
 
     private MemberAnalysis? AnalyseField(IFieldSymbol field, AttributeData notifyAttribute, Configuration config)

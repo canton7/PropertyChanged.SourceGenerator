@@ -8,6 +8,7 @@ namespace PropertyChanged.SourceGenerator.Analysis;
 public class TypeAnalysis
 {
     public bool CanGenerate { get; set; }
+    public bool HadException { get; set; }
     public INamedTypeSymbol TypeSymbol { get; set; } = null!;
     public bool HasInpcInterface { get; set; }
     public bool RequiresEvent { get; set; }

@@ -242,6 +242,24 @@ public class DiagnosticReporter
         this.AddDiagnostic(cannotCallOnAnyPropertyChangedBecauseRaisePropertyChangedIsNonVirtual, method.Locations, raisePropertyChangedMethodName);
     }
 
+    private static readonly DiagnosticDescriptor unhandledException = CreateDescriptor(
+        "INPC027",
+        "An unhandled exception occurred",
+        "The Source Generator encountered an unhandled exception while processing type '{0}'. No code will be changed for this type and its children. Details: {1}");
+    public void ReportUnhandledException(INamedTypeSymbol typeSymbol, Exception exception)
+    {
+        this.AddDiagnostic(unhandledException, typeSymbol.Locations, typeSymbol.Name, exception.ToString());
+    }
+
+    private static readonly DiagnosticDescriptor unhandledExceptionOnParent = CreateDescriptor(
+        "INPC028",
+        "Skipping type because of unhandled exception processing parent",
+        "Skipping type '{0}' because an unhandled exception occurred when processing one of its parents");
+    public void ReportUnhandledExceptionOnParent(INamedTypeSymbol typeSymbol)
+    {
+        this.AddDiagnostic(unhandledExceptionOnParent, typeSymbol.Locations, typeSymbol.Name);
+    }
+
     private static DiagnosticDescriptor CreateDescriptor(string code, string title, string messageFormat, DiagnosticSeverity severity = DiagnosticSeverity.Warning)
     {
         string[] tags = severity == DiagnosticSeverity.Error ? new[] { WellKnownDiagnosticTags.NotConfigurable } : Array.Empty<string>();

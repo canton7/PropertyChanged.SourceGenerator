@@ -41,4 +41,23 @@ partial class SomeViewModel : global::System.ComponentModel.INotifyPropertyChang
 
         this.AssertThat(input, It.HasFile("SomeViewModel", expected, StandardRewriters));
     }
+
+    [Test]
+    public void HandlesMalformedXml()
+    {
+        string input = @"
+public partial class SomeViewModel
+{
+/// <summary>
+/// Test
+/// </summarry>
+[Notify] private string _foo;
+}";
+        string expected = @"
+partial class SomeViewModel : global::System.ComponentModel.INotifyPropertyChanged
+{
+    public string Foo { get; set; }
+}";
+        this.AssertThat(input, It.HasFile("SomeViewModel", expected, StandardRewriters));
+    }
 }

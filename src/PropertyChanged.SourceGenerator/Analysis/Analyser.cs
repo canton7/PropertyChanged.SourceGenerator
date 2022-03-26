@@ -409,8 +409,44 @@ public partial class Analyser
 
     private static string[]? ParseDocComment(string? xml)
     {
+        string? comment = ParseDocCommentXml(xml);
+        if (comment == null)
+        {
+            return null;
+        }
+
+        string[] lines = comment.Split('\n');
+        if (lines.Length == 0)
+        {
+            return null;
+        }
+
+        string leadingWhitespace = "";
+        for (int i = 0; i < lines[0].Length; i++)
+        {
+            if (lines[0][i] != ' ')
+            {
+                leadingWhitespace = lines[0].Substring(0, i);
+                break;
+            }
+        }
+
+        for (int i = 0; i < lines.Length; i++)
+        {
+            if (lines[i].StartsWith(leadingWhitespace))
+            {
+                lines[i] = lines[i].Substring(leadingWhitespace.Length);
+            }
+        }
+
+        return lines;
+    }
+
+    private static string? ParseDocCommentXml(string? xml)
+    {
         // XML doc comments come wrapped in <member ...> ... </member>
-        // Remove this root, and strip leading whitespace from the children
+        // Remove this root, and strip leading whitespace from the children.
+        // Alternatively, if the doc XML was invalid, 'xml' just contains a top-level comment
 
         if (string.IsNullOrWhiteSpace(xml))
             return null;
@@ -418,34 +454,16 @@ public partial class Analyser
         using (var sr = new StringReader(xml))
         using (var reader = XmlReader.Create(sr))
         {
-            reader.MoveToContent();
-            string comment = reader.ReadInnerXml().Trim('\n');
-
-            string[] lines = comment.Split('\n');
-            if (lines.Length == 0)
+            reader.Read();
+            if (reader.NodeType == XmlNodeType.Element && reader.Name == "member")
+            {
+                reader.MoveToContent();
+                return reader.ReadInnerXml().Trim('\n');
+            }
+            else
             {
                 return null;
             }
-
-            string leadingWhitespace = "";
-            for (int i = 0; i < lines[0].Length; i++)
-            {
-                if (lines[0][i] != ' ')
-                {
-                    leadingWhitespace = lines[0].Substring(0, i);
-                    break;
-                }
-            }
-
-            for (int i = 0; i < lines.Length; i++)
-            {
-                if (lines[i].StartsWith(leadingWhitespace))
-                {
-                    lines[i] = lines[i].Substring(leadingWhitespace.Length);
-                }
-            }
-
-            return lines;
         }
     }
 }

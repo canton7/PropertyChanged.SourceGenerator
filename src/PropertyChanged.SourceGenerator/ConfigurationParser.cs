@@ -5,67 +5,66 @@ using System.Text;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.Diagnostics;
 
-namespace PropertyChanged.SourceGenerator
+namespace PropertyChanged.SourceGenerator;
+
+public class ConfigurationParser
 {
-    public class ConfigurationParser
+    private readonly AnalyzerConfigOptionsProvider optionsProvider;
+    private readonly DiagnosticReporter diagnostics;
+
+    public ConfigurationParser(AnalyzerConfigOptionsProvider optionsProvider, DiagnosticReporter diagnostics)
     {
-        private readonly AnalyzerConfigOptionsProvider optionsProvider;
-        private readonly DiagnosticReporter diagnostics;
+        this.optionsProvider = optionsProvider;
+        this.diagnostics = diagnostics;
+    }
 
-        public ConfigurationParser(AnalyzerConfigOptionsProvider optionsProvider, DiagnosticReporter diagnostics)
+    public Configuration Parse(SyntaxTree? syntaxTree)
+    {
+        var options = syntaxTree == null
+            ? this.optionsProvider.GlobalOptions
+            : this.optionsProvider.GetOptions(syntaxTree);
+        var config = new Configuration();
+
+        if (options.TryGetValue("propertychanged.onpropertychanged_method_name", out string? methodName))
         {
-            this.optionsProvider = optionsProvider;
-            this.diagnostics = diagnostics;
+            config.RaisePropertyChangedMethodNames = methodName.Split(';');
+        }
+        if (options.TryGetValue("propertychanged.remove_prefixes", out string? removePrefixes))
+        {
+            config.RemovePrefixes = removePrefixes.Split(';');
+        }
+        if (options.TryGetValue("propertychanged.remove_suffixes", out string? removeSuffixes))
+        {
+            config.RemoveSuffixes = removeSuffixes.Split(';');
+        }
+        if (options.TryGetValue("propertychanged.add_prefix", out string? addPrefix))
+        {
+            config.AddPrefix = addPrefix;
+        }
+        if (options.TryGetValue("propertychanged.add_suffix", out string? addSuffix))
+        {
+            config.AddSuffix = addSuffix;
+        }
+        if (options.TryGetValue("propertychanged.first_letter_capitalization", out string? firstLetterCapitalisation))
+        {
+            if (string.Equals(firstLetterCapitalisation, "none", StringComparison.OrdinalIgnoreCase))
+            {
+                config.FirstLetterCapitalisation = Capitalisation.None;
+            }
+            else if (string.Equals(firstLetterCapitalisation, "upper_case", StringComparison.OrdinalIgnoreCase))
+            {
+                config.FirstLetterCapitalisation = Capitalisation.Uppercase;
+            }
+            else if (string.Equals(firstLetterCapitalisation, "lower_case", StringComparison.OrdinalIgnoreCase))
+            {
+                config.FirstLetterCapitalisation = Capitalisation.Lowercase;
+            }
+            else
+            {
+                this.diagnostics.ReportUnknownFirstLetterCapitalisation(firstLetterCapitalisation);
+            }
         }
 
-        public Configuration Parse(SyntaxTree? syntaxTree)
-        {
-            var options = syntaxTree == null
-                ? this.optionsProvider.GlobalOptions
-                : this.optionsProvider.GetOptions(syntaxTree);
-            var config = new Configuration();
-
-            if (options.TryGetValue("propertychanged.onpropertychanged_method_name", out string? methodName))
-            {
-                config.RaisePropertyChangedMethodNames = methodName.Split(';');
-            }
-            if (options.TryGetValue("propertychanged.remove_prefixes", out string? removePrefixes))
-            {
-                config.RemovePrefixes = removePrefixes.Split(';');
-            }
-            if (options.TryGetValue("propertychanged.remove_suffixes", out string? removeSuffixes))
-            {
-                config.RemoveSuffixes = removeSuffixes.Split(';');
-            }
-            if (options.TryGetValue("propertychanged.add_prefix", out string? addPrefix))
-            {
-                config.AddPrefix = addPrefix;
-            }
-            if (options.TryGetValue("propertychanged.add_suffix", out string? addSuffix))
-            {
-                config.AddSuffix = addSuffix;
-            }
-            if (options.TryGetValue("propertychanged.first_letter_capitalization", out string? firstLetterCapitalisation))
-            {
-                if (string.Equals(firstLetterCapitalisation, "none", StringComparison.OrdinalIgnoreCase))
-                {
-                    config.FirstLetterCapitalisation = Capitalisation.None;
-                }
-                else if (string.Equals(firstLetterCapitalisation, "upper_case", StringComparison.OrdinalIgnoreCase))
-                {
-                    config.FirstLetterCapitalisation = Capitalisation.Uppercase;
-                }
-                else if (string.Equals(firstLetterCapitalisation, "lower_case", StringComparison.OrdinalIgnoreCase))
-                {
-                    config.FirstLetterCapitalisation = Capitalisation.Lowercase;
-                }
-                else
-                {
-                    this.diagnostics.ReportUnknownFirstLetterCapitalisation(firstLetterCapitalisation);
-                }
-            }
-
-            return config;
-        }
+        return config;
     }
 }

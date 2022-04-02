@@ -7,21 +7,21 @@ using Microsoft.CodeAnalysis;
 using NUnit.Framework;
 using PropertyChanged.SourceGenerator.UnitTests.Framework;
 
-namespace PropertyChanged.SourceGenerator.UnitTests
+namespace PropertyChanged.SourceGenerator.UnitTests;
+
+[TestFixture]
+public class NullableTypeTests : TestsBase
 {
-    [TestFixture]
-    public class NullableTypeTests : TestsBase
+    [Test]
+    public void GeneratesNullableEventIfInCompilationNullableContext()
     {
-        [Test]
-        public void GeneratesNullableEventIfInCompilationNullableContext()
-        {
-            string input = @"
+        string input = @"
 public partial class SomeViewModel
 {
     [Notify]
     private string _foo = """";
 }";
-            string expected = @"
+        string expected = @"
 #nullable enable
 partial class SomeViewModel : global::System.ComponentModel.INotifyPropertyChanged
 {
@@ -33,23 +33,23 @@ partial class SomeViewModel : global::System.ComponentModel.INotifyPropertyChang
     }
 }";
 
-            this.AssertThat(
-                input,
-                It.HasFile("SomeViewModel", expected, RemovePropertiesRewriter.Instance),
-                nullableContextOptions: NullableContextOptions.Enable);
-        }
+        this.AssertThat(
+            input,
+            It.HasFile("SomeViewModel", expected, RemovePropertiesRewriter.Instance),
+            nullableContextOptions: NullableContextOptions.Enable);
+    }
 
-        [Test]
-        public void DoesNotGenerateNullableEventIfInFileNullableContext()
-        {
-            string input = @"
+    [Test]
+    public void DoesNotGenerateNullableEventIfInFileNullableContext()
+    {
+        string input = @"
 #nullable enable
 public partial class SomeViewModel
 {
     [Notify]
     private string _foo = """";
 }";
-            string expected = @"
+        string expected = @"
 partial class SomeViewModel : global::System.ComponentModel.INotifyPropertyChanged
 {
     public event global::System.ComponentModel.PropertyChangedEventHandler PropertyChanged;
@@ -62,17 +62,17 @@ partial class SomeViewModel : global::System.ComponentModel.INotifyPropertyChang
     }
 }";
 
-            this.AssertThat(
-                input,
-                It.HasFile("SomeViewModel", expected, RemovePropertiesRewriter.Instance),
-                nullableContextOptions: NullableContextOptions.Disable);
-            ;
-        }
+        this.AssertThat(
+            input,
+            It.HasFile("SomeViewModel", expected, RemovePropertiesRewriter.Instance),
+            nullableContextOptions: NullableContextOptions.Disable);
+        ;
+    }
 
-        [Test]
-        public void GeneratesNullablePropertiesIfInCompilationNullableContext()
-        {
-            string input = @"
+    [Test]
+    public void GeneratesNullablePropertiesIfInCompilationNullableContext()
+    {
+        string input = @"
 public partial class SomeViewModel
 {
     [Notify]
@@ -86,7 +86,7 @@ public partial class SomeViewModel
     [Notify]
     private int? _nullableValue;
 }";
-            string expected = @"
+        string expected = @"
 #nullable enable
 partial class SomeViewModel : global::System.ComponentModel.INotifyPropertyChanged
 {
@@ -142,16 +142,16 @@ partial class SomeViewModel : global::System.ComponentModel.INotifyPropertyChang
     }
 }";
 
-            this.AssertThat(
-                input,
-                It.HasFile("SomeViewModel", expected, RemoveInpcMembersRewriter.Instance),
-                nullableContextOptions: NullableContextOptions.Enable);
-        }
+        this.AssertThat(
+            input,
+            It.HasFile("SomeViewModel", expected, RemoveInpcMembersRewriter.Instance),
+            nullableContextOptions: NullableContextOptions.Enable);
+    }
 
-        [Test]
-        public void GeneratesNullablePropertiesIfInFilenNullableContext()
-        {
-            string input = @"
+    [Test]
+    public void GeneratesNullablePropertiesIfInFilenNullableContext()
+    {
+        string input = @"
 #nullable enable
 public partial class SomeViewModel
 {
@@ -166,7 +166,7 @@ public partial class SomeViewModel
     [Notify]
     private int? _nullableValue;
 }";
-            string expected = @"
+        string expected = @"
 partial class SomeViewModel : global::System.ComponentModel.INotifyPropertyChanged
 {
     #nullable enable annotations
@@ -223,10 +223,9 @@ partial class SomeViewModel : global::System.ComponentModel.INotifyPropertyChang
     }
 }";
 
-            this.AssertThat(
-                input,
-                It.HasFile("SomeViewModel", expected, RemoveInpcMembersRewriter.Instance),
-                nullableContextOptions: NullableContextOptions.Disable);
-        }
+        this.AssertThat(
+            input,
+            It.HasFile("SomeViewModel", expected, RemoveInpcMembersRewriter.Instance),
+            nullableContextOptions: NullableContextOptions.Disable);
     }
 }

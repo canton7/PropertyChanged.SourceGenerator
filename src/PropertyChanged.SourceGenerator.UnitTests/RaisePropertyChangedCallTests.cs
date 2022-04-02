@@ -6,52 +6,52 @@ using System.Threading.Tasks;
 using NUnit.Framework;
 using PropertyChanged.SourceGenerator.UnitTests.Framework;
 
-namespace PropertyChanged.SourceGenerator.UnitTests
+namespace PropertyChanged.SourceGenerator.UnitTests;
+
+[TestFixture]
+public class RaisePropertyChangedCallTests : TestsBase
 {
-    [TestFixture]
-    public class RaisePropertyChangedCallTests : TestsBase
+    [Test]
+    public void GeneratesInpcInterfaceIfNotSpecified()
     {
-        [Test]
-        public void GeneratesInpcInterfaceIfNotSpecified()
-        {
-            string input = @"
+        string input = @"
 public partial class SomeViewModel
 {
     [Notify]
     private string _foo;
 }";
-            string expected = @"
+        string expected = @"
 partial class SomeViewModel : global::System.ComponentModel.INotifyPropertyChanged
 {
     public string Foo { get; set; }
 }";
 
-            this.AssertThat(input, It.HasFile("SomeViewModel", expected, StandardRewriters));
-        }
+        this.AssertThat(input, It.HasFile("SomeViewModel", expected, StandardRewriters));
+    }
 
-        [Test]
-        public void DoesNotGenerateInpcInterfaceIfAlreadySpecified()
-        {
-            string input = @"
+    [Test]
+    public void DoesNotGenerateInpcInterfaceIfAlreadySpecified()
+    {
+        string input = @"
 using System.ComponentModel;
 public partial class SomeViewModel : INotifyPropertyChanged
 {
     [Notify]
     private string _foo;
 }";
-            string expected = @"
+        string expected = @"
 partial class SomeViewModel
 {
     public string Foo { get; set; }
 }";
 
-            this.AssertThat(input, It.HasFile("SomeViewModel", expected, StandardRewriters));
-        }
+        this.AssertThat(input, It.HasFile("SomeViewModel", expected, StandardRewriters));
+    }
 
-        [Test]
-        public void FindsAndCallsMethodWithEventArgs()
-        {
-            string input = @"
+    [Test]
+    public void FindsAndCallsMethodWithEventArgs()
+    {
+        string input = @"
 using System.ComponentModel;
 public class Base : INotifyPropertyChanged
 {
@@ -64,7 +64,7 @@ public partial class Derived : Base
     [Notify]
     private string _foo;
 }";
-            string expected = @"
+        string expected = @"
 partial class Derived
 {
     public string Foo
@@ -81,13 +81,13 @@ partial class Derived
     }
 }";
 
-            this.AssertThat(input, It.HasFile("Derived", expected));
-        }
+        this.AssertThat(input, It.HasFile("Derived", expected));
+    }
 
-        [Test]
-        public void FindsAndCallsMethodWithStringName()
-        {
-            string input = @"
+    [Test]
+    public void FindsAndCallsMethodWithStringName()
+    {
+        string input = @"
 using System.ComponentModel;
 public partial class SomeViewModel : INotifyPropertyChanged
 {
@@ -97,7 +97,7 @@ public partial class SomeViewModel : INotifyPropertyChanged
     [Notify]
     private string _foo;
 }";
-            string expected = @"
+        string expected = @"
 partial class SomeViewModel
 {
     public string Foo
@@ -114,13 +114,13 @@ partial class SomeViewModel
     }
 }";
 
-            this.AssertThat(input, It.HasFile("SomeViewModel", expected));
-        }
+        this.AssertThat(input, It.HasFile("SomeViewModel", expected));
+    }
 
-        [Test]
-        public void FindsAndCallsMethodWithEventArgsAndOldAndNewValues()
-        {
-            string input = @"
+    [Test]
+    public void FindsAndCallsMethodWithEventArgsAndOldAndNewValues()
+    {
+        string input = @"
 using System.ComponentModel;
 public partial class SomeViewModel : INotifyPropertyChanged
 {
@@ -130,7 +130,7 @@ public partial class SomeViewModel : INotifyPropertyChanged
     [Notify]
     private string _foo;
 }";
-            string expected = @"
+        string expected = @"
 partial class SomeViewModel
 {
     public string Foo
@@ -148,13 +148,13 @@ partial class SomeViewModel
     }
 }";
 
-            this.AssertThat(input, It.HasFile("SomeViewModel", expected));
-        }
+        this.AssertThat(input, It.HasFile("SomeViewModel", expected));
+    }
 
-        [Test]
-        public void FindsAndCallsMethodWithStringNameAndOldAndNewValues()
-        {
-            string input = @"
+    [Test]
+    public void FindsAndCallsMethodWithStringNameAndOldAndNewValues()
+    {
+        string input = @"
 using System.ComponentModel;
 public partial class SomeViewModel : INotifyPropertyChanged
 {
@@ -164,7 +164,7 @@ public partial class SomeViewModel : INotifyPropertyChanged
     [Notify]
     private string _foo;
 }";
-            string expected = @"
+        string expected = @"
 partial class SomeViewModel
 {
     public string Foo
@@ -182,13 +182,13 @@ partial class SomeViewModel
     }
 }";
 
-            this.AssertThat(input, It.HasFile("SomeViewModel", expected));
-        }
+        this.AssertThat(input, It.HasFile("SomeViewModel", expected));
+    }
 
-        [Test]
-        public void RaisesIfMethodFoundWithBadSignature()
-        {
-            string input = @"
+    [Test]
+    public void RaisesIfMethodFoundWithBadSignature()
+    {
+        string input = @"
 using System.ComponentModel;
 public partial class SomeViewModel
 {
@@ -199,17 +199,17 @@ public partial class SomeViewModel
     private string _foo;
 }";
 
-            this.AssertThat(input, It.HasDiagnostics(
-                // (3,22): Warning INPC006: Found one or more methods called 'RaisePropertyChanged' to raise the PropertyChanged event, but they had an unrecognised signatures or were inaccessible
-                // SomeViewModel
-                Diagnostic("INPC006", @"SomeViewModel").WithLocation(3, 22)
-            ));
-        }
+        this.AssertThat(input, It.HasDiagnostics(
+            // (3,22): Warning INPC006: Found one or more methods called 'RaisePropertyChanged' to raise the PropertyChanged event, but they had an unrecognised signatures or were inaccessible
+            // SomeViewModel
+            Diagnostic("INPC006", @"SomeViewModel").WithLocation(3, 22)
+        ));
+    }
 
-        [Test]
-        public void PrefersMethodEarlierInListWithBadSignatureToOneLaterInListWithGoodSignature()
-        {
-            string input = @"
+    [Test]
+    public void PrefersMethodEarlierInListWithBadSignatureToOneLaterInListWithGoodSignature()
+    {
+        string input = @"
 using System.ComponentModel;
 public partial class SomeViewModel
 {
@@ -221,17 +221,17 @@ public partial class SomeViewModel
     private string _foo;
 }";
 
-            this.AssertThat(input, It.HasDiagnostics(
-                // (3,22): Warning INPC006: Found one or more methods called 'OnPropertyChanged' to raise the PropertyChanged event, but they had an unrecognised signatures or were inaccessible
-                // SomeViewModel
-                Diagnostic("INPC006", @"SomeViewModel").WithLocation(3, 22)
-            ));
-        }
+        this.AssertThat(input, It.HasDiagnostics(
+            // (3,22): Warning INPC006: Found one or more methods called 'OnPropertyChanged' to raise the PropertyChanged event, but they had an unrecognised signatures or were inaccessible
+            // SomeViewModel
+            Diagnostic("INPC006", @"SomeViewModel").WithLocation(3, 22)
+        ));
+    }
 
-        [Test]
-        public void SearchesForMethodFromTopOfTypeHierarchy()
-        {
-            string input = @"
+    [Test]
+    public void SearchesForMethodFromTopOfTypeHierarchy()
+    {
+        string input = @"
 using System.ComponentModel;
 public class A : INotifyPropertyChanged
 {
@@ -249,7 +249,7 @@ public partial class C : B
     private string _bar;
     protected void OnPropertyChanged(string name) { }
 }";
-            string expectedB = @"
+        string expectedB = @"
 partial class B
 {
     public string Foo
@@ -265,7 +265,7 @@ partial class B
         }
     }
 }";
-            string expectedC = @"
+        string expectedC = @"
 partial class C
 {
     public string Bar
@@ -282,13 +282,13 @@ partial class C
     }
 }";
 
-            this.AssertThat(input, It.HasFile("B", expectedB).HasFile("C", expectedC));
-        }
+        this.AssertThat(input, It.HasFile("B", expectedB).HasFile("C", expectedC));
+    }
 
-        [Test]
-        public void RaisesIfUserDefinedOverrideFound()
-        {
-            string input = @"
+    [Test]
+    public void RaisesIfUserDefinedOverrideFound()
+    {
+        string input = @"
 using System.ComponentModel;
 public partial class Base : INotifyPropertyChanged
 {
@@ -302,18 +302,18 @@ public partial class Derived : Base
     protected override void OnPropertyChanged(string name) { }
 }";
 
-            this.AssertThat(input, It.HasDiagnostics(
-                // (12,29): Warning INPC021: Method 'OnPropertyChanged' must not be overridden. Functionality such as automatic dependencies on base properties will not work. Define a method called TODO instead
-                // OnPropertyChanged
-                Diagnostic("INPC021", @"OnPropertyChanged").WithLocation(12, 29)));
-        }
+        this.AssertThat(input, It.HasDiagnostics(
+            // (12,29): Warning INPC021: Method 'OnPropertyChanged' must not be overridden. Functionality such as automatic dependencies on base properties will not work. Define a method called TODO instead
+            // OnPropertyChanged
+            Diagnostic("INPC021", @"OnPropertyChanged").WithLocation(12, 29)));
+    }
 
-        [Test]
-        public void FindsGenericBaseClasses()
-        {
-            // https://github.com/canton7/PropertyChanged.SourceGenerator/issues/3
+    [Test]
+    public void FindsGenericBaseClasses()
+    {
+        // https://github.com/canton7/PropertyChanged.SourceGenerator/issues/3
 
-            string input = @"
+        string input = @"
 public partial class A<T>
 {
     [Notify]
@@ -324,14 +324,13 @@ public partial class B : A<string>
     [Notify]
     private string _bar;
 }";
-            // It doesn't generate a new RaisePropertyChanged method
-            string expected = @"
+        // It doesn't generate a new RaisePropertyChanged method
+        string expected = @"
 partial class B
 {
     public string Bar { get; set; }
 }";
 
-            this.AssertThat(input, It.HasFile("B", expected, RemovePropertiesRewriter.Instance));
-        }
+        this.AssertThat(input, It.HasFile("B", expected, RemovePropertiesRewriter.Instance));
     }
 }

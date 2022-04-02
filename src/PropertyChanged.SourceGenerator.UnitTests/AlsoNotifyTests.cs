@@ -7,15 +7,15 @@ using Microsoft.VisualStudio.TestPlatform.PlatformAbstractions.Interfaces;
 using NUnit.Framework;
 using PropertyChanged.SourceGenerator.UnitTests.Framework;
 
-namespace PropertyChanged.SourceGenerator.UnitTests
+namespace PropertyChanged.SourceGenerator.UnitTests;
+
+[TestFixture]
+public class AlsoNotifyTests : TestsBase
 {
-    [TestFixture]
-    public class AlsoNotifyTests : TestsBase
+    [Test]
+    public void RaisesIfAlsoNotifyAppliedToMemberWithoutNotifyAttribute()
     {
-        [Test]
-        public void RaisesIfAlsoNotifyAppliedToMemberWithoutNotifyAttribute()
-        {
-            string input = @"
+        string input = @"
 public partial class SomeViewModel
 {
     [Notify]
@@ -24,17 +24,17 @@ public partial class SomeViewModel
     [AlsoNotify(""Foo"")]
     private string _bar;
 }";
-            this.AssertThat(input, It.HasDiagnostics(
-                // (7,6): Warning INPC008: [AlsoNotify] is only valid on members which also have [Notify]. Skipping
-                // AlsoNotify("Foo")
-                Diagnostic("INPC008", @"AlsoNotify(""Foo"")").WithLocation(7, 6)
-            ));
-        }
+        this.AssertThat(input, It.HasDiagnostics(
+            // (7,6): Warning INPC008: [AlsoNotify] is only valid on members which also have [Notify]. Skipping
+            // AlsoNotify("Foo")
+            Diagnostic("INPC008", @"AlsoNotify(""Foo"")").WithLocation(7, 6)
+        ));
+    }
 
-        [Test]
-        public void RaisesIfBackingMemberNameUsed()
-        {
-            string input = @"
+    [Test]
+    public void RaisesIfBackingMemberNameUsed()
+    {
+        string input = @"
 public partial class SomeViewModel
 {
     [Notify, AlsoNotify(nameof(_bar))]
@@ -44,17 +44,17 @@ public partial class SomeViewModel
     private string _bar;
 }";
 
-            this.AssertThat(input, It.HasDiagnostics(
-                // (4,14): Warning INPC009: Unable to find a property called '_bar' on this type or its base types. This event will still be raised
-                // AlsoNotify(nameof(_bar))
-                Diagnostic("INPC009", @"AlsoNotify(nameof(_bar))").WithLocation(4, 14)
-            ));
-        }
+        this.AssertThat(input, It.HasDiagnostics(
+            // (4,14): Warning INPC009: Unable to find a property called '_bar' on this type or its base types. This event will still be raised
+            // AlsoNotify(nameof(_bar))
+            Diagnostic("INPC009", @"AlsoNotify(nameof(_bar))").WithLocation(4, 14)
+        ));
+    }
 
-        [Test]
-        public void RaisesIfPropertyDefinedOnChildClass()
-        {
-            string input = @"
+    [Test]
+    public void RaisesIfPropertyDefinedOnChildClass()
+    {
+        string input = @"
 public partial class Base
 {
     [Notify, AlsoNotify(""Bar"")]
@@ -65,7 +65,7 @@ public partial class Derived : Base
     [Notify]
     private string _bar;
 }";
-            string expected = @"
+        string expected = @"
 partial class Base : global::System.ComponentModel.INotifyPropertyChanged
 {
     public string Foo
@@ -83,18 +83,18 @@ partial class Base : global::System.ComponentModel.INotifyPropertyChanged
     }
 }";
 
-            this.AssertThat(input, It.HasFile("Base", expected, RemoveInpcMembersRewriter.Instance)
-                .HasDiagnostics(
-                // (4,14): Warning INPC009: Unable to find a property called 'Bar' on this type or its base types. This event will still be raised
-                // AlsoNotify("Bar")
-                Diagnostic("INPC009", @"AlsoNotify(""Bar"")").WithLocation(4, 14)
-            ));
-        }
+        this.AssertThat(input, It.HasFile("Base", expected, RemoveInpcMembersRewriter.Instance)
+            .HasDiagnostics(
+            // (4,14): Warning INPC009: Unable to find a property called 'Bar' on this type or its base types. This event will still be raised
+            // AlsoNotify("Bar")
+            Diagnostic("INPC009", @"AlsoNotify(""Bar"")").WithLocation(4, 14)
+        ));
+    }
 
-        [Test]
-        public void NotifiesGeneratedProperty()
-        {
-            string input = @"
+    [Test]
+    public void NotifiesGeneratedProperty()
+    {
+        string input = @"
 public partial class SomeViewModel
 {
     [Notify, AlsoNotify(""Bar"")]
@@ -103,7 +103,7 @@ public partial class SomeViewModel
     [Notify]
     private string _bar;
 }";
-            string expected = @"
+        string expected = @"
 partial class SomeViewModel : global::System.ComponentModel.INotifyPropertyChanged
 {
     public string Foo
@@ -133,13 +133,13 @@ partial class SomeViewModel : global::System.ComponentModel.INotifyPropertyChang
     }
 }";
 
-            this.AssertThat(input, It.HasFile("SomeViewModel", expected, RemoveInpcMembersRewriter.Instance));
-        }
+        this.AssertThat(input, It.HasFile("SomeViewModel", expected, RemoveInpcMembersRewriter.Instance));
+    }
 
-        [Test]
-        public void NotifiesPreExistingProperty()
-        {
-            string input = @"
+    [Test]
+    public void NotifiesPreExistingProperty()
+    {
+        string input = @"
 public partial class SomeViewModel
 {
     [Notify, AlsoNotify(nameof(Bar))]
@@ -147,7 +147,7 @@ public partial class SomeViewModel
 
     public string Bar { get; set; }
 }";
-            string expected = @"
+        string expected = @"
 partial class SomeViewModel : global::System.ComponentModel.INotifyPropertyChanged
 {
     public string Foo
@@ -165,13 +165,13 @@ partial class SomeViewModel : global::System.ComponentModel.INotifyPropertyChang
     }
 }";
 
-            this.AssertThat(input, It.HasFile("SomeViewModel", expected, RemoveInpcMembersRewriter.Instance));
-        }
+        this.AssertThat(input, It.HasFile("SomeViewModel", expected, RemoveInpcMembersRewriter.Instance));
+    }
 
-        [Test]
-        public void NotifiesGeneratedPropertyOnBaseClass()
-        {
-            string input = @"
+    [Test]
+    public void NotifiesGeneratedPropertyOnBaseClass()
+    {
+        string input = @"
 public partial class Base
 {
     [Notify]
@@ -182,7 +182,7 @@ public partial class Derived : Base
     [Notify, AlsoNotify(""Foo"")]
     private string _bar;
 }";
-            string expected = @"
+        string expected = @"
 partial class Derived
 {
     public string Bar
@@ -200,13 +200,13 @@ partial class Derived
     }
 }";
 
-            this.AssertThat(input, It.HasFile("Derived", expected, RemoveInpcMembersRewriter.Instance));
-        }
+        this.AssertThat(input, It.HasFile("Derived", expected, RemoveInpcMembersRewriter.Instance));
+    }
 
-        [Test]
-        public void NotifiesPreExistingPropertyOnBaseClass()
-        {
-            string input = @"
+    [Test]
+    public void NotifiesPreExistingPropertyOnBaseClass()
+    {
+        string input = @"
 public class Base
 {
     public string Foo { get; set; }
@@ -216,7 +216,7 @@ public partial class Derived : Base
     [Notify, AlsoNotify(nameof(Foo))]
     private string _bar;
 }";
-            string expected = @"
+        string expected = @"
 partial class Derived : global::System.ComponentModel.INotifyPropertyChanged
 {
     public string Bar
@@ -234,13 +234,13 @@ partial class Derived : global::System.ComponentModel.INotifyPropertyChanged
     }
 }";
 
-            this.AssertThat(input, It.HasFile("Derived", expected, RemoveInpcMembersRewriter.Instance));
-        }
+        this.AssertThat(input, It.HasFile("Derived", expected, RemoveInpcMembersRewriter.Instance));
+    }
 
-        [Test]
-        public void HandlesStandardNonPropertyNames()
-        {
-            string input = @"
+    [Test]
+    public void HandlesStandardNonPropertyNames()
+    {
+        string input = @"
 public partial class SomeViewModel
 {
     public string this[int index] => """";
@@ -248,7 +248,7 @@ public partial class SomeViewModel
     [Notify, AlsoNotify(null, """", ""Item[]"")]
     private string _foo;
 }";
-            string expected = @"
+        string expected = @"
 partial class SomeViewModel : global::System.ComponentModel.INotifyPropertyChanged
 {
     public string Foo
@@ -267,7 +267,7 @@ partial class SomeViewModel : global::System.ComponentModel.INotifyPropertyChang
         }
     }
 }";
-            string expectedCache = @"
+        string expectedCache = @"
 namespace PropertyChanged.SourceGenerator.Internal
 {
     internal static class PropertyChangedEventArgsCache
@@ -283,21 +283,21 @@ namespace PropertyChanged.SourceGenerator.Internal
     }
 }";
 
-            this.AssertThat(input, It
-                .HasFile("SomeViewModel", expected, RemoveInpcMembersRewriter.Instance)
-                .HasFile("PropertyChangedEventArgsCache", expectedCache));
-        }
+        this.AssertThat(input, It
+            .HasFile("SomeViewModel", expected, RemoveInpcMembersRewriter.Instance)
+            .HasFile("PropertyChangedEventArgsCache", expectedCache));
+    }
 
-        [Test]
-        public void RaisesIfAutoNotifyingSelf()
-        {
-            string input = @"
+    [Test]
+    public void RaisesIfAutoNotifyingSelf()
+    {
+        string input = @"
 public partial class SomeViewModel
 {
     [Notify, AlsoNotify(""Foo"")]
     private string _foo;
 }";
-            string expected = @"
+        string expected = @"
 partial class SomeViewModel : global::System.ComponentModel.INotifyPropertyChanged
 {
     public string Foo
@@ -314,16 +314,16 @@ partial class SomeViewModel : global::System.ComponentModel.INotifyPropertyChang
     }
 }";
 
-            this.AssertThat(input, It.HasFile("SomeViewModel", expected, RemoveInpcMembersRewriter.Instance).HasDiagnostics(
-                // (4,14): Warning INPC012: Property 'Foo' cannot have an [AlsoNotify] attribute which refers to that same property
-                // AlsoNotify("Foo")
-                Diagnostic("INPC012", @"AlsoNotify(""Foo"")").WithLocation(4, 14)));
-        }
+        this.AssertThat(input, It.HasFile("SomeViewModel", expected, RemoveInpcMembersRewriter.Instance).HasDiagnostics(
+            // (4,14): Warning INPC012: Property 'Foo' cannot have an [AlsoNotify] attribute which refers to that same property
+            // AlsoNotify("Foo")
+            Diagnostic("INPC012", @"AlsoNotify(""Foo"")").WithLocation(4, 14)));
+    }
 
-        [Test]
-        public void PassesOldAndNewValue()
-        {
-            string input = @"
+    [Test]
+    public void PassesOldAndNewValue()
+    {
+        string input = @"
 using System.ComponentModel;
 using System.Collections.Generic;
 public partial class SomeViewModel
@@ -335,7 +335,7 @@ public partial class SomeViewModel
 
     public void OnPropertyChanged(string propertyName, object oldValue, object newValue) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
 }";
-            string expected = @"
+        string expected = @"
 partial class SomeViewModel : global::System.ComponentModel.INotifyPropertyChanged
 {
     public string Foo
@@ -355,13 +355,13 @@ partial class SomeViewModel : global::System.ComponentModel.INotifyPropertyChang
     }
 }";
 
-            this.AssertThat(input, It.HasFile("SomeViewModel", expected, RemoveInpcMembersRewriter.Instance));
-        }
+        this.AssertThat(input, It.HasFile("SomeViewModel", expected, RemoveInpcMembersRewriter.Instance));
+    }
 
-        [Test]
-        public void PassesNullForOldAndNewValueIfPropertyDoesNotExist()
-        {
-            string input = @"
+    [Test]
+    public void PassesNullForOldAndNewValueIfPropertyDoesNotExist()
+    {
+        string input = @"
 public partial class SomeViewModel
 {
     [Notify, AlsoNotify(""Item[]"", ""NonExistent"", """")]
@@ -369,7 +369,7 @@ public partial class SomeViewModel
 
     public void OnPropertyChanged(string propertyName, object oldValue, object newValue) { }
 }";
-            string expected = @"
+        string expected = @"
 partial class SomeViewModel : global::System.ComponentModel.INotifyPropertyChanged
 {
     public string Foo
@@ -390,28 +390,28 @@ partial class SomeViewModel : global::System.ComponentModel.INotifyPropertyChang
     }
 }";
 
-            this.AssertThat(input, It.HasFile("SomeViewModel", expected, RemoveInpcMembersRewriter.Instance)
-                .HasDiagnostics(
-                    // (4,14): Warning INPC009: Unable to find a property called 'Item[]' on this type or its base types. This event will still be raised
-                    // AlsoNotify("Item[]", "NonExistent", "")
-                    Diagnostic("INPC009", @"AlsoNotify(""Item[]"", ""NonExistent"", """")").WithLocation(4, 14),
+        this.AssertThat(input, It.HasFile("SomeViewModel", expected, RemoveInpcMembersRewriter.Instance)
+            .HasDiagnostics(
+                // (4,14): Warning INPC009: Unable to find a property called 'Item[]' on this type or its base types. This event will still be raised
+                // AlsoNotify("Item[]", "NonExistent", "")
+                Diagnostic("INPC009", @"AlsoNotify(""Item[]"", ""NonExistent"", """")").WithLocation(4, 14),
 
-                    // (4,14): Warning INPC009: Unable to find a property called 'NonExistent' on this type or its base types. This event will still be raised
-                    // AlsoNotify("Item[]", "NonExistent", "")
-                    Diagnostic("INPC009", @"AlsoNotify(""Item[]"", ""NonExistent"", """")").WithLocation(4, 14)
-                    ));
-        }
+                // (4,14): Warning INPC009: Unable to find a property called 'NonExistent' on this type or its base types. This event will still be raised
+                // AlsoNotify("Item[]", "NonExistent", "")
+                Diagnostic("INPC009", @"AlsoNotify(""Item[]"", ""NonExistent"", """")").WithLocation(4, 14)
+                ));
+    }
 
-        [Test]
-        public void HandlesPathologicalAttributeCases()
-        {
-            string input = @"
+    [Test]
+    public void HandlesPathologicalAttributeCases()
+    {
+        string input = @"
 public partial class SomeViewModel
 {
     [Notify, AlsoNotify, AlsoNotify(new string[0]), AlsoNotify(new[] { null, """" }), AlsoNotify(nameof(NonExistent))]
     private string _foo;
 }";
-            string expected = @"
+        string expected = @"
 partial class SomeViewModel : global::System.ComponentModel.INotifyPropertyChanged
 {
     public string Foo
@@ -429,9 +429,8 @@ partial class SomeViewModel : global::System.ComponentModel.INotifyPropertyChang
         }
     }
 }";
-            this.AssertThat(input, It
-                .HasFile("SomeViewModel", expected, RemoveInpcMembersRewriter.Instance)
-                .AllowCompilationDiagnostics("CS0103")); // Unknown member NonExistent
-        }
+        this.AssertThat(input, It
+            .HasFile("SomeViewModel", expected, RemoveInpcMembersRewriter.Instance)
+            .AllowCompilationDiagnostics("CS0103")); // Unknown member NonExistent
     }
 }

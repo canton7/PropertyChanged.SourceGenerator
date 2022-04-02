@@ -6,21 +6,21 @@ using System.Threading.Tasks;
 using NUnit.Framework;
 using PropertyChanged.SourceGenerator.UnitTests.Framework;
 
-namespace PropertyChanged.SourceGenerator.UnitTests
+namespace PropertyChanged.SourceGenerator.UnitTests;
+
+[TestFixture]
+public class OnAnyPropertyChangedTests : TestsBase
 {
-    [TestFixture]
-    public class OnAnyPropertyChangedTests : TestsBase
+    [Test]
+    public void GeneratesParameterlessWhenAlsoGeneratingRaisePropertyChanged()
     {
-        [Test]
-        public void GeneratesParameterlessWhenAlsoGeneratingRaisePropertyChanged()
-        {
-            string input = @"
+        string input = @"
 public partial class SomeViewModel
 {
     [Notify] string _foo;
     private void OnAnyPropertyChanged(string propertyName) { }
 }";
-            string expected = @"
+        string expected = @"
 partial class SomeViewModel : global::System.ComponentModel.INotifyPropertyChanged
 {
     public event global::System.ComponentModel.PropertyChangedEventHandler PropertyChanged;
@@ -32,19 +32,19 @@ partial class SomeViewModel : global::System.ComponentModel.INotifyPropertyChang
     }
 }";
 
-            this.AssertThat(input, It.HasFile("SomeViewModel", expected, RemovePropertiesRewriter.Instance));
-        }
+        this.AssertThat(input, It.HasFile("SomeViewModel", expected, RemovePropertiesRewriter.Instance));
+    }
 
-        [Test]
-        public void GeneratesOldAndNewWhenAlsoGeneratingRaisePropertyChanged()
-        {
-            string input = @"
+    [Test]
+    public void GeneratesOldAndNewWhenAlsoGeneratingRaisePropertyChanged()
+    {
+        string input = @"
 public partial class SomeViewModel
 {
     [Notify] string _foo;
     private void OnAnyPropertyChanged(string propertyName, object oldValue, object newValue) { }
 }";
-            string expected = @"
+        string expected = @"
 partial class SomeViewModel : global::System.ComponentModel.INotifyPropertyChanged
 {
     public event global::System.ComponentModel.PropertyChangedEventHandler PropertyChanged;
@@ -56,13 +56,13 @@ partial class SomeViewModel : global::System.ComponentModel.INotifyPropertyChang
     }
 }";
 
-            this.AssertThat(input, It.HasFile("SomeViewModel", expected, RemovePropertiesRewriter.Instance));
-        }
+        this.AssertThat(input, It.HasFile("SomeViewModel", expected, RemovePropertiesRewriter.Instance));
+    }
 
-        [Test]
-        public void GeneratesParameterlessWhenOverridingParameterless()
-        {
-            string input = @"
+    [Test]
+    public void GeneratesParameterlessWhenOverridingParameterless()
+    {
+        string input = @"
 using System.ComponentModel;
 public partial class Base
 {
@@ -74,7 +74,7 @@ public partial class Derived : Base
     [Notify] private int _foo;
     private void OnAnyPropertyChanged(string name) { }
 }";
-            string expected = @"
+        string expected = @"
 partial class Derived : global::System.ComponentModel.INotifyPropertyChanged
 {
     public int Foo { get; set; }
@@ -85,13 +85,13 @@ partial class Derived : global::System.ComponentModel.INotifyPropertyChanged
     }
 }";
 
-            this.AssertThat(input, It.HasFile("Derived", expected, RemovePropertiesRewriter.Instance));
-        }
+        this.AssertThat(input, It.HasFile("Derived", expected, RemovePropertiesRewriter.Instance));
+    }
 
-        [Test]
-        public void GeneratesParameterlessWhenOverridingOldAndNew()
-        {
-            string input = @"
+    [Test]
+    public void GeneratesParameterlessWhenOverridingOldAndNew()
+    {
+        string input = @"
 using System.ComponentModel;
 public partial class Base
 {
@@ -103,7 +103,7 @@ public partial class Derived : Base
     [Notify] private int _foo;
     private void OnAnyPropertyChanged(string name) { }
 }";
-            string expected = @"
+        string expected = @"
 partial class Derived : global::System.ComponentModel.INotifyPropertyChanged
 {
     public int Foo { get; set; }
@@ -114,13 +114,13 @@ partial class Derived : global::System.ComponentModel.INotifyPropertyChanged
     }
 }";
 
-            this.AssertThat(input, It.HasFile("Derived", expected, RemovePropertiesRewriter.Instance));
-        }
+        this.AssertThat(input, It.HasFile("Derived", expected, RemovePropertiesRewriter.Instance));
+    }
 
-        [Test]
-        public void GeneratesOldAndNewWhenOverridingParameterless()
-        {
-            string input = @"
+    [Test]
+    public void GeneratesOldAndNewWhenOverridingParameterless()
+    {
+        string input = @"
 using System.ComponentModel;
 public partial class Base
 {
@@ -132,7 +132,7 @@ public partial class Derived : Base
     [Notify] private int _foo;
     private void OnAnyPropertyChanged(string name, object o, object n) { }
 }";
-            string expected = @"
+        string expected = @"
 partial class Derived : global::System.ComponentModel.INotifyPropertyChanged
 {
     public int Foo { get; set; }
@@ -143,17 +143,17 @@ partial class Derived : global::System.ComponentModel.INotifyPropertyChanged
     }
 }";
 
-            this.AssertThat(input, It.HasFile("Derived", expected, RemovePropertiesRewriter.Instance).HasDiagnostics(
-                // (11,18): Warning INPC025: The OnAnyPropertyChanged method has 'oldValue' and 'newValue' parameters, but the 'OnPropertyChanged' method defined in a base class does not. Please add these parameters to 'OnPropertyChanged'
-                // OnAnyPropertyChanged
-                Diagnostic("INPC025", @"OnAnyPropertyChanged").WithLocation(11, 18)
-            ));
-        }
+        this.AssertThat(input, It.HasFile("Derived", expected, RemovePropertiesRewriter.Instance).HasDiagnostics(
+            // (11,18): Warning INPC025: The OnAnyPropertyChanged method has 'oldValue' and 'newValue' parameters, but the 'OnPropertyChanged' method defined in a base class does not. Please add these parameters to 'OnPropertyChanged'
+            // OnAnyPropertyChanged
+            Diagnostic("INPC025", @"OnAnyPropertyChanged").WithLocation(11, 18)
+        ));
+    }
 
-        [Test]
-        public void GeneratesOldAndNewWhenOverridingOldAndNew()
-        {
-            string input = @"
+    [Test]
+    public void GeneratesOldAndNewWhenOverridingOldAndNew()
+    {
+        string input = @"
 using System.ComponentModel;
 public partial class Base
 {
@@ -165,7 +165,7 @@ public partial class Derived : Base
     [Notify] private int _foo;
     private void OnAnyPropertyChanged(string name, object o, object n) { }
 }";
-            string expected = @"
+        string expected = @"
 partial class Derived : global::System.ComponentModel.INotifyPropertyChanged
 {
     public int Foo { get; set; }
@@ -176,13 +176,13 @@ partial class Derived : global::System.ComponentModel.INotifyPropertyChanged
     }
 }";
 
-            this.AssertThat(input, It.HasFile("Derived", expected, RemovePropertiesRewriter.Instance));
-        }
+        this.AssertThat(input, It.HasFile("Derived", expected, RemovePropertiesRewriter.Instance));
+    }
 
-        [Test]
-        public void GeneratesForShadowedMethod()
-        {
-            string input = @"
+    [Test]
+    public void GeneratesForShadowedMethod()
+    {
+        string input = @"
 public partial class Base
 {
     [Notify] private string _foo;
@@ -193,7 +193,7 @@ public partial class Derived : Base
     [Notify] private string _bar;
     protected new void OnAnyPropertyChanged(string propertyName) { }
 }";
-            string expected = @"
+        string expected = @"
 partial class Derived
 {
     public string Bar { get; set; }
@@ -204,13 +204,13 @@ partial class Derived
     }
 }";
 
-            this.AssertThat(input, It.HasFile("Derived", expected, RemovePropertiesRewriter.Instance));
-        }
+        this.AssertThat(input, It.HasFile("Derived", expected, RemovePropertiesRewriter.Instance));
+    }
 
-        [Test]
-        public void DoesNotGenerateForOverriddenMethod()
-        {
-            string input = @"
+    [Test]
+    public void DoesNotGenerateForOverriddenMethod()
+    {
+        string input = @"
 public partial class Base
 {
     [Notify] private string _foo;
@@ -221,7 +221,7 @@ public partial class Derived : Base
     [Notify] private string _bar;
     protected override void OnAnyPropertyChanged(string propertyName) { }
 }";
-            string expectedBase = @"
+        string expectedBase = @"
 partial class Base : global::System.ComponentModel.INotifyPropertyChanged
 {
     public event global::System.ComponentModel.PropertyChangedEventHandler PropertyChanged;
@@ -232,36 +232,36 @@ partial class Base : global::System.ComponentModel.INotifyPropertyChanged
         this.PropertyChanged?.Invoke(this, eventArgs);
     }
 }";
-            string expectedDerived = @"
+        string expectedDerived = @"
 partial class Derived
 {
     public string Bar { get; set; }
 }";
 
-            this.AssertThat(input, It.HasFile("Base", expectedBase, RemovePropertiesRewriter.Instance)
-                .HasFile("Derived", expectedDerived, RemovePropertiesRewriter.Instance));
-        }
+        this.AssertThat(input, It.HasFile("Base", expectedBase, RemovePropertiesRewriter.Instance)
+            .HasFile("Derived", expectedDerived, RemovePropertiesRewriter.Instance));
+    }
 
-        [Test]
-        public void RaisesIfSignatureNotRecognise()
-        {
-            string input = @"
+    [Test]
+    public void RaisesIfSignatureNotRecognise()
+    {
+        string input = @"
 public partial class SomeViewModel
 {
     [Notify] private int _foo;
     private void OnAnyPropertyChanged() { }
 }";
 
-            this.AssertThat(input, It.HasDiagnostics(
-                // (5,18): Warning INPC024: Found one or more OnAnyPropertyChanged methods, but none had the correct signature, or were inaccessible. Skipping
-                // OnAnyPropertyChanged
-                Diagnostic("INPC024", @"OnAnyPropertyChanged").WithLocation(5, 18)));
-        }
+        this.AssertThat(input, It.HasDiagnostics(
+            // (5,18): Warning INPC024: Found one or more OnAnyPropertyChanged methods, but none had the correct signature, or were inaccessible. Skipping
+            // OnAnyPropertyChanged
+            Diagnostic("INPC024", @"OnAnyPropertyChanged").WithLocation(5, 18)));
+    }
 
-        [Test]
-        public void RaisesIfCannotGenerateRaisePropertyChangedMethod()
-        {
-            string input = @"
+    [Test]
+    public void RaisesIfCannotGenerateRaisePropertyChangedMethod()
+    {
+        string input = @"
 using System.ComponentModel;
 public partial class Base : INotifyPropertyChanged
 {
@@ -274,15 +274,14 @@ public partial class Derived : Base
     private void OnAnyPropertyChanged(string name) { }
 }";
 
-            this.AssertThat(input, It.HasDiagnostics(
-                // (6,20): Warning INPC022: Method 'OnPropertyChanged' is non-virtual. Functionality such as dependencies on base properties will not work. Please make this method virtual
-                // OnPropertyChanged
-                Diagnostic("INPC022", @"OnPropertyChanged").WithLocation(6, 20),
+        this.AssertThat(input, It.HasDiagnostics(
+            // (6,20): Warning INPC022: Method 'OnPropertyChanged' is non-virtual. Functionality such as dependencies on base properties will not work. Please make this method virtual
+            // OnPropertyChanged
+            Diagnostic("INPC022", @"OnPropertyChanged").WithLocation(6, 20),
 
-                // (11,18): Warning INPC026: OnAnyPropertyChanged method will not be called because the method to raise PropertyChanged events 'OnPropertyChanged' cannot defined or overridden by the source generator
-                // OnAnyPropertyChanged
-                Diagnostic("INPC026", @"OnAnyPropertyChanged").WithLocation(11, 18)
-            ));
-        }
+            // (11,18): Warning INPC026: OnAnyPropertyChanged method will not be called because the method to raise PropertyChanged events 'OnPropertyChanged' cannot defined or overridden by the source generator
+            // OnAnyPropertyChanged
+            Diagnostic("INPC026", @"OnAnyPropertyChanged").WithLocation(11, 18)
+        ));
     }
 }

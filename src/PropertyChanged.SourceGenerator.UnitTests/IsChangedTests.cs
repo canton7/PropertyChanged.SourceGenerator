@@ -6,15 +6,15 @@ using System.Threading.Tasks;
 using NUnit.Framework;
 using PropertyChanged.SourceGenerator.UnitTests.Framework;
 
-namespace PropertyChanged.SourceGenerator.UnitTests
+namespace PropertyChanged.SourceGenerator.UnitTests;
+
+[TestFixture]
+public class IsChangedTests : TestsBase
 {
-    [TestFixture]
-    public class IsChangedTests : TestsBase
+    [Test]
+    public void GeneratesIsChangedToProperty()
     {
-        [Test]
-        public void GeneratesIsChangedToProperty()
-        {
-            string input = @"
+        string input = @"
 public partial class SomeViewModel
 {
     [IsChanged]
@@ -22,7 +22,7 @@ public partial class SomeViewModel
     [Notify]
     private string _foo;
 }";
-            string expected = @"
+        string expected = @"
 partial class SomeViewModel : global::System.ComponentModel.INotifyPropertyChanged
 {
     public string Foo
@@ -40,13 +40,13 @@ partial class SomeViewModel : global::System.ComponentModel.INotifyPropertyChang
     }
 }";
 
-            this.AssertThat(input, It.HasFile("SomeViewModel", expected, RemoveInpcMembersRewriter.Instance));
-        }
+        this.AssertThat(input, It.HasFile("SomeViewModel", expected, RemoveInpcMembersRewriter.Instance));
+    }
 
-        [Test]
-        public void GeneratesIsChangedToGeneratedProperty()
-        {
-            string input = @"
+    [Test]
+    public void GeneratesIsChangedToGeneratedProperty()
+    {
+        string input = @"
 public partial class SomeViewModel
 {
     [Notify, IsChanged]
@@ -54,7 +54,7 @@ public partial class SomeViewModel
     [Notify]
     private string _foo;
 }";
-            string expected = @"
+        string expected = @"
 partial class SomeViewModel : global::System.ComponentModel.INotifyPropertyChanged
 {
     public bool IsChanged
@@ -84,13 +84,13 @@ partial class SomeViewModel : global::System.ComponentModel.INotifyPropertyChang
     }
 }";
 
-            this.AssertThat(input, It.HasFile("SomeViewModel", expected, RemoveInpcMembersRewriter.Instance));
-        }
+        this.AssertThat(input, It.HasFile("SomeViewModel", expected, RemoveInpcMembersRewriter.Instance));
+    }
 
-        [Test]
-        public void GeneratesIsChangedOnBaseClass()
-        {
-            string input = @"
+    [Test]
+    public void GeneratesIsChangedOnBaseClass()
+    {
+        string input = @"
 public class Base
 {
     [IsChanged] public bool IsChanged { get; set; }
@@ -99,7 +99,7 @@ public partial class Derived : Base
 {
     [Notify] private string _foo;
 }";
-            string expected = @"
+        string expected = @"
 partial class Derived : global::System.ComponentModel.INotifyPropertyChanged
 {
     public string Foo
@@ -117,29 +117,29 @@ partial class Derived : global::System.ComponentModel.INotifyPropertyChanged
     }
 }";
 
-            this.AssertThat(input, It.HasFile("Derived", expected, RemoveInpcMembersRewriter.Instance));
-        }
+        this.AssertThat(input, It.HasFile("Derived", expected, RemoveInpcMembersRewriter.Instance));
+    }
 
-        [Test]
-        public void RaisesIfMultipleIsChangedProperties()
-        {
-            string input = @"
+    [Test]
+    public void RaisesIfMultipleIsChangedProperties()
+    {
+        string input = @"
 public partial class SomeViewModel
 {
     [IsChanged] public bool Foo { get; set; }
     [IsChanged] public bool Bar { get; set; }
 }";
-            this.AssertThat(input, It.HasDiagnostics(
-                // (5,6): Warning INPC014: Found multiple [IsChanged] properties, but only one is allowed. Ignoring this one, and using 'Foo'
-                // IsChanged
-                Diagnostic("INPC014", @"IsChanged").WithLocation(5, 6)
-            ));
-        }
+        this.AssertThat(input, It.HasDiagnostics(
+            // (5,6): Warning INPC014: Found multiple [IsChanged] properties, but only one is allowed. Ignoring this one, and using 'Foo'
+            // IsChanged
+            Diagnostic("INPC014", @"IsChanged").WithLocation(5, 6)
+        ));
+    }
 
-        [Test]
-        public void RaisesIfMultipleIsChangedPropertiesOnBaseTypes()
-        {
-            string input = @"
+    [Test]
+    public void RaisesIfMultipleIsChangedPropertiesOnBaseTypes()
+    {
+        string input = @"
 public class A
 {
     [IsChanged] public bool IsChangedA { get; set; }
@@ -149,32 +149,32 @@ public partial class C : B
 {
     [IsChanged] public bool IsChangedC { get; set; }
 }";
-            this.AssertThat(input, It.HasDiagnostics(
-                // (9,6): Warning INPC014: Found multiple [IsChanged] properties, but only one is allowed. Ignoring this one, and using 'IsChangedA'
-                // IsChanged
-                Diagnostic("INPC014", @"IsChanged").WithLocation(9, 6)
-            ));
-        }
+        this.AssertThat(input, It.HasDiagnostics(
+            // (9,6): Warning INPC014: Found multiple [IsChanged] properties, but only one is allowed. Ignoring this one, and using 'IsChangedA'
+            // IsChanged
+            Diagnostic("INPC014", @"IsChanged").WithLocation(9, 6)
+        ));
+    }
 
-        [Test]
-        public void RaisesIfIsChangedDoesNotReturnBoolean()
-        {
-            string input = @"
+    [Test]
+    public void RaisesIfIsChangedDoesNotReturnBoolean()
+    {
+        string input = @"
 public partial class SomeViewModel
 {
     [IsChanged] public string IsChanged { get; set; }
 }";
-            this.AssertThat(input, It.HasDiagnostics(
-                // (4,31): Warning INPC015: [IsChanged] property 'IsChanged' does not return a bool. Skipping
-                // IsChanged
-                Diagnostic("INPC015", @"IsChanged").WithLocation(4, 31)
-            ));
-        }
+        this.AssertThat(input, It.HasDiagnostics(
+            // (4,31): Warning INPC015: [IsChanged] property 'IsChanged' does not return a bool. Skipping
+            // IsChanged
+            Diagnostic("INPC015", @"IsChanged").WithLocation(4, 31)
+        ));
+    }
 
-        [Test]
-        public void RaisesIfIsChangedHasNoSetter()
-        {
-            string input = @"
+    [Test]
+    public void RaisesIfIsChangedHasNoSetter()
+    {
+        string input = @"
 public partial class SomeViewModel
 {
     [IsChanged]
@@ -183,17 +183,17 @@ public partial class SomeViewModel
     private int _bar;
 }";
 
-            this.AssertThat(input, It.HasDiagnostics(
-                // (5,17): Warning INPC016: [IsChanged] property 'IsChanged' does not have a setter. Skipping
-                // IsChanged
-                Diagnostic("INPC016", @"IsChanged").WithLocation(5, 17)
-            ));
-        }
+        this.AssertThat(input, It.HasDiagnostics(
+            // (5,17): Warning INPC016: [IsChanged] property 'IsChanged' does not have a setter. Skipping
+            // IsChanged
+            Diagnostic("INPC016", @"IsChanged").WithLocation(5, 17)
+        ));
+    }
 
-        [Test]
-        public void IgnoresIfIsChangedPropertyOnBaseClassHasPrivateSetter()
-        {
-            string input = @"
+    [Test]
+    public void IgnoresIfIsChangedPropertyOnBaseClassHasPrivateSetter()
+    {
+        string input = @"
 public class Base
 {
     [IsChanged] public bool IsChanged { get; private set; }
@@ -202,7 +202,7 @@ public partial class Derived : Base
 {
     [Notify] private int? _foo;
 }";
-            string expected = @"
+        string expected = @"
 partial class Derived : global::System.ComponentModel.INotifyPropertyChanged
 {
     public int? Foo
@@ -219,13 +219,13 @@ partial class Derived : global::System.ComponentModel.INotifyPropertyChanged
     }
 }";
 
-            this.AssertThat(input, It.HasFile("Derived", expected, RemoveInpcMembersRewriter.Instance));
-        }
+        this.AssertThat(input, It.HasFile("Derived", expected, RemoveInpcMembersRewriter.Instance));
+    }
 
-        [Test]
-        public void IgnoresIfGeneratedIsChangedPropertyOnBaseClassHasPrivateSetter()
-        {
-            string input = @"
+    [Test]
+    public void IgnoresIfGeneratedIsChangedPropertyOnBaseClassHasPrivateSetter()
+    {
+        string input = @"
 public partial class Base
 {
     [IsChanged, Notify(Setter.Private)] private bool _isChanged;
@@ -234,7 +234,7 @@ public partial class Derived : Base
 {
     [Notify] private int? _foo;
 }";
-            string expected = @"
+        string expected = @"
 partial class Derived
 {
     public int? Foo
@@ -251,7 +251,6 @@ partial class Derived
     }
 }";
 
-            this.AssertThat(input, It.HasFile("Derived", expected, RemoveInpcMembersRewriter.Instance));
-        }
+        this.AssertThat(input, It.HasFile("Derived", expected, RemoveInpcMembersRewriter.Instance));
     }
 }

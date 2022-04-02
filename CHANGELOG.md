@@ -1,3 +1,10 @@
+v1.0.3
+------
+
+ - Handle malformed XML doc comments
+ - Don't propagate crashes to Roslyn, as it gets stuck in the "Generator is not generating files" state
+ - Add README to NuGet package
+
 v1.0.2
 ------
 

@@ -293,6 +293,11 @@ public class Generator
 
     private void GenerateRaiseEvent(TypeAnalysis type, string? propertyName, bool isCallable, bool hasOldVariable)
     {
+        if (!type.INotifyPropertyChanged.CanCall)
+        {
+            return;
+        }
+
         this.writer.Write($"this.{type.INotifyPropertyChanged.RaisePropertyChangedMethod.Name}(");
 
         switch (type.INotifyPropertyChanged.RaisePropertyChangedMethod.Signature.NameType)

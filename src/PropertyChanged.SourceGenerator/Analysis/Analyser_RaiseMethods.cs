@@ -13,6 +13,7 @@ public partial class Analyser
     private void PopulateInterfaceAnalysis(
         INamedTypeSymbol typeSymbol,
         InterfaceAnalysis interfaceAnalysis,
+        string eventName,
         INamedTypeSymbol eventHanderSymbol,
         IReadOnlyList<TypeAnalysis> baseTypeAnalyses, 
         Configuration config)
@@ -31,7 +32,7 @@ public partial class Analyser
         // They might have defined the event but not the interface, so we'll just look for the event by its
         // signature
         var eventSymbol = TypeAndBaseTypes(typeSymbol)
-            .SelectMany(x => x.GetMembers(eventHanderSymbol.Name))
+            .SelectMany(x => x.GetMembers(eventName))
             .OfType<IEventSymbol>()
             .FirstOrDefault(x => SymbolEqualityComparer.Default.Equals(x.Type, eventHanderSymbol) &&
                 !x.IsStatic);
@@ -108,7 +109,7 @@ public partial class Analyser
             interfaceAnalysis.RaisePropertyChangedMethod.Name = method!.Name;
             interfaceAnalysis.RaisePropertyChangedMethod.Signature = signature.Value;
         }
-        else
+        else if (interfaceAnalysis.CanCall)
         {
             // The base type in our hierarchy is defining its own
             // Make sure that that type can actually access the event, if it's pre-existing
@@ -116,10 +117,10 @@ public partial class Analyser
                 !SymbolEqualityComparer.Default.Equals(eventSymbol.ContainingType, typeSymbol))
             {
                 interfaceAnalysis.CanCall = false;
+                interfaceAnalysis.RaisePropertyChangedMethod.Type = RaisePropertyChangedMethodType.None;
                 this.diagnostics.ReportCouldNotFindRaisePropertyChangedMethod(typeSymbol);
             }
-
-            if (isGeneratingAnyParent)
+            else if (isGeneratingAnyParent)
             {
                 interfaceAnalysis.RaisePropertyChangedMethod.Type = interfaceAnalysis.OnAnyPropertyChangedInfo == null
                     ? RaisePropertyChangedMethodType.None

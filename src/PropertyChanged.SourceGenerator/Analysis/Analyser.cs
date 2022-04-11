@@ -155,7 +155,7 @@ public partial class Analyser
 
         typeAnalysis.NullableContext = this.compilation.Options.NullableContextOptions;
 
-        this.PopulateInterfaceAnalysis(typeAnalysis.TypeSymbol, typeAnalysis.INotifyPropertyChanged, this.propertyChangedEventHandlerSymbol!, baseTypeAnalyses, config);
+        this.PopulateInterfaceAnalysis(typeAnalysis.TypeSymbol, typeAnalysis.INotifyPropertyChanged, "PropertyChanged", this.propertyChangedEventHandlerSymbol!, baseTypeAnalyses, config);
         this.ResoveInheritedIsChanged(typeAnalysis, baseTypeAnalyses);
 
         foreach (var member in typeSymbol.GetMembers())

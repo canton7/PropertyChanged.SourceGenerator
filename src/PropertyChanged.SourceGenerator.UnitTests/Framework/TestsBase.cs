@@ -175,7 +175,7 @@ public abstract class TestsBase
     protected void AssertNotifiesFromBase(string input, string type, string memberName, string propertyName)
     {
         var analysis = this.Analyse(input, type);
-        Assert.That(analysis.RaisePropertyChangedMethod.BaseDependsOn
+        Assert.That(analysis.BaseDependsOn
             .Where(x => x.baseProperty == memberName).Select(x => x.notifyProperty.Name), Has.Member(propertyName));
     }
 
@@ -187,7 +187,7 @@ public abstract class TestsBase
         {
             Assert.IsEmpty(member!.AlsoNotify);
         }
-        Assert.IsEmpty(analysis.RaisePropertyChangedMethod.BaseDependsOn.Where(x => x.notifyProperty.Name == memberName));
+        Assert.IsEmpty(analysis.BaseDependsOn.Where(x => x.notifyProperty.Name == memberName));
     }
 }
 

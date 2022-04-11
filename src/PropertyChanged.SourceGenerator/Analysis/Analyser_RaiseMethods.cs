@@ -10,12 +10,17 @@ public partial class Analyser
 {
     public const string OnAnyPropertyChangedMethodName = "OnAnyPropertyChanged";
 
-    private bool TryFindPropertyRaiseMethod(
-        TypeAnalysis typeAnalysis,
+    private void PopulateInterfaceAnalysis(
+        INamedTypeSymbol typeSymbol,
+        InterfaceAnalysis interfaceAnalysis,
+        INamedTypeSymbol eventHanderSymbol,
         IReadOnlyList<TypeAnalysis> baseTypeAnalyses, 
         Configuration config)
     {
-        var typeSymbol = typeAnalysis.TypeSymbol;
+        // If we've got any base types we're generating partial types for, that will have the INPC interface
+        // and event on, for sure
+        interfaceAnalysis.HasInterface = baseTypeAnalyses.Any(x => x.CanGenerate)
+            || typeSymbol.AllInterfaces.Contains(this.inpchangedSymbol, SymbolEqualityComparer.Default);
 
         // Try and find out how we raise the PropertyChanged event
         // 1. If noone's defined the PropertyChanged event yet, we'll define it ourselves
@@ -26,15 +31,15 @@ public partial class Analyser
         // They might have defined the event but not the interface, so we'll just look for the event by its
         // signature
         var eventSymbol = TypeAndBaseTypes(typeSymbol)
-            .SelectMany(x => x.GetMembers("PropertyChanged"))
+            .SelectMany(x => x.GetMembers(eventHanderSymbol.Name))
             .OfType<IEventSymbol>()
-            .FirstOrDefault(x => SymbolEqualityComparer.Default.Equals(x.Type, this.propertyChangedEventHandlerSymbol) &&
+            .FirstOrDefault(x => SymbolEqualityComparer.Default.Equals(x.Type, eventHanderSymbol) &&
                 !x.IsStatic);
 
         bool isGeneratingAnyParent = baseTypeAnalyses.Any(x => x.CanGenerate);
 
         // If there's no event, the base type in our hierarchy is defining it
-        typeAnalysis.RequiresEvent = eventSymbol == null && !isGeneratingAnyParent;
+        interfaceAnalysis.RequiresEvent = eventSymbol == null && !isGeneratingAnyParent;
 
         // Try and find a method with a name we recognise and a signature we know how to call
         // We prioritise the method name over things like the signature or where in the type hierarchy
@@ -55,15 +60,15 @@ public partial class Analyser
             {
                 if (!TryFindCallableOverload(methods, out method, out signature))
                 {
+                    interfaceAnalysis.CanCall = false;
                     this.diagnostics.ReportCouldNotFindCallableRaisePropertyChangedOverload(typeSymbol, name);
-                    return false;
                 }
                 break;
             }
         }
 
         // Get this populated now -- we'll need to adjust our behaviour based on what we find
-        this.FindOnAnyPropertyChangedMethod(typeAnalysis, out var onAnyPropertyChangedMethod);
+        this.FindOnAnyPropertyChangedMethod(typeSymbol, interfaceAnalysis, out var onAnyPropertyChangedMethod);
 
         if (signature != null)
         {
@@ -78,30 +83,30 @@ public partial class Analyser
                 {
                     this.diagnostics.ReportUserDefinedRaisePropertyChangedMethodOverride(method);
                 }
-                typeAnalysis.RaisePropertyChangedMethod.Type = RaisePropertyChangedMethodType.None;
+                interfaceAnalysis.RaisePropertyChangedMethod.Type = RaisePropertyChangedMethodType.None;
             }
             else if (method.IsVirtual || method.IsOverride)
             {
-                typeAnalysis.RaisePropertyChangedMethod.Type = RaisePropertyChangedMethodType.Override;
+                interfaceAnalysis.RaisePropertyChangedMethod.Type = RaisePropertyChangedMethodType.Override;
             }
             else
             {
                 this.diagnostics.ReportRaisePropertyMethodIsNonVirtual(method);
-                if (typeAnalysis.OnAnyPropertyChangedInfo != null)
+                if (interfaceAnalysis.OnAnyPropertyChangedInfo != null)
                 {
                     this.diagnostics.ReportCannotCallOnAnyPropertyChangedBecauseRaisePropertyChangedIsNonVirtual(onAnyPropertyChangedMethod!, method.Name);
                 }
-                typeAnalysis.RaisePropertyChangedMethod.Type = RaisePropertyChangedMethodType.None;
+                interfaceAnalysis.RaisePropertyChangedMethod.Type = RaisePropertyChangedMethodType.None;
             }
 
-            if (typeAnalysis.OnAnyPropertyChangedInfo?.Signature == OnPropertyNameChangedSignature.OldAndNew &&
+            if (interfaceAnalysis.OnAnyPropertyChangedInfo?.Signature == OnPropertyNameChangedSignature.OldAndNew &&
                 !signature.Value.HasOldAndNew)
             {
                 this.diagnostics.ReportCannotPopulateOnAnyPropertyChangedOldAndNew(onAnyPropertyChangedMethod!, method.Name);
             }
 
-            typeAnalysis.RaisePropertyChangedMethod.Name = method!.Name;
-            typeAnalysis.RaisePropertyChangedMethod.Signature = signature.Value;
+            interfaceAnalysis.RaisePropertyChangedMethod.Name = method!.Name;
+            interfaceAnalysis.RaisePropertyChangedMethod.Signature = signature.Value;
         }
         else
         {
@@ -110,31 +115,29 @@ public partial class Analyser
             if (eventSymbol != null && !isGeneratingAnyParent &&
                 !SymbolEqualityComparer.Default.Equals(eventSymbol.ContainingType, typeSymbol))
             {
+                interfaceAnalysis.CanCall = false;
                 this.diagnostics.ReportCouldNotFindRaisePropertyChangedMethod(typeSymbol);
-                return false;
             }
 
             if (isGeneratingAnyParent)
             {
-                typeAnalysis.RaisePropertyChangedMethod.Type = typeAnalysis.OnAnyPropertyChangedInfo == null
+                interfaceAnalysis.RaisePropertyChangedMethod.Type = interfaceAnalysis.OnAnyPropertyChangedInfo == null
                     ? RaisePropertyChangedMethodType.None
                     : RaisePropertyChangedMethodType.Override;
             }
             else
             {
-                typeAnalysis.RaisePropertyChangedMethod.Type = typeSymbol.IsSealed
+                interfaceAnalysis.RaisePropertyChangedMethod.Type = typeSymbol.IsSealed
                     ? RaisePropertyChangedMethodType.NonVirtual
                     : RaisePropertyChangedMethodType.Virtual;
             }
 
-            typeAnalysis.RaisePropertyChangedMethod.Name = config.RaisePropertyChangedMethodNames[0];
-            typeAnalysis.RaisePropertyChangedMethod.Signature = new RaisePropertyChangedMethodSignature(
+            interfaceAnalysis.RaisePropertyChangedMethod.Name = config.RaisePropertyChangedMethodNames[0];
+            interfaceAnalysis.RaisePropertyChangedMethod.Signature = new RaisePropertyChangedMethodSignature(
                 RaisePropertyChangedNameType.PropertyChangedEventArgs,
-                hasOldAndNew: typeAnalysis.OnAnyPropertyChangedInfo?.Signature == OnPropertyNameChangedSignature.OldAndNew,
+                hasOldAndNew: interfaceAnalysis.OnAnyPropertyChangedInfo?.Signature == OnPropertyNameChangedSignature.OldAndNew,
                 typeSymbol.IsSealed ? Accessibility.Private : Accessibility.Protected);
         }
-
-        return true;
 
         bool TryFindCallableOverload(List<IMethodSymbol> methods, out IMethodSymbol method, out RaisePropertyChangedMethodSignature? signature)
         {
@@ -186,11 +189,11 @@ public partial class Analyser
         }
     }
 
-    private void FindOnAnyPropertyChangedMethod(TypeAnalysis typeAnalysis, out IMethodSymbol? method)
+    private void FindOnAnyPropertyChangedMethod(INamedTypeSymbol typeSymbol, InterfaceAnalysis interfaceAnalysis, out IMethodSymbol? method)
     {
         method = null;
 
-        var methods = typeAnalysis.TypeSymbol.GetMembers(OnAnyPropertyChangedMethodName)
+        var methods = typeSymbol.GetMembers(OnAnyPropertyChangedMethodName)
             .OfType<IMethodSymbol>()
             .Where(x => !x.IsOverride && !x.IsStatic)
             .ToList();
@@ -201,7 +204,7 @@ public partial class Analyser
             var firstMethod = methods[0];
             if (FindCallableOverload(methods, out method) is { } signature)
             {
-                typeAnalysis.OnAnyPropertyChangedInfo = new OnPropertyNameChangedInfo(OnAnyPropertyChangedMethodName, signature);
+                interfaceAnalysis.OnAnyPropertyChangedInfo = new OnPropertyNameChangedInfo(OnAnyPropertyChangedMethodName, signature);
             }
             else
             {
@@ -211,7 +214,7 @@ public partial class Analyser
 
         OnPropertyNameChangedSignature? FindCallableOverload(List<IMethodSymbol> methods, out IMethodSymbol method)
         {
-            methods.RemoveAll(x => !this.IsAccessibleNormalMethod(x, typeAnalysis.TypeSymbol));
+            methods.RemoveAll(x => !this.IsAccessibleNormalMethod(x, typeSymbol));
 
             if ((method = methods.FirstOrDefault(x => x.Parameters.Length == 3 &&
                 IsNormalParameter(x.Parameters[0]) &&

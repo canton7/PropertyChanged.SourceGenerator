@@ -15,9 +15,12 @@ public partial class Analyser
     private readonly DiagnosticReporter diagnostics;
     private readonly Compilation compilation;
     private readonly ConfigurationParser configurationParser;
-    private readonly INamedTypeSymbol? inpcSymbol;
+    private readonly INamedTypeSymbol? inpchangedSymbol;
     private readonly INamedTypeSymbol? propertyChangedEventHandlerSymbol;
     private readonly INamedTypeSymbol? propertyChangedEventArgsSymbol;
+    private readonly INamedTypeSymbol? inpchangingSymbol;
+    private readonly INamedTypeSymbol? propertyChangingEventHandlerSymbol;
+    private readonly INamedTypeSymbol? propertyChangingEventArgsSymbol;
     private readonly INamedTypeSymbol notifyAttributeSymbol;
     private readonly INamedTypeSymbol alsoNotifyAttributeSymbol;
     private readonly INamedTypeSymbol dependsOnAttributeSymbol;
@@ -32,8 +35,8 @@ public partial class Analyser
         this.compilation = compilation;
         this.configurationParser = configurationParser;
 
-        this.inpcSymbol = compilation.GetTypeByMetadataName("System.ComponentModel.INotifyPropertyChanged");
-        if (this.inpcSymbol == null)
+        this.inpchangedSymbol = compilation.GetTypeByMetadataName("System.ComponentModel.INotifyPropertyChanged");
+        if (this.inpchangedSymbol == null)
         {
             this.diagnostics.ReportCouldNotFindInpc();
         }
@@ -41,6 +44,10 @@ public partial class Analyser
         {
             this.propertyChangedEventHandlerSymbol = compilation.GetTypeByMetadataName("System.ComponentModel.PropertyChangedEventHandler");
             this.propertyChangedEventArgsSymbol = compilation.GetTypeByMetadataName("System.ComponentModel.PropertyChangedEventArgs");
+
+            this.inpchangingSymbol = compilation.GetTypeByMetadataName("System.ComponentModel.INotifyPropertyChanging"); ;
+            this.propertyChangingEventHandlerSymbol = compilation.GetTypeByMetadataName("System.ComponentModel.PropertyChangingEventHandler");
+            this.propertyChangingEventArgsSymbol = compilation.GetTypeByMetadataName("System.ComponentModel.PropertyChangingEventArgs");
         }
 
         this.notifyAttributeSymbol = compilation.GetTypeByMetadataName("PropertyChanged.SourceGenerator.NotifyAttribute")
@@ -141,22 +148,14 @@ public partial class Analyser
     {
         var typeSymbol = typeAnalysis.TypeSymbol;
 
-        if (this.inpcSymbol == null)
+        if (this.inpchangedSymbol == null || this.inpchangingSymbol == null)
             throw new InvalidOperationException();
 
         var config = this.configurationParser.Parse(typeSymbol.DeclaringSyntaxReferences.FirstOrDefault()?.SyntaxTree);
 
-        if (!this.TryFindPropertyRaiseMethod(typeAnalysis, baseTypeAnalyses, config))
-        {
-            typeAnalysis.CanGenerate = false;
-        }
-
-        // If we've got any base types we're generating partial types for , that will have the INPC interface
-        // and event on, for sure
-        typeAnalysis.HasInpcInterface = baseTypeAnalyses.Any(x => x.CanGenerate)
-            || typeSymbol.AllInterfaces.Contains(this.inpcSymbol, SymbolEqualityComparer.Default);
         typeAnalysis.NullableContext = this.compilation.Options.NullableContextOptions;
 
+        this.PopulateInterfaceAnalysis(typeAnalysis.TypeSymbol, typeAnalysis.INotifyPropertyChanged, this.propertyChangedEventHandlerSymbol!, baseTypeAnalyses, config);
         this.ResoveInheritedIsChanged(typeAnalysis, baseTypeAnalyses);
 
         foreach (var member in typeSymbol.GetMembers())

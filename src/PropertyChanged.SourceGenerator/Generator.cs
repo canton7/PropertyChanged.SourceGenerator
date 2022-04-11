@@ -63,7 +63,7 @@ public class Generator
         }
 
         this.writer.Write($"partial {typeAnalysis.TypeSymbol.ToDisplayString(SymbolDisplayFormats.TypeDeclaration)}");
-        if (!typeAnalysis.HasInpcInterface)
+        if (!typeAnalysis.INotifyPropertyChanged.HasInterface)
         {
             this.writer.Write(" : global::System.ComponentModel.INotifyPropertyChanged");
         }
@@ -72,7 +72,7 @@ public class Generator
         this.writer.WriteLine("{");
         this.writer.Indent++;
 
-        if (typeAnalysis.RequiresEvent)
+        if (typeAnalysis.INotifyPropertyChanged.RequiresEvent)
         {
             string nullable = typeAnalysis.NullableContext.HasFlag(NullableContextOptions.Annotations) ? "?" : "";
             this.writer.WriteLine($"public event global::System.ComponentModel.PropertyChangedEventHandler{nullable} PropertyChanged;");
@@ -97,12 +97,12 @@ public class Generator
 
     private void GenerateRaisePropertyChangedMethod(TypeAnalysis typeAnalysis)
     {
-        var method = typeAnalysis.RaisePropertyChangedMethod;
-        var baseDependsOn = method.BaseDependsOn.ToLookup(x => x.baseProperty);
+        var method = typeAnalysis.INotifyPropertyChanged.RaisePropertyChangedMethod;
+        var baseDependsOn = typeAnalysis.BaseDependsOn.ToLookup(x => x.baseProperty);
         if (method.Type == RaisePropertyChangedMethodType.None ||
             (method.Type == RaisePropertyChangedMethodType.Override &&
             baseDependsOn.Count == 0 &&
-            typeAnalysis.OnAnyPropertyChangedInfo == null))
+            typeAnalysis.INotifyPropertyChanged.OnAnyPropertyChangedInfo == null))
         {
             return;
         }
@@ -145,7 +145,7 @@ public class Generator
         this.writer.WriteLine("{");
         this.writer.Indent++;
 
-        if (typeAnalysis.OnAnyPropertyChangedInfo is { } onAnyPropertyChangedInfo)
+        if (typeAnalysis.INotifyPropertyChanged.OnAnyPropertyChangedInfo is { } onAnyPropertyChangedInfo)
         {
             this.writer.Write($"this.{onAnyPropertyChangedInfo.Name}({propertyNameAccessor}");
             switch (onAnyPropertyChangedInfo.Signature)
@@ -284,7 +284,7 @@ public class Generator
     private void GenerateOldVariableIfNecessary<T>(TypeAnalysis type, T member) where T : IMember
     {
         if (member.IsCallable &&
-            (type.RaisePropertyChangedMethod.Signature.HasOldAndNew ||
+            (type.INotifyPropertyChanged.RaisePropertyChangedMethod.Signature.HasOldAndNew ||
                 member.OnPropertyNameChanged?.Signature == OnPropertyNameChangedSignature.OldAndNew))
         {
             this.writer.WriteLine($"{member.Type!.ToDisplayString(SymbolDisplayFormats.MethodOrPropertyReturnType)} old_{member.Name} = this.{member.Name};");
@@ -293,9 +293,9 @@ public class Generator
 
     private void GenerateRaiseEvent(TypeAnalysis type, string? propertyName, bool isCallable, bool hasOldVariable)
     {
-        this.writer.Write($"this.{type.RaisePropertyChangedMethod.Name}(");
+        this.writer.Write($"this.{type.INotifyPropertyChanged.RaisePropertyChangedMethod.Name}(");
 
-        switch (type.RaisePropertyChangedMethod.Signature.NameType)
+        switch (type.INotifyPropertyChanged.RaisePropertyChangedMethod.Signature.NameType)
         {
             case RaisePropertyChangedNameType.PropertyChangedEventArgs:
                 string cacheName = this.eventArgsCache.GetOrAdd(propertyName);
@@ -307,7 +307,7 @@ public class Generator
                 break;
         }
 
-        if (type.RaisePropertyChangedMethod.Signature.HasOldAndNew)
+        if (type.INotifyPropertyChanged.RaisePropertyChangedMethod.Signature.HasOldAndNew)
         {
             if (isCallable)
             {

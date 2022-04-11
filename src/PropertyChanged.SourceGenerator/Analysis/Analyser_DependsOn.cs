@@ -66,11 +66,11 @@ public partial class Analyser
                     else
                     {
                         // We'll assume it'll pass through RaisePropertyChanged
-                        if (typeAnalysis.RaisePropertyChangedMethod.Type == RaisePropertyChangedMethodType.None)
+                        if (typeAnalysis.INotifyPropertyChanged.RaisePropertyChangedMethod.Type == RaisePropertyChangedMethodType.None)
                         {
-                            this.diagnostics.ReportDependsOnSpecifiedButRaisepropertyChangedMethodCannotBeOverridden(attribute, member, dependsOn!, typeAnalysis.RaisePropertyChangedMethod.Name);
+                            this.diagnostics.ReportDependsOnSpecifiedButRaisepropertyChangedMethodCannotBeOverridden(attribute, member, dependsOn!, typeAnalysis.INotifyPropertyChanged.RaisePropertyChangedMethod.Name);
                         }
-                        typeAnalysis.RaisePropertyChangedMethod.AddDependsOn(dependsOn!, alsoNotifyMember.Value);
+                        typeAnalysis.AddDependsOn(dependsOn!, alsoNotifyMember.Value);
                     }
                 }
             }
@@ -135,7 +135,7 @@ public partial class Analyser
                 {
                     // Is it another property defined on a base type? We'll need to stick it in
                     // the RaisePropertyChanged method
-                    typeAnalysis.RaisePropertyChangedMethod.AddDependsOn(baseProperty.Name, AlsoNotifyMember.FromProperty(
+                    typeAnalysis.AddDependsOn(baseProperty.Name, AlsoNotifyMember.FromProperty(
                         notifyProperty,
                         this.FindOnPropertyNameChangedMethod(typeAnalysis.TypeSymbol, notifyProperty)));
                 }

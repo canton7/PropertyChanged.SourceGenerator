@@ -431,6 +431,11 @@ partial class SomeViewModel : global::System.ComponentModel.INotifyPropertyChang
 }";
         this.AssertThat(input, It
             .HasFile("SomeViewModel", expected, RemoveInpcMembersRewriter.Instance)
+            .HasDiagnostics(
+                // (4,85): Warning INPC009: Unable to find a property called 'NonExistent' on this type or its base types. This event will still be raised
+                // AlsoNotify(nameof(NonExistent))
+                Diagnostic("INPC009", @"AlsoNotify(nameof(NonExistent))").WithLocation(4, 85)
+             )
             .AllowCompilationDiagnostics("CS0103")); // Unknown member NonExistent
     }
 }

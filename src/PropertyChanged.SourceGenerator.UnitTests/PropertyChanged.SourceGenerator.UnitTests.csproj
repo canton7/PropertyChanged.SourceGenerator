@@ -13,9 +13,12 @@
 
   <ItemGroup>
     <PackageReference Include="AltCover" Version="8.2.821" />
-    <PackageReference Include="Basic.Reference.Assemblies" Version="1.1.2" />
-    <PackageReference Include="Microsoft.CodeAnalysis.Analyzers" Version="3.3.2" />
-    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="3.9.0" />
+    <PackageReference Include="Basic.Reference.Assemblies" Version="1.2.4" />
+    <PackageReference Include="Microsoft.CodeAnalysis.Analyzers" Version="3.3.3">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.1.0" />
     <PackageReference Include="NUnit" Version="3.12.0" />
     <PackageReference Include="NUnit3TestAdapter" Version="3.16.1" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="16.5.0" />

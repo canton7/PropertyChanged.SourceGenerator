@@ -20,13 +20,8 @@ public partial class SomeViewModel
     [Notify]
     private string _foo;
 }";
-        string expected = @"
-partial class SomeViewModel : global::System.ComponentModel.INotifyPropertyChanged
-{
-    public string Foo { get; set; }
-}";
 
-        this.AssertThat(input, It.HasFile("SomeViewModel", expected, StandardRewriters));
+        this.AssertThat(input, It.HasFile("SomeViewModel", StandardRewriters));
     }
 
     [Test]
@@ -39,13 +34,8 @@ public partial class SomeViewModel : INotifyPropertyChanged
     [Notify]
     private string _foo;
 }";
-        string expected = @"
-partial class SomeViewModel
-{
-    public string Foo { get; set; }
-}";
 
-        this.AssertThat(input, It.HasFile("SomeViewModel", expected, StandardRewriters));
+        this.AssertThat(input, It.HasFile("SomeViewModel", StandardRewriters));
     }
 
     [Test]
@@ -64,24 +54,8 @@ public partial class Derived : Base
     [Notify]
     private string _foo;
 }";
-        string expected = @"
-partial class Derived
-{
-    public string Foo
-    {
-        get => this._foo;
-        set
-        {
-            if (!global::System.Collections.Generic.EqualityComparer<string>.Default.Equals(value, this._foo))
-            {
-                this._foo = value;
-                this.OnPropertyChanged(global::PropertyChanged.SourceGenerator.Internal.PropertyChangedEventArgsCache.Foo);
-            }
-        }
-    }
-}";
 
-        this.AssertThat(input, It.HasFile("Derived", expected));
+        this.AssertThat(input, It.HasFile("Derived"));
     }
 
     [Test]
@@ -97,24 +71,8 @@ public partial class SomeViewModel : INotifyPropertyChanged
     [Notify]
     private string _foo;
 }";
-        string expected = @"
-partial class SomeViewModel
-{
-    public string Foo
-    {
-        get => this._foo;
-        set
-        {
-            if (!global::System.Collections.Generic.EqualityComparer<string>.Default.Equals(value, this._foo))
-            {
-                this._foo = value;
-                this.NotifyPropertyChanged(@""Foo"");
-            }
-        }
-    }
-}";
 
-        this.AssertThat(input, It.HasFile("SomeViewModel", expected));
+        this.AssertThat(input, It.HasFile("SomeViewModel"));
     }
 
     [Test]
@@ -130,25 +88,8 @@ public partial class SomeViewModel : INotifyPropertyChanged
     [Notify]
     private string _foo;
 }";
-        string expected = @"
-partial class SomeViewModel
-{
-    public string Foo
-    {
-        get => this._foo;
-        set
-        {
-            if (!global::System.Collections.Generic.EqualityComparer<string>.Default.Equals(value, this._foo))
-            {
-                string old_Foo = this.Foo;
-                this._foo = value;
-                this.NotifyPropertyChanged(global::PropertyChanged.SourceGenerator.Internal.PropertyChangedEventArgsCache.Foo, old_Foo, this.Foo);
-            }
-        }
-    }
-}";
 
-        this.AssertThat(input, It.HasFile("SomeViewModel", expected));
+        this.AssertThat(input, It.HasFile("SomeViewModel"));
     }
 
     [Test]
@@ -164,25 +105,8 @@ public partial class SomeViewModel : INotifyPropertyChanged
     [Notify]
     private string _foo;
 }";
-        string expected = @"
-partial class SomeViewModel
-{
-    public string Foo
-    {
-        get => this._foo;
-        set
-        {
-            if (!global::System.Collections.Generic.EqualityComparer<string>.Default.Equals(value, this._foo))
-            {
-                string old_Foo = this.Foo;
-                this._foo = value;
-                this.NotifyPropertyChanged(@""Foo"", old_Foo, this.Foo);
-            }
-        }
-    }
-}";
 
-        this.AssertThat(input, It.HasFile("SomeViewModel", expected));
+        this.AssertThat(input, It.HasFile("SomeViewModel"));
     }
 
     [Test]
@@ -249,40 +173,8 @@ public partial class C : B
     private string _bar;
     protected void OnPropertyChanged(string name) { }
 }";
-        string expectedB = @"
-partial class B
-{
-    public string Foo
-    {
-        get => this._foo;
-        set
-        {
-            if (!global::System.Collections.Generic.EqualityComparer<string>.Default.Equals(value, this._foo))
-            {
-                this._foo = value;
-                this.NotifyOfPropertyChange(global::PropertyChanged.SourceGenerator.Internal.PropertyChangedEventArgsCache.Foo);
-            }
-        }
-    }
-}";
-        string expectedC = @"
-partial class C
-{
-    public string Bar
-    {
-        get => this._bar;
-        set
-        {
-            if (!global::System.Collections.Generic.EqualityComparer<string>.Default.Equals(value, this._bar))
-            {
-                this._bar = value;
-                this.OnPropertyChanged(@""Bar"");
-            }
-        }
-    }
-}";
 
-        this.AssertThat(input, It.HasFile("B", expectedB).HasFile("C", expectedC));
+        this.AssertThat(input, It.HasFile("B").HasFile("C"));
     }
 
     [Test]
@@ -325,12 +217,6 @@ public partial class B : A<string>
     private string _bar;
 }";
         // It doesn't generate a new RaisePropertyChanged method
-        string expected = @"
-partial class B
-{
-    public string Bar { get; set; }
-}";
-
-        this.AssertThat(input, It.HasFile("B", expected, RemovePropertiesRewriter.Instance));
+        this.AssertThat(input, It.HasFile("B", RemovePropertiesRewriter.Instance));
     }
 }

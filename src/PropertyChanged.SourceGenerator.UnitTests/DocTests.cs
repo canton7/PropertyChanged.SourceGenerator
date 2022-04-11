@@ -26,20 +26,8 @@ public partial class SomeViewModel
     /// </description>
     [Notify] private string _foo;
 }";
-        string expected = @"
-partial class SomeViewModel : global::System.ComponentModel.INotifyPropertyChanged
-{
-    /// <summary>
-    /// The Summary
-    /// </summary>
-    /// <description>
-    /// The Description.
-    ///     Indented line
-    /// </description>
-    public string Foo { get; set; }
-}";
 
-        this.AssertThat(input, It.HasFile("SomeViewModel", expected, StandardRewriters));
+        this.AssertThat(input, It.HasFile("SomeViewModel", StandardRewriters));
     }
 
     [Test]
@@ -53,11 +41,7 @@ public partial class SomeViewModel
 /// </summarry>
 [Notify] private string _foo;
 }";
-        string expected = @"
-partial class SomeViewModel : global::System.ComponentModel.INotifyPropertyChanged
-{
-    public string Foo { get; set; }
-}";
-        this.AssertThat(input, It.HasFile("SomeViewModel", expected, StandardRewriters));
+
+        this.AssertThat(input, It.HasFile("SomeViewModel", StandardRewriters));
     }
 }

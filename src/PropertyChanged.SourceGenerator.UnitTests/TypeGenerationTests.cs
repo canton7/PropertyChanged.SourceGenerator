@@ -26,16 +26,8 @@ namespace Test.Foo
         private string _foo;
     }
 }";
-        string expected = @"
-namespace Test.Foo
-{
-    partial class SomeViewModel
-    {
-        public string Foo { get; set; }
-    }
-}";
 
-        this.AssertThat(input, It.HasFile("SomeViewModel", expected, StandardRewriters));
+        this.AssertThat(input, It.HasFile("SomeViewModel", StandardRewriters));
     }
 
     [Test]
@@ -66,13 +58,8 @@ public partial class SomeViewModel<@class>
     [Notify]
     private string _foo;
 }";
-        string expected = @"
-partial class SomeViewModel<@class> : global::System.ComponentModel.INotifyPropertyChanged
-{
-    public string Foo { get; set; }
-}";
 
-        this.AssertThat(input, It.HasFile("SomeViewModel", expected, StandardRewriters));
+        this.AssertThat(input, It.HasFile("SomeViewModel", StandardRewriters));
     }
 
     [Test]
@@ -84,13 +71,8 @@ public partial class SomeViewModel<T> where T : class
     [Notify]
     private string _foo;
 }";
-        string expected = @"
-partial class SomeViewModel<T> : global::System.ComponentModel.INotifyPropertyChanged
-{
-    public string Foo { get; set; }
-}";
 
-        this.AssertThat(input, It.HasFile("SomeViewModel", expected, StandardRewriters));
+        this.AssertThat(input, It.HasFile("SomeViewModel", StandardRewriters));
     }
 
     [Test]
@@ -122,19 +104,8 @@ partial class A
         }
     }
 }";
-        string expected = @"
-partial class A
-{
-    partial class B
-    {
-        partial class C : global::System.ComponentModel.INotifyPropertyChanged
-        {
-            public string Field { get; set; }
-        }
-    }
-}";
 
-        this.AssertThat(input, It.HasFile("C", expected, StandardRewriters));
+        this.AssertThat(input, It.HasFile("C", StandardRewriters));
     }
 
     [Test]
@@ -174,24 +145,9 @@ namespace NS2
         [Notify] string _a;
     }
 }";
-        string expected1 = @"
-namespace NS1
-{
-    partial class SomeViewModel : global::System.ComponentModel.INotifyPropertyChanged
-    {
-        public string A { get; set; }
-    }
-}";
-        string expected2 = @"
-namespace NS2
-{
-    partial class SomeViewModel : global::System.ComponentModel.INotifyPropertyChanged
-    {
-        public string A { get; set; }
-    }
-}";
+
         this.AssertThat(input,
-            It.HasFile("SomeViewModel", expected1, StandardRewriters)
-                .HasFile("SomeViewModel2", expected2, StandardRewriters));
+            It.HasFile("SomeViewModel", StandardRewriters)
+                .HasFile("SomeViewModel2", StandardRewriters));
     }
 }

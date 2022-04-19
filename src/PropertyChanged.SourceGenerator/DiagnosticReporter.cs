@@ -191,7 +191,7 @@ public class DiagnosticReporter
     private static readonly DiagnosticDescriptor userDefinedRaisePropertyChangedMethodOverride = CreateDescriptor(
         "INPC021",
         "Do not define your own overrides of the method to raise PropertyChanged events",
-        "Method '{0}' must not be overridden. Functionality such as dependencies on base properties will not work. Define a method called '" + Analyser.OnAnyPropertyChangedMethodName + "' instead");
+        "Method '{0}' must not be overridden. Functionality such as dependencies on base properties will not work. Define a method called '" + ProperyChangedInterfaceAnalyser.OnAnyPropertyChangedMethodName + "' instead");
     public void ReportUserDefinedRaisePropertyChangedMethodOverride(IMethodSymbol method)
     {
         this.AddDiagnostic(userDefinedRaisePropertyChangedMethodOverride, method.Locations, method.Name);

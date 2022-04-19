@@ -7,6 +7,7 @@ using System.Xml;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using static PropertyChanged.SourceGenerator.Analysis.Utils;
 
 namespace PropertyChanged.SourceGenerator.Analysis;
 
@@ -15,16 +16,12 @@ public partial class Analyser
     private readonly DiagnosticReporter diagnostics;
     private readonly Compilation compilation;
     private readonly ConfigurationParser configurationParser;
-    private readonly INamedTypeSymbol? inpchangedSymbol;
-    private readonly INamedTypeSymbol? propertyChangedEventHandlerSymbol;
-    private readonly INamedTypeSymbol? propertyChangedEventArgsSymbol;
-    private readonly INamedTypeSymbol? inpchangingSymbol;
-    private readonly INamedTypeSymbol? propertyChangingEventHandlerSymbol;
-    private readonly INamedTypeSymbol? propertyChangingEventArgsSymbol;
     private readonly INamedTypeSymbol notifyAttributeSymbol;
     private readonly INamedTypeSymbol alsoNotifyAttributeSymbol;
     private readonly INamedTypeSymbol dependsOnAttributeSymbol;
     private readonly INamedTypeSymbol isChangedAttributeSymbol;
+
+    private readonly ProperyChangedInterfaceAnalyser? propertyChangedInterfaceAnalyser;
 
     public Analyser(
         DiagnosticReporter diagnostics,
@@ -35,19 +32,21 @@ public partial class Analyser
         this.compilation = compilation;
         this.configurationParser = configurationParser;
 
-        this.inpchangedSymbol = compilation.GetTypeByMetadataName("System.ComponentModel.INotifyPropertyChanged");
-        if (this.inpchangedSymbol == null)
+        var inpchangedSymbol = compilation.GetTypeByMetadataName("System.ComponentModel.INotifyPropertyChanged");
+        if (inpchangedSymbol == null)
         {
             this.diagnostics.ReportCouldNotFindInpc();
         }
         else
         {
-            this.propertyChangedEventHandlerSymbol = compilation.GetTypeByMetadataName("System.ComponentModel.PropertyChangedEventHandler");
-            this.propertyChangedEventArgsSymbol = compilation.GetTypeByMetadataName("System.ComponentModel.PropertyChangedEventArgs");
+            var propertyChangedEventHandlerSymbol = compilation.GetTypeByMetadataName("System.ComponentModel.PropertyChangedEventHandler");
+            var propertyChangedEventArgsSymbol = compilation.GetTypeByMetadataName("System.ComponentModel.PropertyChangedEventArgs");
 
-            this.inpchangingSymbol = compilation.GetTypeByMetadataName("System.ComponentModel.INotifyPropertyChanging"); ;
-            this.propertyChangingEventHandlerSymbol = compilation.GetTypeByMetadataName("System.ComponentModel.PropertyChangingEventHandler");
-            this.propertyChangingEventArgsSymbol = compilation.GetTypeByMetadataName("System.ComponentModel.PropertyChangingEventArgs");
+            var inpchangingSymbol = compilation.GetTypeByMetadataName("System.ComponentModel.INotifyPropertyChanging"); ;
+            var propertyChangingEventHandlerSymbol = compilation.GetTypeByMetadataName("System.ComponentModel.PropertyChangingEventHandler");
+            var propertyChangingEventArgsSymbol = compilation.GetTypeByMetadataName("System.ComponentModel.PropertyChangingEventArgs");
+        
+            this.propertyChangedInterfaceAnalyser = new(inpchangedSymbol, propertyChangedEventHandlerSymbol!, propertyChangedEventArgsSymbol!, this.diagnostics, this.compilation);
         }
 
         this.notifyAttributeSymbol = compilation.GetTypeByMetadataName("PropertyChanged.SourceGenerator.NotifyAttribute")
@@ -58,6 +57,7 @@ public partial class Analyser
            ?? throw new InvalidOperationException("DependsOnAttribute must have been added to the assembly");
         this.isChangedAttributeSymbol = compilation.GetTypeByMetadataName("PropertyChanged.SourceGenerator.IsChangedAttribute")
            ?? throw new InvalidOperationException("IsChangedAttribute must have been added to the assembly");
+
     }
 
     public IEnumerable<TypeAnalysis> Analyse(HashSet<INamedTypeSymbol> typeSymbols)
@@ -148,14 +148,14 @@ public partial class Analyser
     {
         var typeSymbol = typeAnalysis.TypeSymbol;
 
-        if (this.inpchangedSymbol == null || this.inpchangingSymbol == null)
+        if (this.propertyChangedInterfaceAnalyser == null)
             throw new InvalidOperationException();
 
         var config = this.configurationParser.Parse(typeSymbol.DeclaringSyntaxReferences.FirstOrDefault()?.SyntaxTree);
 
         typeAnalysis.NullableContext = this.compilation.Options.NullableContextOptions;
 
-        this.PopulateInterfaceAnalysis(typeAnalysis.TypeSymbol, typeAnalysis.INotifyPropertyChanged, "PropertyChanged", this.propertyChangedEventHandlerSymbol!, baseTypeAnalyses, config);
+        this.propertyChangedInterfaceAnalyser.PopulateInterfaceAnalysis(typeAnalysis.TypeSymbol, typeAnalysis.INotifyPropertyChanged, baseTypeAnalyses, config);
         this.ResoveInheritedIsChanged(typeAnalysis, baseTypeAnalyses);
 
         foreach (var member in typeSymbol.GetMembers())
@@ -405,15 +405,6 @@ public partial class Analyser
             {
                 this.diagnostics.ReportAlsoNotifyAttributeNotValidOnMember(attribute, member);
             }
-        }
-    }
-
-    private static IEnumerable<INamedTypeSymbol> TypeAndBaseTypes(INamedTypeSymbol type)
-    {
-        // Stop at 'object': no point in analysing that
-        for (var t = type; t!.SpecialType != SpecialType.System_Object; t = t.BaseType)
-        {
-            yield return t;
         }
     }
 

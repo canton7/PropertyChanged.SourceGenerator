@@ -20,8 +20,8 @@ public partial class Analyser
     {
         // If we've got any base types we're generating partial types for, that will have the INPC interface
         // and event on, for sure
-        interfaceAnalysis.HasInterface = baseTypeAnalyses.Any(x => x.CanGenerate)
-            || typeSymbol.AllInterfaces.Contains(this.inpchangedSymbol, SymbolEqualityComparer.Default);
+        interfaceAnalysis.RequiresInterface = !baseTypeAnalyses.Any(x => x.CanGenerate)
+            && !typeSymbol.AllInterfaces.Contains(this.inpchangedSymbol, SymbolEqualityComparer.Default);
 
         // Try and find out how we raise the PropertyChanged event
         // 1. If noone's defined the PropertyChanged event yet, we'll define it ourselves
@@ -61,7 +61,7 @@ public partial class Analyser
             {
                 if (!TryFindCallableOverload(methods, out method, out signature))
                 {
-                    interfaceAnalysis.CanCall = false;
+                    interfaceAnalysis.CanCallRaiseMethod = false;
                     this.diagnostics.ReportCouldNotFindCallableRaisePropertyChangedOverload(typeSymbol, name);
                 }
                 break;
@@ -84,11 +84,11 @@ public partial class Analyser
                 {
                     this.diagnostics.ReportUserDefinedRaisePropertyChangedMethodOverride(method);
                 }
-                interfaceAnalysis.RaisePropertyChangedMethod.Type = RaisePropertyChangedMethodType.None;
+                interfaceAnalysis.RaiseMethodType = RaisePropertyChangedMethodType.None;
             }
             else if (method.IsVirtual || method.IsOverride)
             {
-                interfaceAnalysis.RaisePropertyChangedMethod.Type = RaisePropertyChangedMethodType.Override;
+                interfaceAnalysis.RaiseMethodType = RaisePropertyChangedMethodType.Override;
             }
             else
             {
@@ -97,7 +97,7 @@ public partial class Analyser
                 {
                     this.diagnostics.ReportCannotCallOnAnyPropertyChangedBecauseRaisePropertyChangedIsNonVirtual(onAnyPropertyChangedMethod!, method.Name);
                 }
-                interfaceAnalysis.RaisePropertyChangedMethod.Type = RaisePropertyChangedMethodType.None;
+                interfaceAnalysis.RaiseMethodType = RaisePropertyChangedMethodType.None;
             }
 
             if (interfaceAnalysis.OnAnyPropertyChangedInfo?.Signature == OnPropertyNameChangedSignature.OldAndNew &&
@@ -106,35 +106,35 @@ public partial class Analyser
                 this.diagnostics.ReportCannotPopulateOnAnyPropertyChangedOldAndNew(onAnyPropertyChangedMethod!, method.Name);
             }
 
-            interfaceAnalysis.RaisePropertyChangedMethod.Name = method!.Name;
-            interfaceAnalysis.RaisePropertyChangedMethod.Signature = signature.Value;
+            interfaceAnalysis.RaiseMethodName = method!.Name;
+            interfaceAnalysis.RaiseMethodSignature = signature.Value;
         }
-        else if (interfaceAnalysis.CanCall)
+        else if (interfaceAnalysis.CanCallRaiseMethod)
         {
             // The base type in our hierarchy is defining its own
             // Make sure that that type can actually access the event, if it's pre-existing
             if (eventSymbol != null && !isGeneratingAnyParent &&
                 !SymbolEqualityComparer.Default.Equals(eventSymbol.ContainingType, typeSymbol))
             {
-                interfaceAnalysis.CanCall = false;
-                interfaceAnalysis.RaisePropertyChangedMethod.Type = RaisePropertyChangedMethodType.None;
+                interfaceAnalysis.CanCallRaiseMethod = false;
+                interfaceAnalysis.RaiseMethodType = RaisePropertyChangedMethodType.None;
                 this.diagnostics.ReportCouldNotFindRaisePropertyChangedMethod(typeSymbol);
             }
             else if (isGeneratingAnyParent)
             {
-                interfaceAnalysis.RaisePropertyChangedMethod.Type = interfaceAnalysis.OnAnyPropertyChangedInfo == null
+                interfaceAnalysis.RaiseMethodType = interfaceAnalysis.OnAnyPropertyChangedInfo == null
                     ? RaisePropertyChangedMethodType.None
                     : RaisePropertyChangedMethodType.Override;
             }
             else
             {
-                interfaceAnalysis.RaisePropertyChangedMethod.Type = typeSymbol.IsSealed
+                interfaceAnalysis.RaiseMethodType = typeSymbol.IsSealed
                     ? RaisePropertyChangedMethodType.NonVirtual
                     : RaisePropertyChangedMethodType.Virtual;
             }
 
-            interfaceAnalysis.RaisePropertyChangedMethod.Name = config.RaisePropertyChangedMethodNames[0];
-            interfaceAnalysis.RaisePropertyChangedMethod.Signature = new RaisePropertyChangedMethodSignature(
+            interfaceAnalysis.RaiseMethodName = config.RaisePropertyChangedMethodNames[0];
+            interfaceAnalysis.RaiseMethodSignature = new RaisePropertyChangedMethodSignature(
                 RaisePropertyChangedNameType.PropertyChangedEventArgs,
                 hasOldAndNew: interfaceAnalysis.OnAnyPropertyChangedInfo?.Signature == OnPropertyNameChangedSignature.OldAndNew,
                 typeSymbol.IsSealed ? Accessibility.Private : Accessibility.Protected);

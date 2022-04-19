@@ -63,7 +63,7 @@ public class Generator
         }
 
         this.writer.Write($"partial {typeAnalysis.TypeSymbol.ToDisplayString(SymbolDisplayFormats.TypeDeclaration)}");
-        if (!typeAnalysis.INotifyPropertyChanged.HasInterface)
+        if (typeAnalysis.INotifyPropertyChanged.RequiresInterface)
         {
             this.writer.Write(" : global::System.ComponentModel.INotifyPropertyChanged");
         }
@@ -97,18 +97,18 @@ public class Generator
 
     private void GenerateRaisePropertyChangedMethod(TypeAnalysis typeAnalysis)
     {
-        var method = typeAnalysis.INotifyPropertyChanged.RaisePropertyChangedMethod;
+        var interfaceAnalysis = typeAnalysis.INotifyPropertyChanged;
         var baseDependsOn = typeAnalysis.BaseDependsOn.ToLookup(x => x.baseProperty);
-        if (method.Type == RaisePropertyChangedMethodType.None ||
-            (method.Type == RaisePropertyChangedMethodType.Override &&
+        if (interfaceAnalysis.RaiseMethodType == RaisePropertyChangedMethodType.None ||
+            (interfaceAnalysis.RaiseMethodType == RaisePropertyChangedMethodType.Override &&
             baseDependsOn.Count == 0 &&
             typeAnalysis.INotifyPropertyChanged.OnAnyPropertyChangedInfo == null))
         {
             return;
         }
 
-        this.writer.Write(AccessibilityToString(method.Signature.Accessibility));
-        switch (method.Type)
+        this.writer.Write(AccessibilityToString(interfaceAnalysis.RaiseMethodSignature.Accessibility));
+        switch (interfaceAnalysis.RaiseMethodType)
         {
             case RaisePropertyChangedMethodType.Virtual:
                 this.writer.Write("virtual ");
@@ -120,10 +120,10 @@ public class Generator
             case RaisePropertyChangedMethodType.NonVirtual:
                 break;
         }
-        this.writer.Write($"void {method.Name}(");
+        this.writer.Write($"void {interfaceAnalysis.RaiseMethodName}(");
         string propertyNameOrEventArgsName = null!;
         string propertyNameAccessor = null!;
-        switch (method.Signature.NameType)
+        switch (interfaceAnalysis.RaiseMethodSignature.NameType)
         {
             case RaisePropertyChangedNameType.String:
                 this.writer.Write("string propertyName");
@@ -136,7 +136,7 @@ public class Generator
                 propertyNameAccessor = "eventArgs.PropertyName";
                 break;
         }
-        if (method.Signature.HasOldAndNew)
+        if (interfaceAnalysis.RaiseMethodSignature.HasOldAndNew)
         {
             this.writer.Write(", object oldValue, object newValue");
         }
@@ -153,7 +153,7 @@ public class Generator
                 case OnPropertyNameChangedSignature.Parameterless:
                     break;
                 case OnPropertyNameChangedSignature.OldAndNew:
-                    if (method.Signature.HasOldAndNew)
+                    if (interfaceAnalysis.RaiseMethodSignature.HasOldAndNew)
                     {
                         this.writer.Write(", oldValue, newValue");
                     }
@@ -166,17 +166,17 @@ public class Generator
             this.writer.WriteLine(");");
         }
 
-        switch (method.Type)
+        switch (interfaceAnalysis.RaiseMethodType)
         {
             case RaisePropertyChangedMethodType.Virtual:
             case RaisePropertyChangedMethodType.NonVirtual:
                 // If we're generating our own, we always use PropertyChangedEventArgs
-                Trace.Assert(method.Signature.NameType == RaisePropertyChangedNameType.PropertyChangedEventArgs);
+                Trace.Assert(interfaceAnalysis.RaiseMethodSignature.NameType == RaisePropertyChangedNameType.PropertyChangedEventArgs);
                 this.writer.WriteLine("this.PropertyChanged?.Invoke(this, eventArgs);");
                 break;
             case RaisePropertyChangedMethodType.Override:
-                this.writer.Write($"base.{method.Name}({propertyNameOrEventArgsName}");
-                if (method.Signature.HasOldAndNew)
+                this.writer.Write($"base.{interfaceAnalysis.RaiseMethodName}({propertyNameOrEventArgsName}");
+                if (interfaceAnalysis.RaiseMethodSignature.HasOldAndNew)
                 {
                     this.writer.Write(", oldValue, newValue");
                 }
@@ -284,7 +284,7 @@ public class Generator
     private void GenerateOldVariableIfNecessary<T>(TypeAnalysis type, T member) where T : IMember
     {
         if (member.IsCallable &&
-            (type.INotifyPropertyChanged.RaisePropertyChangedMethod.Signature.HasOldAndNew ||
+            (type.INotifyPropertyChanged.RaiseMethodSignature.HasOldAndNew ||
                 member.OnPropertyNameChanged?.Signature == OnPropertyNameChangedSignature.OldAndNew))
         {
             this.writer.WriteLine($"{member.Type!.ToDisplayString(SymbolDisplayFormats.MethodOrPropertyReturnType)} old_{member.Name} = this.{member.Name};");
@@ -293,14 +293,14 @@ public class Generator
 
     private void GenerateRaiseEvent(TypeAnalysis type, string? propertyName, bool isCallable, bool hasOldVariable)
     {
-        if (!type.INotifyPropertyChanged.CanCall)
+        if (!type.INotifyPropertyChanged.CanCallRaiseMethod)
         {
             return;
         }
 
-        this.writer.Write($"this.{type.INotifyPropertyChanged.RaisePropertyChangedMethod.Name}(");
+        this.writer.Write($"this.{type.INotifyPropertyChanged.RaiseMethodName}(");
 
-        switch (type.INotifyPropertyChanged.RaisePropertyChangedMethod.Signature.NameType)
+        switch (type.INotifyPropertyChanged.RaiseMethodSignature.NameType)
         {
             case RaisePropertyChangedNameType.PropertyChangedEventArgs:
                 string cacheName = this.eventArgsCache.GetOrAdd(propertyName);
@@ -312,7 +312,7 @@ public class Generator
                 break;
         }
 
-        if (type.INotifyPropertyChanged.RaisePropertyChangedMethod.Signature.HasOldAndNew)
+        if (type.INotifyPropertyChanged.RaiseMethodSignature.HasOldAndNew)
         {
             if (isCallable)
             {

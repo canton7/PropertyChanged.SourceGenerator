@@ -29,13 +29,3 @@ public class TypeAnalysis
     public IEnumerable<(string baseProperty, AlsoNotifyMember notifyProperty)> BaseDependsOn =>
         this.baseDependsOn ?? Enumerable.Empty<(string, AlsoNotifyMember)>();
 }
-
-public class InterfaceAnalysis
-{
-    public bool CanCall { get; set; } = true;
-    public bool HasInterface { get; set; }
-    public bool RequiresEvent { get; set; }
-    private RaisePropertyChangedMethodInfo raisePropertyChangedMethod;
-    public ref RaisePropertyChangedMethodInfo RaisePropertyChangedMethod => ref this.raisePropertyChangedMethod;
-    public OnPropertyNameChangedInfo? OnAnyPropertyChangedInfo { get; set; }
-}

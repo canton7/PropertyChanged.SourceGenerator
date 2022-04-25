@@ -1,5 +1,5 @@
 ﻿#nullable enable
-partial class SomeViewModel : global::System.ComponentModel.INotifyPropertyChanged
+partial class SomeViewModel
 {
     public string? Nullable
     {

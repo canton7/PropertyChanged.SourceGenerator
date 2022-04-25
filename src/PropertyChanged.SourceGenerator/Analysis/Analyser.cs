@@ -22,6 +22,7 @@ public partial class Analyser
     private readonly INamedTypeSymbol isChangedAttributeSymbol;
 
     private readonly ProperyChangedInterfaceAnalyser? propertyChangedInterfaceAnalyser;
+    private readonly ProperyChangingInterfaceAnalyser? propertyChangingInterfaceAnalyser;
 
     public Analyser(
         DiagnosticReporter diagnostics,
@@ -47,6 +48,7 @@ public partial class Analyser
             var propertyChangingEventArgsSymbol = compilation.GetTypeByMetadataName("System.ComponentModel.PropertyChangingEventArgs");
         
             this.propertyChangedInterfaceAnalyser = new(inpchangedSymbol, propertyChangedEventHandlerSymbol!, propertyChangedEventArgsSymbol!, this.diagnostics, this.compilation);
+            this.propertyChangingInterfaceAnalyser = new(inpchangingSymbol!, propertyChangingEventHandlerSymbol!, propertyChangingEventArgsSymbol!, this.diagnostics, this.compilation);
         }
 
         this.notifyAttributeSymbol = compilation.GetTypeByMetadataName("PropertyChanged.SourceGenerator.NotifyAttribute")
@@ -156,6 +158,7 @@ public partial class Analyser
         typeAnalysis.NullableContext = this.compilation.Options.NullableContextOptions;
 
         this.propertyChangedInterfaceAnalyser.PopulateInterfaceAnalysis(typeAnalysis.TypeSymbol, typeAnalysis.INotifyPropertyChanged, baseTypeAnalyses, config);
+        this.propertyChangingInterfaceAnalyser!.PopulateInterfaceAnalysis(typeAnalysis.TypeSymbol, typeAnalysis.INotifyPropertyChanging, baseTypeAnalyses, config);
         this.ResoveInheritedIsChanged(typeAnalysis, baseTypeAnalyses);
 
         foreach (var member in typeSymbol.GetMembers())

@@ -1,4 +1,4 @@
-﻿partial class Base : global::System.ComponentModel.INotifyPropertyChanged
+﻿partial class Base
 {
     public string Foo
     {

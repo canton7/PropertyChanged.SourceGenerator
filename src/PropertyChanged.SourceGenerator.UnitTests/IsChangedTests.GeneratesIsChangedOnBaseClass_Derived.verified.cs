@@ -1,4 +1,4 @@
-﻿partial class Derived : global::System.ComponentModel.INotifyPropertyChanged
+﻿partial class Derived
 {
     public string Foo
     {

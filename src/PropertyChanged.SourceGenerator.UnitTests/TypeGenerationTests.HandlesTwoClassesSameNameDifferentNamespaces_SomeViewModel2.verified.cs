@@ -1,6 +1,6 @@
 ﻿namespace NS2
 {
-    partial class SomeViewModel : global::System.ComponentModel.INotifyPropertyChanged
+    partial class SomeViewModel
     {
         public string A { get; set; }
     }

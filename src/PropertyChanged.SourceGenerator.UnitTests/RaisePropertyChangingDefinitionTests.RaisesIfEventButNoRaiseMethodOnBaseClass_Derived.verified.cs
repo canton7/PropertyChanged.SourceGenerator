@@ -1,4 +1,4 @@
-﻿partial class SomeViewModel
+﻿partial class Derived
 {
     public string Foo
     {
@@ -7,11 +7,13 @@
         {
             if (!global::System.Collections.Generic.EqualityComparer<string>.Default.Equals(value, this._foo))
             {
-                string old_Foo = this.Foo;
                 this._foo = value;
-                this.OnFooChanged(old_Foo, this.Foo);
                 this.OnPropertyChanged(global::PropertyChanged.SourceGenerator.Internal.PropertyChangedEventArgsCache.Foo);
             }
         }
+    }
+    protected virtual void OnPropertyChanged(global::System.ComponentModel.PropertyChangedEventArgs eventArgs)
+    {
+        this.PropertyChanged?.Invoke(this, eventArgs);
     }
 }

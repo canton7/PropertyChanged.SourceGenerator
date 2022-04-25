@@ -1,4 +1,4 @@
-﻿partial class SomeViewModel : global::System.ComponentModel.INotifyPropertyChanged
+﻿partial class SomeViewModel
 {
     #nullable enable annotations
     public string? Nullable

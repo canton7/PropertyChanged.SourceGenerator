@@ -1,4 +1,4 @@
-﻿partial class SomeViewModel<T> : global::System.ComponentModel.INotifyPropertyChanged
+﻿partial class SomeViewModel<T>
 {
     public string Foo { get; set; }
 }

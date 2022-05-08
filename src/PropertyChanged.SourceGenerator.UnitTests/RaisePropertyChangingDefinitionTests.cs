@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
 using NUnit.Framework;
 using PropertyChanged.SourceGenerator.UnitTests.Framework;
 
@@ -11,6 +13,12 @@ namespace PropertyChanged.SourceGenerator.UnitTests;
 [TestFixture]
 public class RaisePropertyChangingDefinitionTests : TestsBase
 {
+    private static readonly CSharpSyntaxVisitor<SyntaxNode?>[] rewriters = new CSharpSyntaxVisitor<SyntaxNode?>[]
+    {
+        RemoveInpcMembersRewriter.Instance, RemovePropertiesRewriter.Instance
+    };
+
+
     [Test]
     public void DoesNothingIfTypeDoesNotImplementInterface()
     {
@@ -21,7 +29,7 @@ public partial class SomeViewModel
     private string _foo;
 }";
 
-        this.AssertThat(input, It.HasFile("SomeViewModel", RemoveInpcMembersRewriter.Instance, RemovePropertiesRewriter.Instance));
+        this.AssertThat(input, It.HasFile("SomeViewModel", rewriters));
     }
 
     [Test]
@@ -35,107 +43,104 @@ public partial class SomeViewModel : INotifyPropertyChanging
     private string _foo;
 }";
 
-        this.AssertThat(input, It.HasFile("SomeViewModel", RemoveInpcMembersRewriter.Instance, RemovePropertiesRewriter.Instance));
+        this.AssertThat(input, It.HasFile("SomeViewModel", rewriters));
     }
 
-    //    [Test]
-    //    public void GeneratesRaisePropertyChangedIfNotDefined()
-    //    {
-    //        string input = @"
-    //using System.ComponentModel;
-    //public partial class SomeViewModel : INotifyPropertyChanged
-    //{
-    //    public event PropertyChangedEventHandler PropertyChanged;
-    //    [Notify]
-    //    private string _foo;
-    //}";
+    [Test]
+    public void GeneratesRaisePropertyChangingIfNotDefined()
+    {
+        string input = @"
+using System.ComponentModel;
+public partial class SomeViewModel : INotifyPropertyChanging
+{
+    public event PropertyChangingEventHandler PropertyChanging;
+    [Notify]
+    private string _foo;
+}";
 
-    //        this.AssertThat(input, It.HasFile("SomeViewModel", RemovePropertiesRewriter.Instance));
-    //    }
+        this.AssertThat(input, It.HasFile("SomeViewModel", rewriters));
+    }
 
-    //    [Test]
-    //    public void RaisesIfEventButNoRaiseMethodOnBaseClass()
-    //    {
-    //        string input = @"
-    //using System.ComponentModel;
-    //public class Base : INotifyPropertyChanged
-    //{
-    //    public event PropertyChangedEventHandler PropertyChanged;
-    //}
-    //public partial class Derived : Base
-    //{
-    //    [Notify]
-    //    private string _foo;
-    //}";
+    [Test]
+    public void RaisesIfEventButNoRaiseMethodOnBaseClass()
+    {
+        string input = @"
+using System.ComponentModel;
+public class Base : INotifyPropertyChanging
+{
+    public event PropertyChangingEventHandler PropertyChanging;
+}
+public partial class Derived : Base
+{
+    [Notify]
+    private string _foo;
+}";
 
-    //        this.AssertThat(input, It.HasDiagnostics(
-    //            // (7,22): Warning INPC007: Could not find any suitable methods to raise the PropertyChanged event defined on a base class
-    //            // Derived
-    //            Diagnostic("INPC007", @"Derived").WithLocation(7, 22)
-    //        ));
-    //    }
+        this.AssertThat(input, It.HasDiagnostics(
+            // (7,22): Warning INPC0028: Could not find any suitable methods to raise the PropertyChanging event defined on a base class
+            // Derived
+            Diagnostic("INPC0028", @"Derived").WithLocation(7, 22)
+        ));
+    }
 
-    //    [Test]
-    //    public void RaisesIfMethodOnBaseClassIsPrivate()
-    //    {
-    //        string input = @"
-    //using System.ComponentModel;
-    //public class Base : INotifyPropertyChanged
-    //{
-    //    public event PropertyChangedEventHandler PropertyChanged;
-    //    private void OnPropertyChanged(string name) => this.PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
-    //}
-    //public partial class Derived : Base
-    //{
-    //    [Notify]
-    //    private string _foo;
-    //}";
+    [Test]
+    public void RaisesIfMethodOnBaseClassIsPrivate()
+    {
+        string input = @"
+using System.ComponentModel;
+public class Base : INotifyPropertyChanging
+{
+    public event PropertyChangingEventHandler PropertyChanging;
+    private void OnPropertyChanging(string name) => this.PropertyChanging?.Invoke(this, new PropertyChangingEventArgs(name));
+}
+public partial class Derived : Base
+{
+    [Notify]
+    private string _foo;
+}";
 
-    //        this.AssertThat(input, It.HasDiagnostics(
-    //            // (8,22): Warning INPC006: Found one or more methods called 'RaisePropertyChanged' to raise the PropertyChanged event, but they had an unrecognised signatures or were inaccessible
-    //            // Derived
-    //            Diagnostic("INPC006", @"Derived").WithLocation(8, 22)
-    //        ));
-    //    }
+        this.AssertThat(input, It.HasDiagnostics(
+            // (8,22): Warning INPC029: Found one or more methods called 'OnPropertyChanging' to raise the PropertyChanging event, but they had an unrecognised signatures or were inaccessible. No PropertyChanging events will be raised from this type
+            // Derived
+            Diagnostic("INPC029", @"Derived").WithLocation(8, 22)
+        ));
+    }
 
-    //    [Test]
-    //    public void RaisesIfNonVirtualBaseMethodAndOverrideRequired()
-    //    {
-    //        string input = @"
-    //using System.ComponentModel;
-    //public class Base : INotifyPropertyChanged
-    //{
-    //    public event PropertyChangedEventHandler PropertyChanged;
-    //    protected void OnPropertyChanged(string name) => this.PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
-    //}
-    //public partial class Derived : Base
-    //{
-    //    [Notify, DependsOn(""Bar"")]
-    //    private string _foo;
-    //}";
+    [Test]
+    public void RaisesIfNonVirtualBaseMethodAndOverrideRequired()
+    {
+        string input = @"
+using System.ComponentModel;
+public class Base : INotifyPropertyChanging
+{
+    public event PropertyChangingEventHandler PropertyChanging;
+    protected void OnPropertyChanging(string name) => this.PropertyChanging?.Invoke(this, new PropertyChangingEventArgs(name));
+}
+public partial class Derived : Base
+{
+    [Notify, DependsOn(""Bar"")]
+    private string _foo;
+}";
 
-    //        this.AssertThat(input, It.HasFile("Derived", RemovePropertiesRewriter.Instance).HasDiagnostics(
-    //            // (6,20): Warning INPC022: Method 'OnPropertyChanged' is non-virtual. Functionality such as dependencies on base properties will not work. Please make this method virtual
-    //            // OnPropertyChanged
-    //            Diagnostic("INPC022", @"OnPropertyChanged").WithLocation(6, 20),
+        this.AssertThat(input, It.HasFile("Derived", rewriters).HasDiagnostics(
+            // (6,20): Warning INPC022: Method 'OnPropertyChanging' is non-virtual. Functionality such as dependencies on base properties will not work. Please make this method virtual
+            // OnPropertyChanging
+            Diagnostic("INPC022", @"OnPropertyChanging").WithLocation(6, 20)
+        ));
+    }
 
-    //            // (10,14): Warning INPC023: [DependsOn("Bar")] specified, but this will not be raised because the method to raise PropertyChanged events 'OnPropertyChanged' cannot defined or overridden by the source generator
-    //            // DependsOn("Bar")
-    //            Diagnostic("INPC023", @"DependsOn(""Bar"")").WithLocation(10, 14)
-    //        ));
-    //    }
+//    [Test]
+//    public void DefinesVirtual()
+//    {
+//        string input = @"
+//using System.ComponentModel;
+//public partial class Derived : INotifyPropertyChanging
+//{
+//    [Notify, DependsOn(""Foo"")] private string _bar;
+//}";
 
-    //    [Test]
-    //    public void DefinesVirtual()
-    //    {
-    //        string input = @"
-    //public partial class Derived
-    //{
-    //    [Notify, DependsOn(""Foo"")] private string _bar;
-    //}";
-
-    //        this.AssertThat(input, It.HasFile("Derived", RemovePropertiesRewriter.Instance));
-    //    }
+//        this.AssertThat(input, It.HasFile("Derived", rewriters));
+//    }
 
     //    [Test]
     //    public void DefinesOverrideStringNoOldAndNew()

@@ -69,6 +69,15 @@ public class DiagnosticReporter
         this.AddDiagnostic(couldNotFindCallableRaisePropertyChangedOverload, typeSymbol.Locations, name);
     }
 
+    private static readonly DiagnosticDescriptor couldNotFindCallableRaisePropertyChangingOverload = CreateDescriptor(
+        "INPC029",
+        "Could not find callable method to raise PropertyChanging event",
+        "Found one or more methods called '{0}' to raise the PropertyChanging event, but they had an unrecognised signatures or were inaccessible. No PropertyChanging events will be raised from this type");
+    public void ReportCouldNotFindCallableRaisePropertyChangingOverload(INamedTypeSymbol typeSymbol, string name)
+    {
+        this.AddDiagnostic(couldNotFindCallableRaisePropertyChangingOverload, typeSymbol.Locations, name);
+    }
+
     private static readonly DiagnosticDescriptor couldNotFindRaisePropertyChangedMethod = CreateDescriptor(
         "INPC007",
         "Could not find method to raise PropertyChanged event",
@@ -76,6 +85,15 @@ public class DiagnosticReporter
     public void ReportCouldNotFindRaisePropertyChangedMethod(INamedTypeSymbol typeSymbol)
     {
         this.AddDiagnostic(couldNotFindRaisePropertyChangedMethod, typeSymbol.Locations);
+    }
+
+    private static readonly DiagnosticDescriptor couldNotFindRaisePropertyChangingMethod = CreateDescriptor(
+        "INPC0028",
+        "Could not find method to raise PropertyChanging event",
+        "Could not find any suitable methods to raise the PropertyChanging event defined on a base class");
+    public void ReportCouldNotFindRaisePropertyChangingMethod(INamedTypeSymbol typeSymbol)
+    {
+        this.AddDiagnostic(couldNotFindRaisePropertyChangingMethod, typeSymbol.Locations);
     }
 
     private static readonly DiagnosticDescriptor alsoNotifyAttributeNotValidOnMember = CreateDescriptor(
@@ -259,6 +277,8 @@ public class DiagnosticReporter
     {
         this.AddDiagnostic(unhandledExceptionOnParent, typeSymbol.Locations, typeSymbol.Name);
     }
+
+    // INPC numbers are defined out of order!! The next one is not just the one above + 1
 
     private static DiagnosticDescriptor CreateDescriptor(string code, string title, string messageFormat, DiagnosticSeverity severity = DiagnosticSeverity.Warning)
     {

@@ -131,4 +131,9 @@ public class ProperyChangingInterfaceAnalyser : InterfaceAnalyser
             return null;
         }
     }
+
+    protected override void ReportCouldNotFindRaisePropertyChangingOrChangedMethod(INamedTypeSymbol typeSymbol) =>
+        this.Diagnostics.ReportCouldNotFindRaisePropertyChangingMethod(typeSymbol);
+    protected override void ReportCouldNotFindCallableRaisePropertyChangedOrChangingOverload(INamedTypeSymbol typeSymbol, string name) =>
+        this.Diagnostics.ReportCouldNotFindCallableRaisePropertyChangingOverload(typeSymbol, name);
 }

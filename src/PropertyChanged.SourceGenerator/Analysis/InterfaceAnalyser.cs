@@ -90,7 +90,7 @@ public abstract class InterfaceAnalyser
                 if (!this.TryFindCallableOverload(methods, out method, out signature, typeSymbol))
                 {
                     interfaceAnalysis.CanCallRaiseMethod = false;
-                    this.Diagnostics.ReportCouldNotFindCallableRaisePropertyChangedOverload(typeSymbol, name);
+                    this.ReportCouldNotFindCallableRaisePropertyChangedOrChangingOverload(typeSymbol, name);
                 }
                 break;
             }
@@ -146,7 +146,7 @@ public abstract class InterfaceAnalyser
             {
                 interfaceAnalysis.CanCallRaiseMethod = false;
                 interfaceAnalysis.RaiseMethodType = RaisePropertyChangedMethodType.None;
-                this.Diagnostics.ReportCouldNotFindRaisePropertyChangedMethod(typeSymbol);
+                this.ReportCouldNotFindRaisePropertyChangingOrChangedMethod(typeSymbol);
             }
             else if (isGeneratingAnyParent)
             {
@@ -177,4 +177,7 @@ public abstract class InterfaceAnalyser
     protected abstract bool TryFindCallableOverload(List<IMethodSymbol> methods, out IMethodSymbol method, out RaisePropertyChangedMethodSignature? signature, INamedTypeSymbol typeSymbol);
 
     protected abstract void FindOnAnyPropertyChangedOrChangingMethod(INamedTypeSymbol typeSymbol, InterfaceAnalysis interfaceAnalysis, out IMethodSymbol? method);
+
+    protected abstract void ReportCouldNotFindRaisePropertyChangingOrChangedMethod(INamedTypeSymbol typeSymbol);
+    protected abstract void ReportCouldNotFindCallableRaisePropertyChangedOrChangingOverload(INamedTypeSymbol typeSymbol, string name);
 }

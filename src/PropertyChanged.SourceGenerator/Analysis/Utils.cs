@@ -9,7 +9,7 @@ public static class Utils
     public static IEnumerable<INamedTypeSymbol> TypeAndBaseTypes(INamedTypeSymbol type)
     {
         // Stop at 'object': no point in analysing that
-        for (var t = type; t!.SpecialType != SpecialType.System_Object; t = t.BaseType)
+        for (var t = type; t != null && t.SpecialType != SpecialType.System_Object; t = t.BaseType)
         {
             yield return t;
         }

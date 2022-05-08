@@ -34,11 +34,7 @@ public partial class Analyser
         {
             // FindCallableOverload might remove some...
             var firstMethod = methods[0];
-            if (FindCallableOverload(methods) is { } signature)
-            {
-                result = new OnPropertyNameChangedInfo(onChangedMethodName, signature);
-            }
-            else
+            if ((result = FindCallableOverload(methods, onChangedMethodName)) == null)
             {
                 this.diagnostics.ReportInvalidOnPropertyNameChangedSignature(name, onChangedMethodName, firstMethod);
             }
@@ -46,7 +42,7 @@ public partial class Analyser
 
         return result;
 
-        OnPropertyNameChangedSignature? FindCallableOverload(List<IMethodSymbol> methods)
+        OnPropertyNameChangedInfo? FindCallableOverload(List<IMethodSymbol> methods, string onChangedMethodName)
         {
             methods.RemoveAll(x => !IsAccessibleNormalMethod(x, typeSymbol, this.compilation));
 
@@ -56,12 +52,13 @@ public partial class Analyser
                 SymbolEqualityComparer.Default.Equals(x.Parameters[0].Type, x.Parameters[1].Type) &&
                 this.compilation.HasImplicitConversion(memberType, x.Parameters[0].Type)))
             {
-                return OnPropertyNameChangedSignature.OldAndNew;
+                // TODO: Needs to support OnPropertyNameChanging as well
+                return new OnPropertyNameChangedInfo(onChangedMethodName, hasOld: true, hasNew: true);
             }
 
             if (methods.Any(x => x.Parameters.Length == 0))
             {
-                return OnPropertyNameChangedSignature.Parameterless;
+                return new OnPropertyNameChangedInfo(onChangedMethodName, hasOld: false, hasNew: false);
             }
 
             return null;

@@ -15,13 +15,15 @@ public enum RaisePropertyChangedNameType
 public struct RaisePropertyChangedMethodSignature
 {
     public RaisePropertyChangedNameType NameType { get; }
-    public bool HasOldAndNew { get; }
+    public bool HasOld { get; }
+    public bool HasNew { get; }
     public Accessibility Accessibility { get; }
 
-    public RaisePropertyChangedMethodSignature(RaisePropertyChangedNameType nameType, bool hasOldAndNew, Accessibility accessibility)
+    public RaisePropertyChangedMethodSignature(RaisePropertyChangedNameType nameType, bool hasOld, bool hasNew, Accessibility accessibility)
     {
         this.NameType = nameType;
-        this.HasOldAndNew = hasOldAndNew;
+        this.HasOld = hasOld;
+        this.HasNew = hasNew;
         this.Accessibility = accessibility;
     }
 }

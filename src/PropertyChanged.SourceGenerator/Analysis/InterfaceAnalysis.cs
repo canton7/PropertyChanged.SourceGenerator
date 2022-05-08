@@ -1,4 +1,6 @@
-﻿namespace PropertyChanged.SourceGenerator.Analysis;
+﻿using Microsoft.CodeAnalysis;
+
+namespace PropertyChanged.SourceGenerator.Analysis;
 
 public class InterfaceAnalysis
 {
@@ -16,6 +18,16 @@ public class InterfaceAnalysis
     /// True if this method can be called, because either we're generating it, or because it's user-defined and accessible
     /// </summary>
     public bool CanCallRaiseMethod { get; set; } = true;
+
+    /// <summary>
+    /// The name of the event: PropertyChanged or PropertyChanging
+    /// </summary>
+    public string EventName { get; set; } = null!;
+
+    /// <summary>
+    /// The name of the EventArgs: PropertyChangedEventArgs or PropertyChangingEventArgs
+    /// </summary>
+    public INamedTypeSymbol EventArgsSymbol { get; set; } = null!;
 
     /// <summary>
     /// The type of method we're generating, or None if we're not generating it

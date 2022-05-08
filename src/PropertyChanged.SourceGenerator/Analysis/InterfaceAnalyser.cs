@@ -38,10 +38,18 @@ public abstract class InterfaceAnalyser
         IReadOnlyList<TypeAnalysis> baseTypeAnalyses,
         Configuration config)
     {
+        bool hasInterface = typeSymbol.AllInterfaces.Contains(this.interfaceSymbol, SymbolEqualityComparer.Default);
+        if (!this.ShouldGenerateIfInterfaceNotPresent() && !hasInterface)
+        {
+            return;
+        }
+
         // If we've got any base types we're generating partial types for, that will have the INPC interface
         // and event on, for sure
-        interfaceAnalysis.RequiresInterface = !baseTypeAnalyses.Any(x => x.CanGenerate)
-            && !typeSymbol.AllInterfaces.Contains(this.interfaceSymbol, SymbolEqualityComparer.Default);
+        interfaceAnalysis.RequiresInterface = !hasInterface && !baseTypeAnalyses.Any(x => x.CanGenerate);
+
+        interfaceAnalysis.EventName = this.eventName;
+        interfaceAnalysis.EventArgsSymbol = this.EventArgsSymbol;
 
         // Try and find out how we raise the PropertyChanged event
         // 1. If noone's defined the PropertyChanged event yet, we'll define it ourselves
@@ -120,8 +128,8 @@ public abstract class InterfaceAnalyser
                 interfaceAnalysis.RaiseMethodType = RaisePropertyChangedMethodType.None;
             }
 
-            if (interfaceAnalysis.OnAnyPropertyChangedInfo?.Signature == OnPropertyNameChangedSignature.OldAndNew &&
-                !signature.Value.HasOldAndNew)
+            if (interfaceAnalysis.OnAnyPropertyChangedInfo is { } info &&
+                ((info.HasOld && !signature.Value.HasOld) || (info.HasNew && !signature.Value.HasNew)))
             {
                 this.Diagnostics.ReportCannotPopulateOnAnyPropertyChangedOldAndNew(onAnyPropertyChangedMethod!, method.Name);
             }
@@ -153,13 +161,16 @@ public abstract class InterfaceAnalyser
                     : RaisePropertyChangedMethodType.Virtual;
             }
 
-            interfaceAnalysis.RaiseMethodName = config.RaisePropertyChangedMethodNames[0];
+            interfaceAnalysis.RaiseMethodName = this.GetRaisePropertyChangedOrChangingEventNames(config)[0];
             interfaceAnalysis.RaiseMethodSignature = new RaisePropertyChangedMethodSignature(
                 RaisePropertyChangedNameType.PropertyChangedEventArgs,
-                hasOldAndNew: interfaceAnalysis.OnAnyPropertyChangedInfo?.Signature == OnPropertyNameChangedSignature.OldAndNew,
+                hasOld: interfaceAnalysis.OnAnyPropertyChangedInfo?.HasOld ?? false,
+                hasNew: interfaceAnalysis.OnAnyPropertyChangedInfo?.HasNew ?? false,
                 typeSymbol.IsSealed ? Accessibility.Private : Accessibility.Protected);
         }
     }
+
+    protected abstract bool ShouldGenerateIfInterfaceNotPresent();
 
     protected abstract string[] GetRaisePropertyChangedOrChangingEventNames(Configuration config);
 

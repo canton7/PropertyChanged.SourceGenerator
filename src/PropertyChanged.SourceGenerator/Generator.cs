@@ -13,6 +13,8 @@ namespace PropertyChanged.SourceGenerator;
 
 public class Generator
 {
+    public const string EventArgsCacheName = "EventArgsCache";
+
     private readonly IndentedTextWriter writer = new(new StringWriter());
     private readonly EventArgsCache eventArgsCache;
 
@@ -148,7 +150,7 @@ public class Generator
                 propertyNameAccessor = "propertyName";
                 break;
             case RaisePropertyChangedNameType.PropertyChangedEventArgs:
-                this.writer.Write(interfaceAnalysis.EventArgsSymbol.ToDisplayString(SymbolDisplayFormats.MethodOrPropertyReturnType));
+                this.writer.Write(interfaceAnalysis.EventArgsSymbol.ToDisplayString(SymbolDisplayFormats.FullyQualifiedTypeName));
                 this.writer.Write(" eventArgs");
                 propertyNameOrEventArgsName = "eventArgs";
                 propertyNameAccessor = "eventArgs.PropertyName";
@@ -218,7 +220,7 @@ public class Generator
                 foreach (var (_, notifyProperty) in group)
                 {
                     this.GenerateOnPropertyNameChangedIfNecessary(notifyProperty, hasOldVariable: false);
-                    this.GenerateRaiseEvent(typeAnalysis, notifyProperty.Name, notifyProperty.IsCallable, hasOldVariable: false);
+                    this.GenerateRaiseEvent(interfaceAnalysis, notifyProperty.Name, notifyProperty.IsCallable, hasOldVariable: false);
                 }
                 this.writer.WriteLine("break;");
                 this.writer.Indent--;
@@ -251,7 +253,7 @@ public class Generator
             }
         }
 
-        this.writer.WriteLine($"{propertyAccessibility}{member.Type.ToDisplayString(SymbolDisplayFormats.MethodOrPropertyReturnType)} {member.Name}");
+        this.writer.WriteLine($"{propertyAccessibility}{member.Type.ToDisplayString(SymbolDisplayFormats.FullyQualifiedTypeName)} {member.Name}");
         this.writer.WriteLine("{");
         this.writer.Indent++;
 
@@ -261,7 +263,7 @@ public class Generator
         this.writer.Indent++;
 
         this.writer.WriteLine("if (!global::System.Collections.Generic.EqualityComparer<" +
-            member.Type.ToDisplayString(SymbolDisplayFormats.TypeParameter) +
+            member.Type.ToDisplayString(SymbolDisplayFormats.FullyQualifiedTypeName) +
             $">.Default.Equals(value, {backingMemberReference}))");
         this.writer.WriteLine("{");
         this.writer.Indent++;
@@ -275,11 +277,11 @@ public class Generator
         this.writer.WriteLine($"{backingMemberReference} = value;");
 
         this.GenerateOnPropertyNameChangedIfNecessary(member, hasOldVariable: true);
-        this.GenerateRaiseEvent(type, member.Name, isCallable: true, hasOldVariable: true);
+        this.GenerateRaiseEvent(type.INotifyPropertyChanged, member.Name, isCallable: true, hasOldVariable: true);
         foreach (var alsoNotify in member.AlsoNotify.OrderBy(x => x.Name))
         {
             this.GenerateOnPropertyNameChangedIfNecessary(alsoNotify, hasOldVariable: true);
-            this.GenerateRaiseEvent(type, alsoNotify.Name, alsoNotify.IsCallable, hasOldVariable: true);
+            this.GenerateRaiseEvent(type.INotifyPropertyChanged, alsoNotify.Name, alsoNotify.IsCallable, hasOldVariable: true);
         }
 
         if (type.IsChangedPropertyName != null && type.IsChangedPropertyName != member.Name)
@@ -305,24 +307,24 @@ public class Generator
         if (member.IsCallable &&
             (type.INotifyPropertyChanged.RaiseMethodSignature.HasOld || member.OnPropertyNameChanged?.HasOld == true))
         {
-            this.writer.WriteLine($"{member.Type!.ToDisplayString(SymbolDisplayFormats.MethodOrPropertyReturnType)} old_{member.Name} = this.{member.Name};");
+            this.writer.WriteLine($"{member.Type!.ToDisplayString(SymbolDisplayFormats.FullyQualifiedTypeName)} old_{member.Name} = this.{member.Name};");
         }
     }
 
-    private void GenerateRaiseEvent(TypeAnalysis type, string? propertyName, bool isCallable, bool hasOldVariable)
+    private void GenerateRaiseEvent(InterfaceAnalysis interfaceAnalysis, string? propertyName, bool isCallable, bool hasOldVariable)
     {
-        if (!type.INotifyPropertyChanged.CanCallRaiseMethod)
+        if (!interfaceAnalysis.CanCallRaiseMethod)
         {
             return;
         }
 
-        this.writer.Write($"this.{type.INotifyPropertyChanged.RaiseMethodName}(");
+        this.writer.Write($"this.{interfaceAnalysis.RaiseMethodName}(");
 
-        switch (type.INotifyPropertyChanged.RaiseMethodSignature.NameType)
+        switch (interfaceAnalysis.RaiseMethodSignature.NameType)
         {
             case RaisePropertyChangedNameType.PropertyChangedEventArgs:
-                string cacheName = this.eventArgsCache.GetOrAdd(propertyName);
-                this.writer.Write($"global::PropertyChanged.SourceGenerator.Internal.PropertyChangedEventArgsCache.{cacheName}");
+                string cacheName = this.eventArgsCache.GetOrAdd(propertyName, interfaceAnalysis.EventArgsSymbol);
+                this.writer.Write($"global::PropertyChanged.SourceGenerator.Internal.{EventArgsCacheName}.{cacheName}");
                 break;
 
             case RaisePropertyChangedNameType.String:
@@ -330,7 +332,7 @@ public class Generator
                 break;
         }
 
-        if (type.INotifyPropertyChanged.RaiseMethodSignature.HasOld)
+        if (interfaceAnalysis.RaiseMethodSignature.HasOld)
         {
             if (isCallable && hasOldVariable)
             {
@@ -341,7 +343,7 @@ public class Generator
                 this.writer.Write(", (object)null");
             }
         }
-        if (type.INotifyPropertyChanged.RaiseMethodSignature.HasNew)
+        if (interfaceAnalysis.RaiseMethodSignature.HasNew)
         {
             if (isCallable)
             {
@@ -369,7 +371,7 @@ public class Generator
                 }
                 else
                 {
-                    this.writer.Write($"default({member.Type!.ToDisplayString(SymbolDisplayFormats.MethodOrPropertyReturnType)})");
+                    this.writer.Write($"default({member.Type!.ToDisplayString(SymbolDisplayFormats.FullyQualifiedTypeName)})");
                 }
             }
             if (member.OnPropertyNameChanged.Value.HasNew)
@@ -444,20 +446,21 @@ public class Generator
         this.writer.WriteLine("{");
         this.writer.Indent++;
 
-        this.writer.WriteLine("internal static class PropertyChangedEventArgsCache");
+        this.writer.WriteLine($"internal static class {EventArgsCacheName}");
         this.writer.WriteLine("{");
         this.writer.Indent++;
 
-        foreach (var (cacheName, propertyName) in this.eventArgsCache.GetEntries().OrderBy(x => x.cacheName))
+        foreach (var (cacheName, eventArgsTypeSymbol, propertyName) in this.eventArgsCache.GetEntries().OrderBy(x => x.cacheName))
         {
             string backingFieldName = "_" + cacheName;
             for (int i = 0; this.eventArgsCache.ContainsCacheName(backingFieldName); i++)
             {
                 backingFieldName = $"_{cacheName}{i}";
             }
-            this.writer.WriteLine($"private static global::System.ComponentModel.PropertyChangedEventArgs {backingFieldName};");
-            this.writer.WriteLine($"public static global::System.ComponentModel.PropertyChangedEventArgs {cacheName} => " +
-                $"{backingFieldName} ??= new global::System.ComponentModel.PropertyChangedEventArgs({EscapeString(propertyName)});");
+            string eventArgsType = eventArgsTypeSymbol.ToDisplayString(SymbolDisplayFormats.FullyQualifiedTypeName);
+            this.writer.WriteLine($"private static {eventArgsType} {backingFieldName};");
+            this.writer.WriteLine($"public static {eventArgsType} {cacheName} => " +
+                $"{backingFieldName} ??= new {eventArgsType}({EscapeString(propertyName)});");
         }
 
         this.writer.Indent--;

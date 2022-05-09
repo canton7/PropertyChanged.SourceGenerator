@@ -154,7 +154,7 @@ public partial class SomeViewModel
 
         this.AssertThat(input, It
             .HasFile("SomeViewModel", RemoveInpcMembersRewriter.Instance)
-            .HasFile("PropertyChangedEventArgsCache"));
+            .HasFile("EventArgsCache"));
     }
 
     [Test]

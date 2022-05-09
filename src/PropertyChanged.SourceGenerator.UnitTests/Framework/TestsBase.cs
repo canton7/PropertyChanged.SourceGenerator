@@ -98,7 +98,7 @@ public abstract class TestsBase
 
             // 0: Attributes
             // 1: Generated file
-            // 2: PropertyChangedEventArgsCache
+            // 2: EventArgsCache
             //Assert.AreEqual(3, runResult.GeneratedTrees.Length);
             //Assert.IsEmpty(runResult.Diagnostics);
 

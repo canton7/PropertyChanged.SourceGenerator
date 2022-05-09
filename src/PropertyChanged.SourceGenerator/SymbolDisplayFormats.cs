@@ -26,13 +26,7 @@ public static class SymbolDisplayFormats
     /// A string suitable for use as the return type from a property or method, suitably escaped.
     /// E.g. "global::System.Collections.Generic.IEnumerable&lt;T&gt;"
     /// </summary>
-    public static SymbolDisplayFormat MethodOrPropertyReturnType { get; }
-
-    /// <summary>
-    /// A string suitable for passing as a type parameter (i.e. between the &lt; and &gt; when constructing
-    /// a call to a generic methods), suitably escaped. E.g. "global::System.Collections.Generic.List&lt;int&gt;"
-    /// </summary>
-    public static SymbolDisplayFormat TypeParameter { get; }
+    public static SymbolDisplayFormat FullyQualifiedTypeName { get; }
 
     static SymbolDisplayFormats()
     {
@@ -48,15 +42,7 @@ public static class SymbolDisplayFormats
             kindOptions: SymbolDisplayKindOptions.IncludeTypeKeyword,
             miscellaneousOptions: SymbolDisplayMiscellaneousOptions.EscapeKeywordIdentifiers);
 
-        MethodOrPropertyReturnType = new SymbolDisplayFormat(
-            globalNamespaceStyle: SymbolDisplayGlobalNamespaceStyle.Included,
-            typeQualificationStyle: SymbolDisplayTypeQualificationStyle.NameAndContainingTypesAndNamespaces,
-            genericsOptions: SymbolDisplayGenericsOptions.IncludeTypeParameters,
-            miscellaneousOptions: SymbolDisplayMiscellaneousOptions.EscapeKeywordIdentifiers
-                | SymbolDisplayMiscellaneousOptions.UseSpecialTypes
-                | SymbolDisplayMiscellaneousOptions.IncludeNullableReferenceTypeModifier);
-
-        TypeParameter = new SymbolDisplayFormat(
+        FullyQualifiedTypeName = new SymbolDisplayFormat(
             globalNamespaceStyle: SymbolDisplayGlobalNamespaceStyle.Included,
             typeQualificationStyle: SymbolDisplayTypeQualificationStyle.NameAndContainingTypesAndNamespaces,
             genericsOptions: SymbolDisplayGenericsOptions.IncludeTypeParameters,

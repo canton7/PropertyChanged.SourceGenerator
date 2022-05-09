@@ -9,7 +9,7 @@
             {
                 string old_Foo = this.Foo;
                 this._foo = value;
-                this.NotifyPropertyChanged(global::PropertyChanged.SourceGenerator.Internal.PropertyChangedEventArgsCache.Foo, old_Foo, this.Foo);
+                this.NotifyPropertyChanged(global::PropertyChanged.SourceGenerator.Internal.EventArgsCache.PropertyChanged_Foo, old_Foo, this.Foo);
             }
         }
     }

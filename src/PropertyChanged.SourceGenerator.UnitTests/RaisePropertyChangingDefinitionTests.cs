@@ -129,18 +129,18 @@ public partial class Derived : Base
         ));
     }
 
-    //    [Test]
-    //    public void DefinesVirtual()
-    //    {
-    //        string input = @"
-    //using System.ComponentModel;
-    //public partial class Derived : INotifyPropertyChanging
-    //{
-    //    [Notify, DependsOn(""Foo"")] private string _bar;
-    //}";
+    [Test]
+    public void DefinesVirtual()
+    {
+        string input = @"
+using System.ComponentModel;
+public partial class Derived : INotifyPropertyChanging
+{
+    [Notify, DependsOn(""Foo"")] private string _bar;
+}";
 
-    //        this.AssertThat(input, It.HasFile("Derived", rewriters));
-    //    }
+        this.AssertThat(input, It.HasFile("Derived", rewriters));
+    }
 
     [Test]
     public void DefinesOverrideStringNoOld()
@@ -214,75 +214,63 @@ public partial class Derived : Base
         this.AssertThat(input, It.HasFile("Derived", rewriters));
     }
 
-    //    [Test]
-    //    public void CallsOnPropertyNameChangedNoOldAndNew()
-    //    {
-    //        string input = @"
-    //using System.ComponentModel;
-    //public class Base : INotifyPropertyChanged
-    //{
-    //    public event PropertyChangedEventHandler PropertyChanged;
-    //    protected virtual void OnPropertyChanged(PropertyChangedEventArgs args, object oldValue, object newValue) => this.PropertyChanged?.Invoke(this, args);
-    //}
-    //public partial class Derived : Base
-    //{
-    //    [Notify, DependsOn(""Foo"")] private string _bar;
-    //    private void OnBarChanged() { }
-    //}";
+    [Test]
+    public void CallsOnPropertyNameChangedNoOld()
+    {
+        string input = @"
+using System.ComponentModel;
+public class Base : INotifyPropertyChanging
+{
+    public event PropertyChangingEventHandler PropertyChanging;
+    protected virtual void OnPropertyChanging(PropertyChangingEventArgs args, object oldValue) => this.PropertyChanging?.Invoke(this, args);
+}
+public partial class Derived : Base
+{
+    [Notify, DependsOn(""Foo"")] private string _bar;
+    private void OnBarChanged() { }
+}";
 
-    //        this.AssertThat(input, It.HasFile("Derived", RemovePropertiesRewriter.Instance));
-    //    }
+        this.AssertThat(input, It.HasFile("Derived", rewriters));
+    }
 
-    //    [Test]
-    //    public void CallsOnPropertyNameChangedOldAndNew()
-    //    {
-    //        string input = @"
-    //using System.ComponentModel;
-    //public class Base : INotifyPropertyChanged
-    //{
-    //    public event PropertyChangedEventHandler PropertyChanged;
-    //    protected virtual void OnPropertyChanged(PropertyChangedEventArgs args, object oldValue, object newValue) => this.PropertyChanged?.Invoke(this, args);
-    //}
-    //public partial class Derived : Base
-    //{
-    //    [Notify, DependsOn(""Foo"")] private string _bar;
-    //    private void OnBarChanged(string oldValue, string newValue) { }
-    //}";
+    [Test]
+    public void CallsOnPropertyNameChangedOld()
+    {
+        string input = @"
+using System.ComponentModel;
+public class Base : INotifyPropertyChanging
+{
+    public event PropertyChangingEventHandler PropertyChanging;
+    protected virtual void OnPropertyChanging(PropertyChangingEventArgs args, object oldValue) => this.PropertyChanging?.Invoke(this, args);
+}
+public partial class Derived : Base
+{
+    [Notify, DependsOn(""Foo"")] private string _bar;
+    private void OnBarChanged(string oldValue, string newValue) { }
+}";
 
-    //        this.AssertThat(input, It.HasFile("Derived", RemovePropertiesRewriter.Instance));
-    //    }
+        this.AssertThat(input, It.HasFile("Derived", rewriters));
+    }
 
-    //    [TestCase("public")]
-    //    [TestCase("protected internal")]
-    //    [TestCase("protected")]
-    //    [TestCase("internal")]
-    //    [TestCase("private protected")]
-    //    public void CopiesBaseMethodAccessibility(string accessibility)
-    //    {
-    //        string input = @$"
-    //using System.ComponentModel;
-    //public class Base : INotifyPropertyChanged
-    //{{
-    //    public event PropertyChangedEventHandler PropertyChanged;
-    //    {accessibility} virtual void OnPropertyChanged(string name) => this.PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
-    //}}
-    //public partial class Derived : Base
-    //{{
-    //    [Notify, DependsOn(""Foo"")] private string _bar;
-    //}}";
+    [TestCase("public")]
+    [TestCase("protected internal")]
+    [TestCase("protected")]
+    [TestCase("internal")]
+    [TestCase("private protected")]
+    public void CopiesBaseMethodAccessibility(string accessibility)
+    {
+        string input = @$"
+using System.ComponentModel;
+public class Base : INotifyPropertyChanging
+{{
+    public event PropertyChangingEventHandler PropertyChanging;
+    {accessibility} virtual void OnPropertyChanging(string name) => this.PropertyChanging?.Invoke(this, new PropertyChangingEventArgs(name));
+}}
+public partial class Derived : Base
+{{
+    [Notify, DependsOn(""Foo"")] private string _bar;
+}}";
 
-    //        this.AssertThat(input, It.HasFile("Derived", RemovePropertiesRewriter.Instance));
-    //    }
-
-    //    [Test]
-    //    public void HandlesSealedClass()
-    //    {
-    //        string input = @"
-    //public sealed partial class SomeViewModel
-    //{
-    //    [Notify] string _foo;
-    //}";
-
-    //        this.AssertThat(input, It.HasFile("SomeViewModel", RemovePropertiesRewriter.Instance));
-    //    }
+        this.AssertThat(input, It.HasFile("Derived", rewriters));
+    }
 }

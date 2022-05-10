@@ -100,8 +100,8 @@ public class Generator
             this.GenerateMember(typeAnalysis, member);
         }
 
-        this.GenerateRaisePropertyChangingOrChangedMethod(typeAnalysis, typeAnalysis.INotifyPropertyChanged);
-        this.GenerateRaisePropertyChangingOrChangedMethod(typeAnalysis, typeAnalysis.INotifyPropertyChanging);
+        this.GenerateRaisePropertyChangingOrChangedMethod(typeAnalysis, typeAnalysis.INotifyPropertyChanged, true);
+        this.GenerateRaisePropertyChangingOrChangedMethod(typeAnalysis, typeAnalysis.INotifyPropertyChanging, false);
         
         this.writer.Indent--;
         this.writer.WriteLine("}");
@@ -115,7 +115,8 @@ public class Generator
 
     private void GenerateRaisePropertyChangingOrChangedMethod(
         TypeAnalysis typeAnalysis,
-        InterfaceAnalysis interfaceAnalysis)
+        InterfaceAnalysis interfaceAnalysis,
+        bool isPropertyChanged)
     {
         var baseDependsOn = typeAnalysis.BaseDependsOn.ToLookup(x => x.baseProperty);
         if (interfaceAnalysis.RaiseMethodType == RaisePropertyChangedMethodType.None ||
@@ -219,7 +220,11 @@ public class Generator
                 this.writer.Indent++;
                 foreach (var (_, notifyProperty) in group)
                 {
-                    this.GenerateOnPropertyNameChangedIfNecessary(notifyProperty, hasOldVariable: false);
+                    // TODO: Needs more work
+                    if (isPropertyChanged)
+                    {
+                        this.GenerateOnPropertyNameChangedIfNecessary(notifyProperty, hasOldVariable: false);
+                    }
                     this.GenerateRaiseEvent(interfaceAnalysis, notifyProperty.Name, notifyProperty.IsCallable, hasOldVariable: false);
                 }
                 this.writer.WriteLine("break;");

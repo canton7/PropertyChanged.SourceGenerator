@@ -15,4 +15,5 @@ public interface IMember
     string? Name { get; }
 
     OnPropertyNameChangedInfo? OnPropertyNameChanged { get; }
+    OnPropertyNameChangedInfo? OnPropertyNameChanging { get; }
 }

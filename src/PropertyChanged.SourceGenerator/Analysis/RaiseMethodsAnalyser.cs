@@ -7,23 +7,29 @@ using static PropertyChanged.SourceGenerator.Analysis.Utils;
 
 namespace PropertyChanged.SourceGenerator.Analysis;
 
-public partial class Analyser
+public abstract class RaiseMethodsAnalyser
 {
-    private OnPropertyNameChangedInfo? FindOnPropertyNameChangedMethod(INamedTypeSymbol typeSymbol, IPropertySymbol property) =>
-        this.FindOnPropertyNameChangedMethod(typeSymbol, property.Name, property.Type, property.ContainingType);
+    private readonly Compilation compilation;
+    protected DiagnosticReporter Diagnostics { get; }
+
+    public RaiseMethodsAnalyser(DiagnosticReporter diagnostics, Compilation compilation)
+    {
+        this.Diagnostics = diagnostics;
+        this.compilation = compilation;
+    }
 
     /// <param name="typeSymbol">Type we're currently analysing</param>
     /// <param name="name">Name of the property to find an OnPropertyNameChanged method for</param>
     /// <param name="memberType">Type of the property</param>
     /// <param name="containingType">Type containing the property (may be a base type)</param>
     /// <returns></returns>
-    private OnPropertyNameChangedInfo? FindOnPropertyNameChangedMethod(
-        INamedTypeSymbol typeSymbol, 
+    public OnPropertyNameChangedInfo? FindOnPropertyNameChangedMethod(
+        INamedTypeSymbol typeSymbol,
         string name,
         ITypeSymbol memberType,
         INamedTypeSymbol containingType)
     {
-        string onChangedMethodName = $"On{name}Changed";
+        string onChangedMethodName = this.GetOnPropertyNameChangedOrChangingMethodName(name);
         var methods = containingType.GetMembers(onChangedMethodName)
             .OfType<IMethodSymbol>()
             .Where(x => !x.IsOverride && !x.IsStatic)
@@ -36,7 +42,7 @@ public partial class Analyser
             var firstMethod = methods[0];
             if ((result = FindCallableOverload(methods, onChangedMethodName)) == null)
             {
-                this.diagnostics.ReportInvalidOnPropertyNameChangedSignature(name, onChangedMethodName, firstMethod);
+                this.Diagnostics.ReportInvalidOnPropertyNameChangedSignature(name, onChangedMethodName, firstMethod);
             }
         }
 
@@ -64,4 +70,26 @@ public partial class Analyser
             return null;
         }
     }
+
+    protected abstract string GetOnPropertyNameChangedOrChangingMethodName(string name);
+}
+
+public class PropertyChangedRaiseMethodsAnalyser : RaiseMethodsAnalyser
+{
+    public PropertyChangedRaiseMethodsAnalyser(DiagnosticReporter diagnostics, Compilation compilation)
+        : base(diagnostics, compilation)
+    {
+    }
+
+    protected override string GetOnPropertyNameChangedOrChangingMethodName(string name) => $"On{name}Changed";
+}
+
+public class PropertyChangingRaiseMethodsAnalyser : RaiseMethodsAnalyser
+{
+    public PropertyChangingRaiseMethodsAnalyser(DiagnosticReporter diagnostics, Compilation compilation)
+        : base(diagnostics, compilation)
+    {
+    }
+
+    protected override string GetOnPropertyNameChangedOrChangingMethodName(string name) => $"On{name}Changing";
 }

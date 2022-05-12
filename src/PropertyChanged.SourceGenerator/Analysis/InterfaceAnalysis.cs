@@ -17,7 +17,7 @@ public class InterfaceAnalysis
     /// <summary>
     /// True if this method can be called, because either we're generating it, or because it's user-defined and accessible
     /// </summary>
-    public bool CanCallRaiseMethod { get; set; } = true;
+    public bool CanCallRaiseMethod { get; set; } 
 
     /// <summary>
     /// The name of the event: PropertyChanged or PropertyChanging

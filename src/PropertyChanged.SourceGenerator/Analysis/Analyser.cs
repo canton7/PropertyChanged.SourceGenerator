@@ -24,9 +24,6 @@ public partial class Analyser
     private readonly ProperyChangedInterfaceAnalyser? propertyChangedInterfaceAnalyser;
     private readonly ProperyChangingInterfaceAnalyser? propertyChangingInterfaceAnalyser;
 
-    private readonly PropertyChangedRaiseMethodsAnalyser? propertyChangedRaiseMethodsAnalyser;
-    private readonly PropertyChangingRaiseMethodsAnalyser? propertyChangingRaiseMethodsAnalyser;
-
     public Analyser(
         DiagnosticReporter diagnostics,
         Compilation compilation,
@@ -52,9 +49,6 @@ public partial class Analyser
         
             this.propertyChangedInterfaceAnalyser = new(inpchangedSymbol, propertyChangedEventHandlerSymbol!, propertyChangedEventArgsSymbol!, this.diagnostics, this.compilation);
             this.propertyChangingInterfaceAnalyser = new(inpchangingSymbol!, propertyChangingEventHandlerSymbol!, propertyChangingEventArgsSymbol!, this.diagnostics, this.compilation);
-
-            this.propertyChangedRaiseMethodsAnalyser = new(this.diagnostics, this.compilation);
-            this.propertyChangingRaiseMethodsAnalyser = new(this.diagnostics, this.compilation);
         }
 
         this.notifyAttributeSymbol = compilation.GetTypeByMetadataName("PropertyChanged.SourceGenerator.NotifyAttribute")
@@ -292,8 +286,8 @@ public partial class Analyser
             Type = type,
             GetterAccessibility = getterAccessibility,
             SetterAccessibility = setterAccessibility,
-            OnPropertyNameChanged = this.propertyChangedRaiseMethodsAnalyser!.FindOnPropertyNameChangedMethod(backingMember.ContainingType, name, type, backingMember.ContainingType),
-            OnPropertyNameChanging = this.propertyChangingRaiseMethodsAnalyser!.FindOnPropertyNameChangedMethod(backingMember.ContainingType, name, type, backingMember.ContainingType),
+            OnPropertyNameChanged = this.propertyChangedInterfaceAnalyser!.FindOnPropertyNameChangedMethod(backingMember.ContainingType, name, type, backingMember.ContainingType),
+            OnPropertyNameChanging = this.propertyChangingInterfaceAnalyser!.FindOnPropertyNameChangedMethod(backingMember.ContainingType, name, type, backingMember.ContainingType),
             DocComment = ParseDocComment(backingMember.GetDocumentationCommentXml()),
         };
 
@@ -496,8 +490,8 @@ public partial class Analyser
     private (OnPropertyNameChangedInfo? onPropertyNameChanged, OnPropertyNameChangedInfo? onPropertyNameChanging) FindOnPropertyNameChangedMethod(
         INamedTypeSymbol typeSymbol,
         IPropertySymbol property) =>
-            (this.propertyChangedRaiseMethodsAnalyser!.FindOnPropertyNameChangedMethod(typeSymbol, property.Name, property.Type, property.ContainingType),
-            this.propertyChangingRaiseMethodsAnalyser!.FindOnPropertyNameChangedMethod(typeSymbol, property.Name, property.Type, property.ContainingType));
+            (this.propertyChangedInterfaceAnalyser!.FindOnPropertyNameChangedMethod(typeSymbol, property.Name, property.Type, property.ContainingType),
+            this.propertyChangingInterfaceAnalyser!.FindOnPropertyNameChangedMethod(typeSymbol, property.Name, property.Type, property.ContainingType));
 
 
 }

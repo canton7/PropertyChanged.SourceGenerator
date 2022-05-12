@@ -24,7 +24,7 @@ public class ProperyChangedInterfaceAnalyser : InterfaceAnalyser
     protected override string[] GetRaisePropertyChangedOrChangingEventNames(Configuration config) =>
         config.RaisePropertyChangedMethodNames;
 
-    protected override bool TryFindCallableOverload(List<IMethodSymbol> methods, out IMethodSymbol method, out RaisePropertyChangedMethodSignature? signature, INamedTypeSymbol typeSymbol)
+    protected override bool TryFindCallableRaisePropertyChangedOrChangingOverload(List<IMethodSymbol> methods, out IMethodSymbol method, out RaisePropertyChangedMethodSignature? signature, INamedTypeSymbol typeSymbol)
     {
         methods.RemoveAll(x => !IsAccessibleNormalMethod(x, typeSymbol, this.Compilation));
 
@@ -89,7 +89,10 @@ public class ProperyChangedInterfaceAnalyser : InterfaceAnalyser
         return false;
     }
 
-    protected override void FindOnAnyPropertyChangedOrChangingMethod(INamedTypeSymbol typeSymbol, InterfaceAnalysis interfaceAnalysis, out IMethodSymbol? method)
+    protected override void FindOnAnyPropertyChangedOrChangingMethod(
+        INamedTypeSymbol typeSymbol,
+        InterfaceAnalysis interfaceAnalysis,
+        out IMethodSymbol? method)
     {
         method = null;
 
@@ -142,5 +145,31 @@ public class ProperyChangedInterfaceAnalyser : InterfaceAnalyser
         this.Diagnostics.ReportCouldNotFindRaisePropertyChangedMethod(typeSymbol);
     protected override void ReportCouldNotFindCallableRaisePropertyChangedOrChangingOverload(INamedTypeSymbol typeSymbol, string name) =>
         this.Diagnostics.ReportCouldNotFindCallableRaisePropertyChangedOverload(typeSymbol, name);
-        
+
+    protected override string GetOnPropertyNameChangedOrChangingMethodName(string name) => $"On{name}Changed";
+
+    protected override OnPropertyNameChangedInfo? FindCallableOnPropertyNameChangedOrChangingOverload(
+        INamedTypeSymbol typeSymbol,
+        List<IMethodSymbol> methods,
+        string onChangedMethodName,
+        ITypeSymbol memberType)
+    {
+        methods.RemoveAll(x => !IsAccessibleNormalMethod(x, typeSymbol, this.Compilation));
+
+        if (methods.Any(x => x.Parameters.Length == 2 &&
+            IsNormalParameter(x.Parameters[0]) &&
+            IsNormalParameter(x.Parameters[1]) &&
+            SymbolEqualityComparer.Default.Equals(x.Parameters[0].Type, x.Parameters[1].Type) &&
+            this.Compilation.HasImplicitConversion(memberType, x.Parameters[0].Type)))
+        {
+            return new OnPropertyNameChangedInfo(onChangedMethodName, hasOld: true, hasNew: true);
+        }
+
+        if (methods.Any(x => x.Parameters.Length == 0))
+        {
+            return new OnPropertyNameChangedInfo(onChangedMethodName, hasOld: false, hasNew: false);
+        }
+
+        return null;
+    }
 }

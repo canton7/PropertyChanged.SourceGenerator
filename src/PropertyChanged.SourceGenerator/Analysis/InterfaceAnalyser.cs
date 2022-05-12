@@ -32,6 +32,8 @@ public abstract class InterfaceAnalyser
         this.Compilation = compilation;
     }
 
+    #region Interface Analysis
+
     public void PopulateInterfaceAnalysis(
         INamedTypeSymbol typeSymbol,
         InterfaceAnalysis interfaceAnalysis,
@@ -74,6 +76,7 @@ public abstract class InterfaceAnalyser
         // We prioritise the method name over things like the signature or where in the type hierarchy
         // it is. One we've found any method with a name we're looking for, stop: it's most likely they've 
         // just messed up the signature
+        interfaceAnalysis.CanCallRaiseMethod = true;
         RaisePropertyChangedMethodSignature? signature = null;
         IMethodSymbol? method = null;
         foreach (string name in this.GetRaisePropertyChangedOrChangingEventNames(config))
@@ -87,7 +90,7 @@ public abstract class InterfaceAnalyser
                 .ToList();
             if (methods.Count > 0)
             {
-                if (!this.TryFindCallableOverload(methods, out method, out signature, typeSymbol))
+                if (!this.TryFindCallableRaisePropertyChangedOrChangingOverload(methods, out method, out signature, typeSymbol))
                 {
                     interfaceAnalysis.CanCallRaiseMethod = false;
                     this.ReportCouldNotFindCallableRaisePropertyChangedOrChangingOverload(typeSymbol, name);
@@ -174,10 +177,55 @@ public abstract class InterfaceAnalyser
 
     protected abstract string[] GetRaisePropertyChangedOrChangingEventNames(Configuration config);
 
-    protected abstract bool TryFindCallableOverload(List<IMethodSymbol> methods, out IMethodSymbol method, out RaisePropertyChangedMethodSignature? signature, INamedTypeSymbol typeSymbol);
+    protected abstract bool TryFindCallableRaisePropertyChangedOrChangingOverload(List<IMethodSymbol> methods, out IMethodSymbol method, out RaisePropertyChangedMethodSignature? signature, INamedTypeSymbol typeSymbol);
 
     protected abstract void FindOnAnyPropertyChangedOrChangingMethod(INamedTypeSymbol typeSymbol, InterfaceAnalysis interfaceAnalysis, out IMethodSymbol? method);
 
     protected abstract void ReportCouldNotFindRaisePropertyChangingOrChangedMethod(INamedTypeSymbol typeSymbol);
     protected abstract void ReportCouldNotFindCallableRaisePropertyChangedOrChangingOverload(INamedTypeSymbol typeSymbol, string name);
+
+    #endregion
+
+    #region OnPropertyNameChanged / Changing
+
+    /// <param name="typeSymbol">Type we're currently analysing</param>
+    /// <param name="name">Name of the property to find an OnPropertyNameChanged method for</param>
+    /// <param name="memberType">Type of the property</param>
+    /// <param name="containingType">Type containing the property (may be a base type)</param>
+    /// <returns></returns>
+    public OnPropertyNameChangedInfo? FindOnPropertyNameChangedMethod(
+        INamedTypeSymbol typeSymbol,
+        string name,
+        ITypeSymbol memberType,
+        INamedTypeSymbol containingType)
+    {
+        string onChangedMethodName = this.GetOnPropertyNameChangedOrChangingMethodName(name);
+        var methods = containingType.GetMembers(onChangedMethodName)
+            .OfType<IMethodSymbol>()
+            .Where(x => !x.IsOverride && !x.IsStatic)
+            .ToList();
+
+        OnPropertyNameChangedInfo? result = null;
+        if (methods.Count > 0)
+        {
+            // FindCallableOverload might remove some...
+            var firstMethod = methods[0];
+            if ((result = this.FindCallableOnPropertyNameChangedOrChangingOverload(typeSymbol, methods, onChangedMethodName, memberType)) == null)
+            {
+                this.Diagnostics.ReportInvalidOnPropertyNameChangedSignature(name, onChangedMethodName, firstMethod);
+            }
+        }
+
+        return result;
+    }
+
+    protected abstract string GetOnPropertyNameChangedOrChangingMethodName(string name);
+
+    protected abstract OnPropertyNameChangedInfo? FindCallableOnPropertyNameChangedOrChangingOverload(
+        INamedTypeSymbol typeSymbol,
+        List<IMethodSymbol> methods,
+        string onChangedMethodName,
+        ITypeSymbol memberType);
+
+    #endregion
 }

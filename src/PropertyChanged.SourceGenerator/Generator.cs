@@ -223,7 +223,7 @@ public class Generator
                     // TODO: Needs more work
                     if (isPropertyChanged)
                     {
-                        this.GenerateOnPropertyNameChangedIfNecessary(notifyProperty, hasOldVariable: false);
+                        this.GenerateOnPropertyNameChangedOrChangingIfNecessary(notifyProperty, notifyProperty.OnPropertyNameChanged, hasOldVariable: false);
                     }
                     this.GenerateRaiseEvent(interfaceAnalysis, notifyProperty.Name, notifyProperty.IsCallable, hasOldVariable: false);
                 }
@@ -279,13 +279,21 @@ public class Generator
             this.GenerateOldVariableIfNecessary(type, alsoNotify);
         }
 
+        this.GenerateOnPropertyNameChangedOrChangingIfNecessary(member, member.OnPropertyNameChanging, hasOldVariable: true);
+        this.GenerateRaiseEvent(type.INotifyPropertyChanging, member.Name, isCallable: true, hasOldVariable: true);
+        foreach (var alsoNotify in member.AlsoNotify.OrderBy(x => x.Name))
+        {
+            this.GenerateOnPropertyNameChangedOrChangingIfNecessary(alsoNotify, alsoNotify.OnPropertyNameChanging, hasOldVariable: true);
+            this.GenerateRaiseEvent(type.INotifyPropertyChanging, alsoNotify.Name, alsoNotify.IsCallable, hasOldVariable: true);
+        }
+
         this.writer.WriteLine($"{backingMemberReference} = value;");
 
-        this.GenerateOnPropertyNameChangedIfNecessary(member, hasOldVariable: true);
+        this.GenerateOnPropertyNameChangedOrChangingIfNecessary(member, member.OnPropertyNameChanged, hasOldVariable: true);
         this.GenerateRaiseEvent(type.INotifyPropertyChanged, member.Name, isCallable: true, hasOldVariable: true);
         foreach (var alsoNotify in member.AlsoNotify.OrderBy(x => x.Name))
         {
-            this.GenerateOnPropertyNameChangedIfNecessary(alsoNotify, hasOldVariable: true);
+            this.GenerateOnPropertyNameChangedOrChangingIfNecessary(alsoNotify, alsoNotify.OnPropertyNameChanged, hasOldVariable: true);
             this.GenerateRaiseEvent(type.INotifyPropertyChanged, alsoNotify.Name, alsoNotify.IsCallable, hasOldVariable: true);
         }
 
@@ -310,7 +318,8 @@ public class Generator
     private void GenerateOldVariableIfNecessary<T>(TypeAnalysis type, T member) where T : IMember
     {
         if (member.IsCallable &&
-            (type.INotifyPropertyChanged.RaiseMethodSignature.HasOld || member.OnPropertyNameChanged?.HasOld == true))
+            (type.INotifyPropertyChanged.RaiseMethodSignature.HasOld || member.OnPropertyNameChanged?.HasOld == true ||
+            type.INotifyPropertyChanging.RaiseMethodSignature.HasOld || member.OnPropertyNameChanging?.HasOld == true))
         {
             this.writer.WriteLine($"{member.Type!.ToDisplayString(SymbolDisplayFormats.FullyQualifiedTypeName)} old_{member.Name} = this.{member.Name};");
         }
@@ -363,12 +372,15 @@ public class Generator
         this.writer.WriteLine(");");
     }
 
-    private void GenerateOnPropertyNameChangedIfNecessary<T>(T member, bool hasOldVariable) where T : IMember
+    private void GenerateOnPropertyNameChangedOrChangingIfNecessary<T>(
+        T member,
+        OnPropertyNameChangedInfo? onPropertyNameChangedInfo,
+        bool hasOldVariable) where T : IMember
     {
-        if (member.OnPropertyNameChanged != null)
+        if (onPropertyNameChangedInfo != null)
         {
-            this.writer.Write($"this.{member.OnPropertyNameChanged.Value.Name}(");
-            if (member.OnPropertyNameChanged.Value.HasOld)
+            this.writer.Write($"this.{onPropertyNameChangedInfo.Value.Name}(");
+            if (onPropertyNameChangedInfo.Value.HasOld)
             {
                 if (hasOldVariable)
                 {
@@ -379,9 +391,9 @@ public class Generator
                     this.writer.Write($"default({member.Type!.ToDisplayString(SymbolDisplayFormats.FullyQualifiedTypeName)})");
                 }
             }
-            if (member.OnPropertyNameChanged.Value.HasNew)
+            if (onPropertyNameChangedInfo.Value.HasNew)
             {
-                if (member.OnPropertyNameChanged.Value.HasOld)
+                if (onPropertyNameChangedInfo.Value.HasOld)
                 {
                     this.writer.Write(", ");
                 }

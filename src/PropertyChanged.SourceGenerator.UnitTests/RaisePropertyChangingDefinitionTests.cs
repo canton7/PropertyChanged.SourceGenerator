@@ -33,7 +33,7 @@ public partial class SomeViewModel
     }
 
     [Test]
-    public void GeneratesEventAndRaisePropertyChangedIfNotDefined()
+    public void GeneratesEventAndRaisePropertyChangingIfNotDefined()
     {
         string input = @"
 using System.ComponentModel;
@@ -215,7 +215,7 @@ public partial class Derived : Base
     }
 
     [Test]
-    public void CallsOnPropertyNameChangedNoOld()
+    public void CallsOnPropertyNameChangingNoOld()
     {
         string input = @"
 using System.ComponentModel;
@@ -227,14 +227,14 @@ public class Base : INotifyPropertyChanging
 public partial class Derived : Base
 {
     [Notify, DependsOn(""Foo"")] private string _bar;
-    private void OnBarChanged() { }
+    private void OnBarChanging() { }
 }";
 
         this.AssertThat(input, It.HasFile("Derived", rewriters));
     }
 
     [Test]
-    public void CallsOnPropertyNameChangedOld()
+    public void CallsOnPropertyNameChangingOld()
     {
         string input = @"
 using System.ComponentModel;
@@ -246,7 +246,7 @@ public class Base : INotifyPropertyChanging
 public partial class Derived : Base
 {
     [Notify, DependsOn(""Foo"")] private string _bar;
-    private void OnBarChanged(string oldValue, string newValue) { }
+    private void OnBarChanging(string oldValue) { }
 }";
 
         this.AssertThat(input, It.HasFile("Derived", rewriters));

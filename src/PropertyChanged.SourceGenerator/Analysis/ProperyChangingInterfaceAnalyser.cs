@@ -24,7 +24,7 @@ public class ProperyChangingInterfaceAnalyser : InterfaceAnalyser
     protected override string[] GetRaisePropertyChangedOrChangingEventNames(Configuration config) =>
         config.RaisePropertyChangingMethodNames;
 
-    protected override bool TryFindCallableOverload(List<IMethodSymbol> methods, out IMethodSymbol method, out RaisePropertyChangedMethodSignature? signature, INamedTypeSymbol typeSymbol)
+    protected override bool TryFindCallableRaisePropertyChangedOrChangingOverload(List<IMethodSymbol> methods, out IMethodSymbol method, out RaisePropertyChangedMethodSignature? signature, INamedTypeSymbol typeSymbol)
     {
         methods.RemoveAll(x => !IsAccessibleNormalMethod(x, typeSymbol, this.Compilation));
 
@@ -136,4 +136,29 @@ public class ProperyChangingInterfaceAnalyser : InterfaceAnalyser
         this.Diagnostics.ReportCouldNotFindRaisePropertyChangingMethod(typeSymbol);
     protected override void ReportCouldNotFindCallableRaisePropertyChangedOrChangingOverload(INamedTypeSymbol typeSymbol, string name) =>
         this.Diagnostics.ReportCouldNotFindCallableRaisePropertyChangingOverload(typeSymbol, name);
+
+    protected override string GetOnPropertyNameChangedOrChangingMethodName(string name) => $"On{name}Changing";
+
+    protected override OnPropertyNameChangedInfo? FindCallableOnPropertyNameChangedOrChangingOverload(
+        INamedTypeSymbol typeSymbol,
+        List<IMethodSymbol> methods,
+        string onChangedMethodName,
+        ITypeSymbol memberType)
+    {
+        methods.RemoveAll(x => !IsAccessibleNormalMethod(x, typeSymbol, this.Compilation));
+
+        if (methods.Any(x => x.Parameters.Length == 1 &&
+            IsNormalParameter(x.Parameters[0]) &&
+            this.Compilation.HasImplicitConversion(memberType, x.Parameters[0].Type)))
+        {
+            return new OnPropertyNameChangedInfo(onChangedMethodName, hasOld: true, hasNew: false);
+        }
+
+        if (methods.Any(x => x.Parameters.Length == 0))
+        {
+            return new OnPropertyNameChangedInfo(onChangedMethodName, hasOld: false, hasNew: false);
+        }
+
+        return null;
+    }
 }

@@ -66,7 +66,7 @@ public partial class Derived : Base
     private string _bar;
 }";
 
-        this.AssertThat(input, It.HasFile("Base", RemoveInpcMembersRewriter.Instance)
+        this.AssertThat(input, It.HasFile("Base", RemoveInpcMembersRewriter.All)
             .HasDiagnostics(
             // (4,14): Warning INPC009: Unable to find a property called 'Bar' on this type or its base types. This event will still be raised
             // AlsoNotify("Bar")
@@ -87,7 +87,7 @@ public partial class SomeViewModel
     private string _bar;
 }";
 
-        this.AssertThat(input, It.HasFile("SomeViewModel", RemoveInpcMembersRewriter.Instance));
+        this.AssertThat(input, It.HasFile("SomeViewModel", RemoveInpcMembersRewriter.All));
     }
 
     [Test]
@@ -102,7 +102,7 @@ public partial class SomeViewModel
     public string Bar { get; set; }
 }";
 
-        this.AssertThat(input, It.HasFile("SomeViewModel", RemoveInpcMembersRewriter.Instance));
+        this.AssertThat(input, It.HasFile("SomeViewModel", RemoveInpcMembersRewriter.All));
     }
 
     [Test]
@@ -120,7 +120,7 @@ public partial class Derived : Base
     private string _bar;
 }";
 
-        this.AssertThat(input, It.HasFile("Derived", RemoveInpcMembersRewriter.Instance));
+        this.AssertThat(input, It.HasFile("Derived", RemoveInpcMembersRewriter.All));
     }
 
     [Test]
@@ -137,7 +137,7 @@ public partial class Derived : Base
     private string _bar;
 }";
 
-        this.AssertThat(input, It.HasFile("Derived", RemoveInpcMembersRewriter.Instance));
+        this.AssertThat(input, It.HasFile("Derived", RemoveInpcMembersRewriter.All));
     }
 
     [Test]
@@ -153,7 +153,7 @@ public partial class SomeViewModel
 }";
 
         this.AssertThat(input, It
-            .HasFile("SomeViewModel", RemoveInpcMembersRewriter.Instance)
+            .HasFile("SomeViewModel", RemoveInpcMembersRewriter.All)
             .HasFile("EventArgsCache"));
     }
 
@@ -167,7 +167,7 @@ public partial class SomeViewModel
     private string _foo;
 }";
 
-        this.AssertThat(input, It.HasFile("SomeViewModel", RemoveInpcMembersRewriter.Instance).HasDiagnostics(
+        this.AssertThat(input, It.HasFile("SomeViewModel", RemoveInpcMembersRewriter.All).HasDiagnostics(
             // (4,14): Warning INPC012: Property 'Foo' cannot have an [AlsoNotify] attribute which refers to that same property
             // AlsoNotify("Foo")
             Diagnostic("INPC012", @"AlsoNotify(""Foo"")").WithLocation(4, 14)));
@@ -189,7 +189,7 @@ public partial class SomeViewModel
     public void OnPropertyChanged(string propertyName, object oldValue, object newValue) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
 }";
 
-        this.AssertThat(input, It.HasFile("SomeViewModel", RemoveInpcMembersRewriter.Instance));
+        this.AssertThat(input, It.HasFile("SomeViewModel", RemoveInpcMembersRewriter.All));
     }
 
     [Test]
@@ -204,7 +204,7 @@ public partial class SomeViewModel
     public void OnPropertyChanged(string propertyName, object oldValue, object newValue) { }
 }";
 
-        this.AssertThat(input, It.HasFile("SomeViewModel", RemoveInpcMembersRewriter.Instance)
+        this.AssertThat(input, It.HasFile("SomeViewModel", RemoveInpcMembersRewriter.All)
             .HasDiagnostics(
                 // (4,14): Warning INPC009: Unable to find a property called 'Item[]' on this type or its base types. This event will still be raised
                 // AlsoNotify("Item[]", "NonExistent", "")
@@ -227,7 +227,7 @@ public partial class SomeViewModel
 }";
 
         this.AssertThat(input, It
-            .HasFile("SomeViewModel", RemoveInpcMembersRewriter.Instance)
+            .HasFile("SomeViewModel", RemoveInpcMembersRewriter.All)
             .HasDiagnostics(
                 // (4,85): Warning INPC009: Unable to find a property called 'NonExistent' on this type or its base types. This event will still be raised
                 // AlsoNotify(nameof(NonExistent))

@@ -11,11 +11,26 @@ namespace PropertyChanged.SourceGenerator.UnitTests.Framework;
 
 public class RemoveInpcMembersRewriter : CSharpSyntaxRewriter
 {
-    public static RemoveInpcMembersRewriter Instance { get; } = new();
+    private readonly bool removeChanged;
+    private readonly bool removeChanging;
+
+    public static RemoveInpcMembersRewriter All { get; } = new(true, true);
+    public static RemoveInpcMembersRewriter Changed { get; } = new(true, false);
+    public static RemoveInpcMembersRewriter Changing { get; } = new(false, true);
+
+    private RemoveInpcMembersRewriter(bool removeChanged, bool removeChanging)
+    {
+        this.removeChanged = removeChanged;
+        this.removeChanging = removeChanging;
+    }
 
     public override SyntaxNode? VisitMethodDeclaration(MethodDeclarationSyntax node)
     {
-        if (node.Identifier.ValueText == "OnPropertyChanged")
+        if (this.removeChanged && node.Identifier.ValueText == "OnPropertyChanged")
+        {
+            return null;
+        }
+        if (this.removeChanging && node.Identifier.ValueText == "OnPropertyChanging")
         {
             return null;
         }
@@ -25,7 +40,11 @@ public class RemoveInpcMembersRewriter : CSharpSyntaxRewriter
 
     public override SyntaxNode? VisitEventFieldDeclaration(EventFieldDeclarationSyntax node) 
     {
-        if (node.Declaration.Variables.Any(x => x.Identifier.ValueText == "PropertyChanged"))
+        if (this.removeChanged && node.Declaration.Variables.Any(x => x.Identifier.ValueText == "PropertyChanged"))
+        {
+            return null;
+        }
+        if (this.removeChanging && node.Declaration.Variables.Any(x => x.Identifier.ValueText == "PropertyChanging"))
         {
             return null;
         }
@@ -55,7 +74,11 @@ public class RemoveInpcMembersRewriter : CSharpSyntaxRewriter
 
     public override SyntaxNode? VisitSimpleBaseType(SimpleBaseTypeSyntax node)
     {
-        if (node.Type is QualifiedNameSyntax syntax && syntax.ToString() == "global::System.ComponentModel.INotifyPropertyChanged")
+        if (this.removeChanged && node.Type is QualifiedNameSyntax changedSyntax && changedSyntax.ToString() == "global::System.ComponentModel.INotifyPropertyChanged")
+        {
+            return null;
+        }
+        if (this.removeChanging && node.Type is QualifiedNameSyntax changingSyntax && changingSyntax.ToString() == "global::System.ComponentModel.INotifyPropertyChanging")
         {
             return null;
         }

@@ -23,7 +23,7 @@ public partial class SomeViewModel
     private string _foo;
 }";
 
-        this.AssertThat(input, It.HasFile("SomeViewModel", RemoveInpcMembersRewriter.Instance));
+        this.AssertThat(input, It.HasFile("SomeViewModel", RemoveInpcMembersRewriter.All));
     }
 
     [Test]
@@ -38,7 +38,7 @@ public partial class SomeViewModel
     private string _foo;
 }";
 
-        this.AssertThat(input, It.HasFile("SomeViewModel", RemoveInpcMembersRewriter.Instance));
+        this.AssertThat(input, It.HasFile("SomeViewModel", RemoveInpcMembersRewriter.All));
     }
 
     [Test]
@@ -54,7 +54,7 @@ public partial class Derived : Base
     [Notify] private string _foo;
 }";
 
-        this.AssertThat(input, It.HasFile("Derived", RemoveInpcMembersRewriter.Instance));
+        this.AssertThat(input, It.HasFile("Derived", RemoveInpcMembersRewriter.All));
     }
 
     [Test]
@@ -140,7 +140,7 @@ public partial class Derived : Base
     [Notify] private int? _foo;
 }";
 
-        this.AssertThat(input, It.HasFile("Derived", RemoveInpcMembersRewriter.Instance));
+        this.AssertThat(input, It.HasFile("Derived", RemoveInpcMembersRewriter.All));
     }
 
     [Test]
@@ -156,6 +156,6 @@ public partial class Derived : Base
     [Notify] private int? _foo;
 }";
 
-        this.AssertThat(input, It.HasFile("Derived", RemoveInpcMembersRewriter.Instance));
+        this.AssertThat(input, It.HasFile("Derived", RemoveInpcMembersRewriter.All));
     }
 }

@@ -124,14 +124,14 @@ public abstract class InterfaceAnalyser
             else
             {
                 this.Diagnostics.ReportRaisePropertyMethodIsNonVirtual(method);
-                if (interfaceAnalysis.OnAnyPropertyChangedInfo != null)
+                if (interfaceAnalysis.OnAnyPropertyChangedOrChangingInfo != null)
                 {
                     this.Diagnostics.ReportCannotCallOnAnyPropertyChangedBecauseRaisePropertyChangedIsNonVirtual(onAnyPropertyChangedMethod!, method.Name);
                 }
                 interfaceAnalysis.RaiseMethodType = RaisePropertyChangedMethodType.None;
             }
 
-            if (interfaceAnalysis.OnAnyPropertyChangedInfo is { } info &&
+            if (interfaceAnalysis.OnAnyPropertyChangedOrChangingInfo is { } info &&
                 ((info.HasOld && !signature.Value.HasOld) || (info.HasNew && !signature.Value.HasNew)))
             {
                 this.Diagnostics.ReportCannotPopulateOnAnyPropertyChangedOldAndNew(onAnyPropertyChangedMethod!, method.Name);
@@ -153,7 +153,7 @@ public abstract class InterfaceAnalyser
             }
             else if (isGeneratingAnyParent)
             {
-                interfaceAnalysis.RaiseMethodType = interfaceAnalysis.OnAnyPropertyChangedInfo == null
+                interfaceAnalysis.RaiseMethodType = interfaceAnalysis.OnAnyPropertyChangedOrChangingInfo == null
                     ? RaisePropertyChangedMethodType.None
                     : RaisePropertyChangedMethodType.Override;
             }
@@ -167,8 +167,8 @@ public abstract class InterfaceAnalyser
             interfaceAnalysis.RaiseMethodName = this.GetRaisePropertyChangedOrChangingEventNames(config)[0];
             interfaceAnalysis.RaiseMethodSignature = new RaisePropertyChangedMethodSignature(
                 RaisePropertyChangedNameType.PropertyChangedEventArgs,
-                hasOld: interfaceAnalysis.OnAnyPropertyChangedInfo?.HasOld ?? false,
-                hasNew: interfaceAnalysis.OnAnyPropertyChangedInfo?.HasNew ?? false,
+                hasOld: interfaceAnalysis.OnAnyPropertyChangedOrChangingInfo?.HasOld ?? false,
+                hasNew: interfaceAnalysis.OnAnyPropertyChangedOrChangingInfo?.HasNew ?? false,
                 typeSymbol.IsSealed ? Accessibility.Private : Accessibility.Protected);
         }
     }

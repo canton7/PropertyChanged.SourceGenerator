@@ -100,8 +100,8 @@ public class Generator
             this.GenerateMember(typeAnalysis, member);
         }
 
-        this.GenerateRaisePropertyChangingOrChangedMethod(typeAnalysis, typeAnalysis.INotifyPropertyChanged, true);
-        this.GenerateRaisePropertyChangingOrChangedMethod(typeAnalysis, typeAnalysis.INotifyPropertyChanging, false);
+        this.GenerateRaisePropertyChangingOrChangedMethod(typeAnalysis, typeAnalysis.INotifyPropertyChanged, x => x.OnPropertyNameChanged);
+        this.GenerateRaisePropertyChangingOrChangedMethod(typeAnalysis, typeAnalysis.INotifyPropertyChanging, x => x.OnPropertyNameChanging);
         
         this.writer.Indent--;
         this.writer.WriteLine("}");
@@ -116,13 +116,13 @@ public class Generator
     private void GenerateRaisePropertyChangingOrChangedMethod(
         TypeAnalysis typeAnalysis,
         InterfaceAnalysis interfaceAnalysis,
-        bool isPropertyChanged)
+        Func<IMember, OnPropertyNameChangedInfo?> onPropertyNameChangedOrChangingGetter)
     {
         var baseDependsOn = typeAnalysis.BaseDependsOn.ToLookup(x => x.baseProperty);
         if (interfaceAnalysis.RaiseMethodType == RaisePropertyChangedMethodType.None ||
             (interfaceAnalysis.RaiseMethodType == RaisePropertyChangedMethodType.Override &&
             baseDependsOn.Count == 0 &&
-            interfaceAnalysis.OnAnyPropertyChangedInfo == null))
+            interfaceAnalysis.OnAnyPropertyChangedOrChangingInfo == null))
         {
             return;
         }
@@ -170,14 +170,14 @@ public class Generator
         this.writer.WriteLine("{");
         this.writer.Indent++;
 
-        if (typeAnalysis.INotifyPropertyChanged.OnAnyPropertyChangedInfo is { } onAnyPropertyChangedInfo)
+        if (interfaceAnalysis.OnAnyPropertyChangedOrChangingInfo is { } onAnyPropertyChangedOrChangingInfo)
         {
-            this.writer.Write($"this.{onAnyPropertyChangedInfo.Name}({propertyNameAccessor}");
-            if (onAnyPropertyChangedInfo.HasOld)
+            this.writer.Write($"this.{onAnyPropertyChangedOrChangingInfo.Name}({propertyNameAccessor}");
+            if (onAnyPropertyChangedOrChangingInfo.HasOld)
             {
                 this.writer.Write(interfaceAnalysis.RaiseMethodSignature.HasOld ? ", oldValue" : ", (object)null");
             }
-            if (onAnyPropertyChangedInfo.HasNew)
+            if (onAnyPropertyChangedOrChangingInfo.HasNew)
             {
                 this.writer.Write(interfaceAnalysis.RaiseMethodSignature.HasNew ? ", newValue" : ", (object)null");
             }
@@ -220,11 +220,8 @@ public class Generator
                 this.writer.Indent++;
                 foreach (var (_, notifyProperty) in group)
                 {
-                    // TODO: Needs more work
-                    if (isPropertyChanged)
-                    {
-                        this.GenerateOnPropertyNameChangedOrChangingIfNecessary(notifyProperty, notifyProperty.OnPropertyNameChanged, hasOldVariable: false);
-                    }
+                    var onPropertyNameChangedOrChangingInfo = onPropertyNameChangedOrChangingGetter(notifyProperty);
+                    this.GenerateOnPropertyNameChangedOrChangingIfNecessary(notifyProperty, onPropertyNameChangedOrChangingInfo, hasOldVariable: false);
                     this.GenerateRaiseEvent(interfaceAnalysis, notifyProperty.Name, notifyProperty.IsCallable, hasOldVariable: false);
                 }
                 this.writer.WriteLine("break;");

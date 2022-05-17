@@ -47,5 +47,5 @@ public class InterfaceAnalysis
     /// <summary>
     /// The signature of the 'OnAnyPropertyChanged' method, if any
     /// </summary>
-    public OnPropertyNameChangedInfo? OnAnyPropertyChangedInfo { get; set; }
+    public OnPropertyNameChangedInfo? OnAnyPropertyChangedOrChangingInfo { get; set; }
 }

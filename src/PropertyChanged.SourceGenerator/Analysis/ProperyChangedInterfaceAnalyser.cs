@@ -107,7 +107,7 @@ public class ProperyChangedInterfaceAnalyser : InterfaceAnalyser
             var firstMethod = methods[0];
             if (FindCallableOverload(methods, out method) is { } result)
             {
-                interfaceAnalysis.OnAnyPropertyChangedInfo = result;
+                interfaceAnalysis.OnAnyPropertyChangedOrChangingInfo = result;
             }
             else
             {

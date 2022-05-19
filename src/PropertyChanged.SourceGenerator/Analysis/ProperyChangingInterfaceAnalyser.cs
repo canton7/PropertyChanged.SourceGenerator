@@ -134,8 +134,21 @@ public class ProperyChangingInterfaceAnalyser : InterfaceAnalyser
 
     protected override void ReportCouldNotFindRaisePropertyChangingOrChangedMethod(INamedTypeSymbol typeSymbol) =>
         this.Diagnostics.ReportCouldNotFindRaisePropertyChangingMethod(typeSymbol);
+
     protected override void ReportCouldNotFindCallableRaisePropertyChangedOrChangingOverload(INamedTypeSymbol typeSymbol, string name) =>
         this.Diagnostics.ReportCouldNotFindCallableRaisePropertyChangingOverload(typeSymbol, name);
+
+    protected override void ReportUserDefinedRaisePropertyChangedOrChangingMethodOverride(IMethodSymbol method) =>
+        this.Diagnostics.ReportUserDefinedRaisePropertyChangingMethodOverride(method);
+
+    protected override void ReportCannotCallOnAnyPropertyChangedOrChangingBecauseRaisePropertyChangedOrChangingIsNonVirtual(IMethodSymbol method, string raisePropertyChangedMethodName) =>
+        this.Diagnostics.ReportCannotCallOnAnyPropertyChangingBecauseRaisePropertyChangingIsNonVirtual(method, raisePropertyChangedMethodName);
+
+    protected override void ReportCannotPopulateOnAnyPropertyChangedOrChangingOldAndNew(IMethodSymbol method, string raisePropertyChangedMethodName) =>
+        this.Diagnostics.ReportCannotPopulateOnAnyPropertyChangingOldAndNew(method, raisePropertyChangedMethodName);
+
+    protected override void ReportRaisePropertyChangedOrChangingMethodIsNonVirtual(IMethodSymbol method) =>
+        this.Diagnostics.ReportRaisePropertyChangingMethodIsNonVirtual(method);
 
     protected override string GetOnPropertyNameChangedOrChangingMethodName(string name) => $"On{name}Changing";
 

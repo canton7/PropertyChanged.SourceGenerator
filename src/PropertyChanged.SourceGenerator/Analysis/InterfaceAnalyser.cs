@@ -113,7 +113,7 @@ public abstract class InterfaceAnalyser
             {
                 if (method.IsOverride)
                 {
-                    this.Diagnostics.ReportUserDefinedRaisePropertyChangedMethodOverride(method);
+                    this.ReportUserDefinedRaisePropertyChangedOrChangingMethodOverride(method);
                 }
                 interfaceAnalysis.RaiseMethodType = RaisePropertyChangedMethodType.None;
             }
@@ -123,10 +123,10 @@ public abstract class InterfaceAnalyser
             }
             else
             {
-                this.Diagnostics.ReportRaisePropertyMethodIsNonVirtual(method);
+                this.ReportRaisePropertyChangedOrChangingMethodIsNonVirtual(method);
                 if (interfaceAnalysis.OnAnyPropertyChangedOrChangingInfo != null)
                 {
-                    this.Diagnostics.ReportCannotCallOnAnyPropertyChangedBecauseRaisePropertyChangedIsNonVirtual(onAnyPropertyChangedMethod!, method.Name);
+                    this.ReportCannotCallOnAnyPropertyChangedOrChangingBecauseRaisePropertyChangedOrChangingIsNonVirtual(onAnyPropertyChangedMethod!, method.Name);
                 }
                 interfaceAnalysis.RaiseMethodType = RaisePropertyChangedMethodType.None;
             }
@@ -134,7 +134,7 @@ public abstract class InterfaceAnalyser
             if (interfaceAnalysis.OnAnyPropertyChangedOrChangingInfo is { } info &&
                 ((info.HasOld && !signature.Value.HasOld) || (info.HasNew && !signature.Value.HasNew)))
             {
-                this.Diagnostics.ReportCannotPopulateOnAnyPropertyChangedOldAndNew(onAnyPropertyChangedMethod!, method.Name);
+                this.ReportCannotPopulateOnAnyPropertyChangedOrChangingOldAndNew(onAnyPropertyChangedMethod!, method.Name);
             }
 
             interfaceAnalysis.RaiseMethodName = method!.Name;
@@ -182,7 +182,16 @@ public abstract class InterfaceAnalyser
     protected abstract void FindOnAnyPropertyChangedOrChangingMethod(INamedTypeSymbol typeSymbol, InterfaceAnalysis interfaceAnalysis, out IMethodSymbol? method);
 
     protected abstract void ReportCouldNotFindRaisePropertyChangingOrChangedMethod(INamedTypeSymbol typeSymbol);
+
     protected abstract void ReportCouldNotFindCallableRaisePropertyChangedOrChangingOverload(INamedTypeSymbol typeSymbol, string name);
+
+    protected abstract void ReportUserDefinedRaisePropertyChangedOrChangingMethodOverride(IMethodSymbol method);
+
+    protected abstract void ReportCannotCallOnAnyPropertyChangedOrChangingBecauseRaisePropertyChangedOrChangingIsNonVirtual(IMethodSymbol method, string raisePropertyChangedMethodName);
+
+    protected abstract void ReportCannotPopulateOnAnyPropertyChangedOrChangingOldAndNew(IMethodSymbol method, string raisePropertyChangedMethodName);
+
+    protected abstract void ReportRaisePropertyChangedOrChangingMethodIsNonVirtual(IMethodSymbol method);
 
     #endregion
 

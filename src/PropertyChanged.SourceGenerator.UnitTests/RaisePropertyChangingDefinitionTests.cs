@@ -123,9 +123,9 @@ public partial class Derived : Base
 }";
 
         this.AssertThat(input, It.HasFile("Derived", rewriters).HasDiagnostics(
-            // (6,20): Warning INPC022: Method 'OnPropertyChanging' is non-virtual. Functionality such as dependencies on base properties will not work. Please make this method virtual
+            // (6,20): Warning INPC031: Method 'OnPropertyChanging' is non-virtual. Functionality such as dependencies on base properties will not work. Please make this method virtual
             // OnPropertyChanging
-            Diagnostic("INPC022", @"OnPropertyChanging").WithLocation(6, 20)
+            Diagnostic("INPC031", @"OnPropertyChanging").WithLocation(6, 20)
         ));
     }
 

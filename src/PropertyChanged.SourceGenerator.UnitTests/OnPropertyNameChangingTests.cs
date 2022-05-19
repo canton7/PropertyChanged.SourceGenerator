@@ -140,12 +140,12 @@ public partial class Derived : Base
     {
         string input = @"
 using System.ComponentModel;
-public partial class Base : INotifyPropertyChanging
+public partial class Base
 {
-    public int Bar { get; }
+    public int Bar { get; set; }
     private void OnBarChanging(int oldValue) { }
 }
-public partial class Derived : Base
+public partial class Derived : Base, INotifyPropertyChanging
 {
     [Notify, AlsoNotify(""Bar"")]
     private int _foo;

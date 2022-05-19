@@ -159,6 +159,7 @@ public partial class Analyser
 
         this.propertyChangedInterfaceAnalyser.PopulateInterfaceAnalysis(typeAnalysis.TypeSymbol, typeAnalysis.INotifyPropertyChanged, baseTypeAnalyses, config);
         this.propertyChangingInterfaceAnalyser!.PopulateInterfaceAnalysis(typeAnalysis.TypeSymbol, typeAnalysis.INotifyPropertyChanging, baseTypeAnalyses, config);
+        InterfaceAnalyser.PopulateRaiseMethodNameIfEmpty(typeAnalysis.INotifyPropertyChanged, typeAnalysis.INotifyPropertyChanging, config);
         this.ResoveInheritedIsChanged(typeAnalysis, baseTypeAnalyses);
 
         foreach (var member in typeSymbol.GetMembers())

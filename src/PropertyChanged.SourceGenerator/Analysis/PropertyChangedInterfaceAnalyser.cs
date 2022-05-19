@@ -15,7 +15,7 @@ public class PropertyChangedInterfaceAnalyser : InterfaceAnalyser
         INamedTypeSymbol eventArgsSymbol,
         DiagnosticReporter diagnostics,
         Compilation compilation)
-        : base(interfaceSymbol, eventHandlerSymbol, eventArgsSymbol, "PropertyChanged", diagnostics, compilation)
+        : base(interfaceSymbol, eventHandlerSymbol, eventArgsSymbol, "PropertyChanged", diagnostics, compilation, x => x.INotifyPropertyChanged)
     {
     }
 

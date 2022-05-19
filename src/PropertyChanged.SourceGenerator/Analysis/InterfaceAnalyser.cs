@@ -15,6 +15,7 @@ public abstract class InterfaceAnalyser
     private readonly string eventName;
     protected readonly DiagnosticReporter Diagnostics;
     protected readonly Compilation Compilation;
+    private readonly Func<TypeAnalysis, InterfaceAnalysis> interfaceAnalysisGetter;
 
     protected InterfaceAnalyser(
         INamedTypeSymbol interfaceSymbol,
@@ -22,7 +23,8 @@ public abstract class InterfaceAnalyser
         INamedTypeSymbol eventArgsSymbol,
         string eventName,
         DiagnosticReporter diagnostics,
-        Compilation compilation)
+        Compilation compilation,
+        Func<TypeAnalysis, InterfaceAnalysis> interfaceAnalysisGetter)
     {
         this.interfaceSymbol = interfaceSymbol;
         this.eventHandlerSymbol = eventHandlerSymbol;
@@ -30,6 +32,7 @@ public abstract class InterfaceAnalyser
         this.eventName = eventName;
         this.Diagnostics = diagnostics;
         this.Compilation = compilation;
+        this.interfaceAnalysisGetter = interfaceAnalysisGetter;
     }
 
     #region Interface Analysis
@@ -164,7 +167,11 @@ public abstract class InterfaceAnalyser
                     : RaisePropertyChangedMethodType.Virtual;
             }
 
-            interfaceAnalysis.RaiseMethodName = this.GetRaisePropertyChangedOrChangingEventNames(config)[0];
+            // See if any of our base type analysis came up with a name.
+            // If they didn't, we'll sort this out in PopulateRaiseMethodNameIfEmpty
+            interfaceAnalysis.RaiseMethodName =
+                baseTypeAnalyses.Select(x => this.interfaceAnalysisGetter(x).RaiseMethodName).FirstOrDefault(x => x != null);
+
             interfaceAnalysis.RaiseMethodSignature = new RaisePropertyChangedOrChangingMethodSignature(
                 RaisePropertyChangedOrChangingNameType.PropertyChangedEventArgs,
                 hasOld: interfaceAnalysis.OnAnyPropertyChangedOrChangingInfo?.HasOld ?? false,
@@ -172,6 +179,44 @@ public abstract class InterfaceAnalyser
                 typeSymbol.IsSealed ? Accessibility.Private : Accessibility.Protected);
         }
     }
+
+    public static void PopulateRaiseMethodNameIfEmpty(
+        InterfaceAnalysis propertyChangedAnalysis,
+        InterfaceAnalysis propertyChangingAnalysis,
+        Configuration config)
+    {
+        if (propertyChangedAnalysis.CanCallRaiseMethod && propertyChangedAnalysis.RaiseMethodName == null)
+        {
+            // Do we have a name from PropertyChanging that we can copy?
+            propertyChangedAnalysis.RaiseMethodName = GetMatchingName(propertyChangingAnalysis, config.RaisePropertyChangingMethodNames, config.RaisePropertyChangedMethodNames);
+        }
+
+        if (propertyChangingAnalysis.CanCallRaiseMethod && propertyChangingAnalysis.RaiseMethodName == null)
+        {
+            propertyChangingAnalysis.RaiseMethodName = GetMatchingName(propertyChangedAnalysis, config.RaisePropertyChangedMethodNames, config.RaisePropertyChangingMethodNames);
+        }
+
+        string GetMatchingName(InterfaceAnalysis theirAnalysis, string[] theirNames, string[] ourNames)
+        {
+            string? ourName = null;
+            if (theirAnalysis.CanCallRaiseMethod && theirAnalysis.RaiseMethodName != null)
+            {
+                int index = theirNames.AsSpan().IndexOf(theirAnalysis.RaiseMethodName);
+                if (index != -1)
+                {
+                    ourName = ourNames.ElementAtOrDefault(index);
+                }
+            }
+
+            if (ourName == null)
+            {
+                ourName = ourNames[0];
+            }
+
+            return ourName;
+        }
+    }
+
 
     protected abstract bool ShouldGenerateIfInterfaceNotPresent();
 

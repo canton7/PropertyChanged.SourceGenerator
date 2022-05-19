@@ -9,8 +9,12 @@
             {
                 this.NotifyPropertyChanging(@"Foo");
                 this._foo = value;
-                this.OnPropertyChanged(global::PropertyChanged.SourceGenerator.Internal.EventArgsCache.PropertyChanged_Foo);
+                this.NotifyPropertyChanged(global::PropertyChanged.SourceGenerator.Internal.EventArgsCache.PropertyChanged_Foo);
             }
         }
+    }
+    protected virtual void NotifyPropertyChanged(global::System.ComponentModel.PropertyChangedEventArgs eventArgs)
+    {
+        this.PropertyChanged?.Invoke(this, eventArgs);
     }
 }

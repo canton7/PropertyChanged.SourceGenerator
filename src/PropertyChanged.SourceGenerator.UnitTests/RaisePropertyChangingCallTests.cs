@@ -185,6 +185,23 @@ public partial class C : B
     }
 
     [Test]
+    public void TakesNameFromPropertyChangedIfPossible()
+    {
+        string input = @"
+using System.ComponentModel;
+public partial class SomeViewModel : INotifyPropertyChanged, INotifyPropertyChanging
+{
+    public event PropertyChangedEventHandler PropertyChanged;
+    protected virtual void RaisePropertyChanged(string name) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
+
+    [Notify]
+    private int _foo;
+}";
+
+        this.AssertThat(input, It.HasFile("SomeViewModel", rewriters));
+    }
+
+    [Test]
     public void RaisesIfUserDefinedOverrideFound()
     {
         string input = @"

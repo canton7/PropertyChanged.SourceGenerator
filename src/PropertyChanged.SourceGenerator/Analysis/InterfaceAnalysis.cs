@@ -37,7 +37,7 @@ public class InterfaceAnalysis
     /// <summary>
     /// The name of the method to raise this event
     /// </summary>
-    public string RaiseMethodName { get; set; } = null!;
+    public string? RaiseMethodName { get; set; }
 
     /// <summary>
     /// The signature of the raise method

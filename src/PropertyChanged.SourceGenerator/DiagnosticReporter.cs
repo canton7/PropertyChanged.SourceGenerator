@@ -255,7 +255,7 @@ public class DiagnosticReporter
         "INPC023",
         "DependsOn specified, but this will have no effect because the method to raise PropertyChanged events cannot be defined or overridden",
         "[DependsOn(\"{0}\")] specified, but this will not be raised because the method to raise PropertyChanged events '{1}' cannot defined or overridden by the source generator");
-    public void ReportDependsOnSpecifiedButRaisepropertyChangedMethodCannotBeOverridden(AttributeData dependsOnAttribute, ISymbol member, string dependsOn, string raisePropertyChangedMethodName)
+    public void ReportDependsOnSpecifiedButRaisePropertyChangedMethodCannotBeOverridden(AttributeData dependsOnAttribute, ISymbol member, string dependsOn, string raisePropertyChangedMethodName)
     {
         this.AddDiagnostic(dependsOnSpecifiedButRaisepropertyChangedMethodCannotBeOverridden, AttributeLocations(dependsOnAttribute, member), dependsOn, raisePropertyChangedMethodName);
     }

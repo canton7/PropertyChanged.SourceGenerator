@@ -9,7 +9,7 @@
             {
                 this.OnPropertyChanging(@"Bar");
                 this._bar = value;
-                this.OnPropertyChanged(global::PropertyChanged.SourceGenerator.Internal.EventArgsCache.PropertyChanged_Bar);
+                this.NotifyOfPropertyChange(global::PropertyChanged.SourceGenerator.Internal.EventArgsCache.PropertyChanged_Bar);
             }
         }
     }

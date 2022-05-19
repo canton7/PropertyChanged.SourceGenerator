@@ -21,7 +21,7 @@ public partial class SomeViewModel
     private string _foo;
 }";
 
-        this.AssertThat(input, It.HasFile("SomeViewModel", StandardRewriters));
+        this.AssertThat(input, It.HasFile("SomeViewModel", RemovePropertiesRewriter.Instance));
     }
 
     [Test]
@@ -35,7 +35,7 @@ public partial class SomeViewModel : INotifyPropertyChanged
     private string _foo;
 }";
 
-        this.AssertThat(input, It.HasFile("SomeViewModel", StandardRewriters));
+        this.AssertThat(input, It.HasFile("SomeViewModel", RemovePropertiesRewriter.Instance));
     }
 
     [Test]

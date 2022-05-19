@@ -21,8 +21,8 @@ public partial class Analyser
     private readonly INamedTypeSymbol dependsOnAttributeSymbol;
     private readonly INamedTypeSymbol isChangedAttributeSymbol;
 
-    private readonly ProperyChangedInterfaceAnalyser? propertyChangedInterfaceAnalyser;
-    private readonly ProperyChangingInterfaceAnalyser? propertyChangingInterfaceAnalyser;
+    private readonly PropertyChangedInterfaceAnalyser? propertyChangedInterfaceAnalyser;
+    private readonly PropertyChangingInterfaceAnalyser? propertyChangingInterfaceAnalyser;
 
     public Analyser(
         DiagnosticReporter diagnostics,

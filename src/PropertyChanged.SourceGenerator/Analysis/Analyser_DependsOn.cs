@@ -67,10 +67,15 @@ public partial class Analyser
                     else
                     {
                         // We'll assume it'll pass through RaisePropertyChanged
-                        if (typeAnalysis.INotifyPropertyChanged.RaiseMethodType == RaisePropertyChangedMethodType.None)
+                        if (typeAnalysis.INotifyPropertyChanged.CanCallRaiseMethod &&
+                            typeAnalysis.INotifyPropertyChanged.RaiseMethodType == RaisePropertyChangedMethodType.None)
                         {
-                            // TODO: For PropertyChanging
                             this.diagnostics.ReportDependsOnSpecifiedButRaisePropertyChangedMethodCannotBeOverridden(attribute, member, dependsOn!, typeAnalysis.INotifyPropertyChanged.RaiseMethodName!);
+                        }
+                        if (typeAnalysis.INotifyPropertyChanging.CanCallRaiseMethod &&
+                            typeAnalysis.INotifyPropertyChanging.RaiseMethodType == RaisePropertyChangedMethodType.None)
+                        {
+                            this.diagnostics.ReportDependsOnSpecifiedButRaisePropertyChangingMethodCannotBeOverridden(attribute, member, dependsOn!, typeAnalysis.INotifyPropertyChanged.RaiseMethodName!);
                         }
                         typeAnalysis.AddDependsOn(dependsOn!, alsoNotifyMember.Value);
                     }

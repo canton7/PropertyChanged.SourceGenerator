@@ -251,13 +251,22 @@ public class DiagnosticReporter
         this.AddDiagnostic(raisePropertyChangingMethodIsNonVirtual, method.Locations, method.Name);
     }
 
-    private static readonly DiagnosticDescriptor dependsOnSpecifiedButRaisepropertyChangedMethodCannotBeOverridden = CreateDescriptor(
+    private static readonly DiagnosticDescriptor dependsOnSpecifiedButRaisePropertyChangedMethodCannotBeOverridden = CreateDescriptor(
         "INPC023",
-        "DependsOn specified, but this will have no effect because the method to raise PropertyChanged events cannot be defined or overridden",
-        "[DependsOn(\"{0}\")] specified, but this will not be raised because the method to raise PropertyChanged events '{1}' cannot defined or overridden by the source generator");
+        "DependsOn specified, but PropertyChanged events will not be raised because the method to raise PropertyChanged events cannot be defined or overridden",
+        "[DependsOn(\"{0}\")] specified, but PropertyChanged events will not be raised because the method to raise PropertyChanged events '{1}' cannot defined or overridden by the source generator");
     public void ReportDependsOnSpecifiedButRaisePropertyChangedMethodCannotBeOverridden(AttributeData dependsOnAttribute, ISymbol member, string dependsOn, string raisePropertyChangedMethodName)
     {
-        this.AddDiagnostic(dependsOnSpecifiedButRaisepropertyChangedMethodCannotBeOverridden, AttributeLocations(dependsOnAttribute, member), dependsOn, raisePropertyChangedMethodName);
+        this.AddDiagnostic(dependsOnSpecifiedButRaisePropertyChangedMethodCannotBeOverridden, AttributeLocations(dependsOnAttribute, member), dependsOn, raisePropertyChangedMethodName);
+    }
+
+    private static readonly DiagnosticDescriptor dependsOnSpecifiedButRaisePropertyChangingMethodCannotBeOverridden = CreateDescriptor(
+       "INPC035",
+       "DependsOn specified, but PropertyChanging events will not be raised because the method to raise PropertyChanging events cannot be defined or overridden",
+       "[DependsOn(\"{0}\")] specified, but PropertyChanging events will not be raised because the method to raise PropertyChanging events '{1}' cannot defined or overridden by the source generator");
+    public void ReportDependsOnSpecifiedButRaisePropertyChangingMethodCannotBeOverridden(AttributeData dependsOnAttribute, ISymbol member, string dependsOn, string raisePropertyChangedMethodName)
+    {
+        this.AddDiagnostic(dependsOnSpecifiedButRaisePropertyChangingMethodCannotBeOverridden, AttributeLocations(dependsOnAttribute, member), dependsOn, raisePropertyChangedMethodName);
     }
 
     private static readonly DiagnosticDescriptor invalidOnAnyPropertyChangedSignature = CreateDescriptor(

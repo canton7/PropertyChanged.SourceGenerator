@@ -145,12 +145,12 @@ public class Generator
         string propertyNameAccessor = null!;
         switch (interfaceAnalysis.RaiseMethodSignature.NameType)
         {
-            case RaisePropertyChangedNameType.String:
+            case RaisePropertyChangedOrChangingNameType.String:
                 this.writer.Write("string propertyName");
                 propertyNameOrEventArgsName = "propertyName";
                 propertyNameAccessor = "propertyName";
                 break;
-            case RaisePropertyChangedNameType.PropertyChangedEventArgs:
+            case RaisePropertyChangedOrChangingNameType.PropertyChangedEventArgs:
                 this.writer.Write(interfaceAnalysis.EventArgsSymbol.ToDisplayString(SymbolDisplayFormats.FullyQualifiedTypeName));
                 this.writer.Write(" eventArgs");
                 propertyNameOrEventArgsName = "eventArgs";
@@ -189,7 +189,7 @@ public class Generator
             case RaisePropertyChangedMethodType.Virtual:
             case RaisePropertyChangedMethodType.NonVirtual:
                 // If we're generating our own, we always use PropertyChangedEventArgs
-                Trace.Assert(interfaceAnalysis.RaiseMethodSignature.NameType == RaisePropertyChangedNameType.PropertyChangedEventArgs);
+                Trace.Assert(interfaceAnalysis.RaiseMethodSignature.NameType == RaisePropertyChangedOrChangingNameType.PropertyChangedEventArgs);
                 this.writer.WriteLine($"this.{interfaceAnalysis.EventName}?.Invoke(this, eventArgs);");
                 break;
             case RaisePropertyChangedMethodType.Override:
@@ -333,12 +333,12 @@ public class Generator
 
         switch (interfaceAnalysis.RaiseMethodSignature.NameType)
         {
-            case RaisePropertyChangedNameType.PropertyChangedEventArgs:
+            case RaisePropertyChangedOrChangingNameType.PropertyChangedEventArgs:
                 string cacheName = this.eventArgsCache.GetOrAdd(propertyName, interfaceAnalysis.EventArgsSymbol);
                 this.writer.Write($"global::PropertyChanged.SourceGenerator.Internal.{EventArgsCacheName}.{cacheName}");
                 break;
 
-            case RaisePropertyChangedNameType.String:
+            case RaisePropertyChangedOrChangingNameType.String:
                 this.writer.Write(EscapeString(propertyName));
                 break;
         }

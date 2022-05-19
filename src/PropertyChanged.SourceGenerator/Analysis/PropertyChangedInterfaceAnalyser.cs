@@ -24,7 +24,7 @@ public class PropertyChangedInterfaceAnalyser : InterfaceAnalyser
     protected override string[] GetRaisePropertyChangedOrChangingEventNames(Configuration config) =>
         config.RaisePropertyChangedMethodNames;
 
-    protected override bool TryFindCallableRaisePropertyChangedOrChangingOverload(List<IMethodSymbol> methods, out IMethodSymbol method, out RaisePropertyChangedMethodSignature? signature, INamedTypeSymbol typeSymbol)
+    protected override bool TryFindCallableRaisePropertyChangedOrChangingOverload(List<IMethodSymbol> methods, out IMethodSymbol method, out RaisePropertyChangedOrChangingMethodSignature? signature, INamedTypeSymbol typeSymbol)
     {
         methods.RemoveAll(x => !IsAccessibleNormalMethod(x, typeSymbol, this.Compilation));
 
@@ -33,8 +33,8 @@ public class PropertyChangedInterfaceAnalyser : InterfaceAnalyser
             SymbolEqualityComparer.Default.Equals(x.Parameters[0].Type, this.EventArgsSymbol) &&
             IsNormalParameter(x.Parameters[0]))) != null)
         {
-            signature = new RaisePropertyChangedMethodSignature(
-                RaisePropertyChangedNameType.PropertyChangedEventArgs, 
+            signature = new RaisePropertyChangedOrChangingMethodSignature(
+                RaisePropertyChangedOrChangingNameType.PropertyChangedEventArgs, 
                 hasOld: false,
                 hasNew: false,
                 method.DeclaredAccessibility);
@@ -45,8 +45,8 @@ public class PropertyChangedInterfaceAnalyser : InterfaceAnalyser
             x.Parameters[0].Type.SpecialType == SpecialType.System_String &&
             IsNormalParameter(x.Parameters[0]))) != null)
         {
-            signature = new RaisePropertyChangedMethodSignature(
-                RaisePropertyChangedNameType.String,
+            signature = new RaisePropertyChangedOrChangingMethodSignature(
+                RaisePropertyChangedOrChangingNameType.String,
                 hasOld: false,
                 hasNew: false,
                 method.DeclaredAccessibility);
@@ -61,8 +61,8 @@ public class PropertyChangedInterfaceAnalyser : InterfaceAnalyser
             x.Parameters[2].Type.SpecialType == SpecialType.System_Object &&
             IsNormalParameter(x.Parameters[2]))) != null)
         {
-            signature = new RaisePropertyChangedMethodSignature(
-                RaisePropertyChangedNameType.PropertyChangedEventArgs,
+            signature = new RaisePropertyChangedOrChangingMethodSignature(
+                RaisePropertyChangedOrChangingNameType.PropertyChangedEventArgs,
                 hasOld: true,
                 hasNew: true,
                 method.DeclaredAccessibility);
@@ -77,8 +77,8 @@ public class PropertyChangedInterfaceAnalyser : InterfaceAnalyser
             x.Parameters[2].Type.SpecialType == SpecialType.System_Object &&
             IsNormalParameter(x.Parameters[2]))) != null)
         {
-            signature = new RaisePropertyChangedMethodSignature(
-                RaisePropertyChangedNameType.String,
+            signature = new RaisePropertyChangedOrChangingMethodSignature(
+                RaisePropertyChangedOrChangingNameType.String,
                 hasOld: true,
                 hasNew: true,
                 method.DeclaredAccessibility);

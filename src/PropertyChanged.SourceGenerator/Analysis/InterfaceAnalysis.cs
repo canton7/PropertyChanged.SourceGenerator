@@ -42,7 +42,7 @@ public class InterfaceAnalysis
     /// <summary>
     /// The signature of the raise method
     /// </summary>
-    public RaisePropertyChangedMethodSignature RaiseMethodSignature { get; set; }
+    public RaisePropertyChangedOrChangingMethodSignature RaiseMethodSignature { get; set; }
 
     /// <summary>
     /// The signature of the 'OnAnyPropertyChanged' method, if any

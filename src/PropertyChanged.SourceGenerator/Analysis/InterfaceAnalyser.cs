@@ -77,7 +77,7 @@ public abstract class InterfaceAnalyser
         // it is. One we've found any method with a name we're looking for, stop: it's most likely they've 
         // just messed up the signature
         interfaceAnalysis.CanCallRaiseMethod = true;
-        RaisePropertyChangedMethodSignature? signature = null;
+        RaisePropertyChangedOrChangingMethodSignature? signature = null;
         IMethodSymbol? method = null;
         foreach (string name in this.GetRaisePropertyChangedOrChangingEventNames(config))
         {
@@ -165,8 +165,8 @@ public abstract class InterfaceAnalyser
             }
 
             interfaceAnalysis.RaiseMethodName = this.GetRaisePropertyChangedOrChangingEventNames(config)[0];
-            interfaceAnalysis.RaiseMethodSignature = new RaisePropertyChangedMethodSignature(
-                RaisePropertyChangedNameType.PropertyChangedEventArgs,
+            interfaceAnalysis.RaiseMethodSignature = new RaisePropertyChangedOrChangingMethodSignature(
+                RaisePropertyChangedOrChangingNameType.PropertyChangedEventArgs,
                 hasOld: interfaceAnalysis.OnAnyPropertyChangedOrChangingInfo?.HasOld ?? false,
                 hasNew: interfaceAnalysis.OnAnyPropertyChangedOrChangingInfo?.HasNew ?? false,
                 typeSymbol.IsSealed ? Accessibility.Private : Accessibility.Protected);
@@ -177,7 +177,7 @@ public abstract class InterfaceAnalyser
 
     protected abstract string[] GetRaisePropertyChangedOrChangingEventNames(Configuration config);
 
-    protected abstract bool TryFindCallableRaisePropertyChangedOrChangingOverload(List<IMethodSymbol> methods, out IMethodSymbol method, out RaisePropertyChangedMethodSignature? signature, INamedTypeSymbol typeSymbol);
+    protected abstract bool TryFindCallableRaisePropertyChangedOrChangingOverload(List<IMethodSymbol> methods, out IMethodSymbol method, out RaisePropertyChangedOrChangingMethodSignature? signature, INamedTypeSymbol typeSymbol);
 
     protected abstract void FindOnAnyPropertyChangedOrChangingMethod(INamedTypeSymbol typeSymbol, InterfaceAnalysis interfaceAnalysis, out IMethodSymbol? method);
 

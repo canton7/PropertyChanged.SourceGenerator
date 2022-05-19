@@ -6,20 +6,20 @@ using Microsoft.CodeAnalysis;
 
 namespace PropertyChanged.SourceGenerator.Analysis;
 
-public enum RaisePropertyChangedNameType
+public enum RaisePropertyChangedOrChangingNameType
 {
     PropertyChangedEventArgs,
     String,
 }
 
-public struct RaisePropertyChangedMethodSignature
+public struct RaisePropertyChangedOrChangingMethodSignature
 {
-    public RaisePropertyChangedNameType NameType { get; }
+    public RaisePropertyChangedOrChangingNameType NameType { get; }
     public bool HasOld { get; }
     public bool HasNew { get; }
     public Accessibility Accessibility { get; }
 
-    public RaisePropertyChangedMethodSignature(RaisePropertyChangedNameType nameType, bool hasOld, bool hasNew, Accessibility accessibility)
+    public RaisePropertyChangedOrChangingMethodSignature(RaisePropertyChangedOrChangingNameType nameType, bool hasOld, bool hasNew, Accessibility accessibility)
     {
         this.NameType = nameType;
         this.HasOld = hasOld;

@@ -141,6 +141,15 @@ public class DiagnosticReporter
         this.AddDiagnostic(invalidOnPropertyNameChangedSignature, method.Locations, onChangedMethodName, name);
     }
 
+    private static readonly DiagnosticDescriptor invalidOnPropertyNameChangingSignature = CreateDescriptor(
+        "INPC030",
+        "On{PropertyName}Changing method signature not recognised",
+        "Found one or more On{{PropertyName}}Changing methods called '{0}' for property '{1}', but none had the correct signature, or were inaccessible. Skipping");
+    public void ReportInvalidOnPropertyNameChangingSignature(string name, string onChangedMethodName, IMethodSymbol method)
+    {
+        this.AddDiagnostic(invalidOnPropertyNameChangingSignature, method.Locations, onChangedMethodName, name);
+    }
+
     private static readonly DiagnosticDescriptor multipleIsChangedProperties = CreateDescriptor(
         "INPC014",
         "Multiple [IsChanged] proeprties",

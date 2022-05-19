@@ -212,7 +212,7 @@ public abstract class InterfaceAnalyser
             var firstMethod = methods[0];
             if ((result = this.FindCallableOnPropertyNameChangedOrChangingOverload(typeSymbol, methods, onChangedMethodName, memberType)) == null)
             {
-                this.Diagnostics.ReportInvalidOnPropertyNameChangedSignature(name, onChangedMethodName, firstMethod);
+                this.ReportInvalidOnPropertyNameChangedOrChangingSignature(name, onChangedMethodName, firstMethod);
             }
         }
 
@@ -226,6 +226,8 @@ public abstract class InterfaceAnalyser
         List<IMethodSymbol> methods,
         string onChangedMethodName,
         ITypeSymbol memberType);
+
+    protected abstract void ReportInvalidOnPropertyNameChangedOrChangingSignature(string name, string onChangedMethodName, IMethodSymbol method);
 
     #endregion
 }

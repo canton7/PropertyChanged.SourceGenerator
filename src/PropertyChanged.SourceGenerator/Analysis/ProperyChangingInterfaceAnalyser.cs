@@ -161,4 +161,7 @@ public class ProperyChangingInterfaceAnalyser : InterfaceAnalyser
 
         return null;
     }
+
+    protected override void ReportInvalidOnPropertyNameChangedOrChangingSignature(string name, string onChangedMethodName, IMethodSymbol method) =>
+        this.Diagnostics.ReportInvalidOnPropertyNameChangingSignature(name, onChangedMethodName, method);
 }

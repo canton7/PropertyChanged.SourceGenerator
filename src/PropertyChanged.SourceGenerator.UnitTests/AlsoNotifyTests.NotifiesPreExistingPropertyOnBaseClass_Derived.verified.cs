@@ -1,4 +1,4 @@
-﻿partial class Derived : global::System.ComponentModel.INotifyPropertyChanged
+﻿partial class Derived
 {
     public string Bar
     {
@@ -8,8 +8,8 @@
             if (!global::System.Collections.Generic.EqualityComparer<string>.Default.Equals(value, this._bar))
             {
                 this._bar = value;
-                this.OnPropertyChanged(global::PropertyChanged.SourceGenerator.Internal.PropertyChangedEventArgsCache.Bar);
-                this.OnPropertyChanged(global::PropertyChanged.SourceGenerator.Internal.PropertyChangedEventArgsCache.Foo);
+                this.OnPropertyChanged(global::PropertyChanged.SourceGenerator.Internal.EventArgsCache.PropertyChanged_Bar);
+                this.OnPropertyChanged(global::PropertyChanged.SourceGenerator.Internal.EventArgsCache.PropertyChanged_Foo);
             }
         }
     }

@@ -5,6 +5,7 @@ using System.Text;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using static PropertyChanged.SourceGenerator.Analysis.Utils;
 
 namespace PropertyChanged.SourceGenerator.Analysis;
 
@@ -66,11 +67,17 @@ public partial class Analyser
                     else
                     {
                         // We'll assume it'll pass through RaisePropertyChanged
-                        if (typeAnalysis.RaisePropertyChangedMethod.Type == RaisePropertyChangedMethodType.None)
+                        if (typeAnalysis.INotifyPropertyChanged.CanCallRaiseMethod &&
+                            typeAnalysis.INotifyPropertyChanged.RaiseMethodType == RaisePropertyChangedMethodType.None)
                         {
-                            this.diagnostics.ReportDependsOnSpecifiedButRaisepropertyChangedMethodCannotBeOverridden(attribute, member, dependsOn!, typeAnalysis.RaisePropertyChangedMethod.Name);
+                            this.diagnostics.ReportDependsOnSpecifiedButRaisePropertyChangedMethodCannotBeOverridden(attribute, member, dependsOn!, typeAnalysis.INotifyPropertyChanged.RaiseMethodName!);
                         }
-                        typeAnalysis.RaisePropertyChangedMethod.AddDependsOn(dependsOn!, alsoNotifyMember.Value);
+                        if (typeAnalysis.INotifyPropertyChanging.CanCallRaiseMethod &&
+                            typeAnalysis.INotifyPropertyChanging.RaiseMethodType == RaisePropertyChangedMethodType.None)
+                        {
+                            this.diagnostics.ReportDependsOnSpecifiedButRaisePropertyChangingMethodCannotBeOverridden(attribute, member, dependsOn!, typeAnalysis.INotifyPropertyChanged.RaiseMethodName!);
+                        }
+                        typeAnalysis.AddDependsOn(dependsOn!, alsoNotifyMember.Value);
                     }
                 }
             }
@@ -135,7 +142,7 @@ public partial class Analyser
                 {
                     // Is it another property defined on a base type? We'll need to stick it in
                     // the RaisePropertyChanged method
-                    typeAnalysis.RaisePropertyChangedMethod.AddDependsOn(baseProperty.Name, AlsoNotifyMember.FromProperty(
+                    typeAnalysis.AddDependsOn(baseProperty.Name, AlsoNotifyMember.FromProperty(
                         notifyProperty,
                         this.FindOnPropertyNameChangedMethod(typeAnalysis.TypeSymbol, notifyProperty)));
                 }

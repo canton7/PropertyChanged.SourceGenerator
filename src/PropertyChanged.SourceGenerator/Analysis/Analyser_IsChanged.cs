@@ -52,7 +52,7 @@ public partial class Analyser
                 else
                 {
                     typeAnalysis.IsChangedPropertyName = member.Name;
-                    typeAnalysis.IsChangedSetterIsPrivate = member is IPropertySymbol { SetMethod: { DeclaredAccessibility: Accessibility.Private } };
+                    typeAnalysis.IsChangedSetterIsPrivate = member is IPropertySymbol { SetMethod.DeclaredAccessibility: Accessibility.Private };
                 }
             }
         }

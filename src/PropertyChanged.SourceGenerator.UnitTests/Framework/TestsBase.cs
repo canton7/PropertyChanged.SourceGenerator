@@ -81,7 +81,7 @@ public abstract class TestsBase
 
     protected static Expectation It { get; } = new Expectation();
     protected static ImmutableList<CSharpSyntaxVisitor<SyntaxNode?>> StandardRewriters { get; } = new CSharpSyntaxVisitor<SyntaxNode?>[] {
-        RemovePropertiesRewriter.Instance, RemoveInpcMembersRewriter.Instance
+        RemovePropertiesRewriter.Instance, RemoveInpcMembersRewriter.All
     }.ToImmutableList();
 
     protected void AssertThat(
@@ -98,7 +98,7 @@ public abstract class TestsBase
 
             // 0: Attributes
             // 1: Generated file
-            // 2: PropertyChangedEventArgsCache
+            // 2: EventArgsCache
             //Assert.AreEqual(3, runResult.GeneratedTrees.Length);
             //Assert.IsEmpty(runResult.Diagnostics);
 
@@ -175,7 +175,7 @@ public abstract class TestsBase
     protected void AssertNotifiesFromBase(string input, string type, string memberName, string propertyName)
     {
         var analysis = this.Analyse(input, type);
-        Assert.That(analysis.RaisePropertyChangedMethod.BaseDependsOn
+        Assert.That(analysis.BaseDependsOn
             .Where(x => x.baseProperty == memberName).Select(x => x.notifyProperty.Name), Has.Member(propertyName));
     }
 
@@ -187,7 +187,7 @@ public abstract class TestsBase
         {
             Assert.IsEmpty(member!.AlsoNotify);
         }
-        Assert.IsEmpty(analysis.RaisePropertyChangedMethod.BaseDependsOn.Where(x => x.notifyProperty.Name == memberName));
+        Assert.IsEmpty(analysis.BaseDependsOn.Where(x => x.notifyProperty.Name == memberName));
     }
 }
 

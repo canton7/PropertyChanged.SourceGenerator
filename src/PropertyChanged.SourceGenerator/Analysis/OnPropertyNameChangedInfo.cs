@@ -4,20 +4,16 @@ using System.Text;
 
 namespace PropertyChanged.SourceGenerator.Analysis;
 
-public enum OnPropertyNameChangedSignature
-{
-    Parameterless,
-    OldAndNew,
-}
-
 public struct OnPropertyNameChangedInfo
 {
     public string Name { get; }
-    public OnPropertyNameChangedSignature Signature { get; }
+    public bool HasOld { get; }
+    public bool HasNew { get; }
 
-    public OnPropertyNameChangedInfo(string name, OnPropertyNameChangedSignature signature)
+    public OnPropertyNameChangedInfo(string name, bool hasOld, bool hasNew)
     {
         this.Name = name;
-        this.Signature = signature;
+        this.HasOld = hasOld;
+        this.HasNew = hasNew;
     }
 }

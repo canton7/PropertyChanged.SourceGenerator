@@ -22,7 +22,7 @@ public partial class SomeViewModel
     public void OnFooChanged() { }
 }";
 
-        this.AssertThat(input, It.HasFile("SomeViewModel", RemoveInpcMembersRewriter.Instance));
+        this.AssertThat(input, It.HasFile("SomeViewModel", RemoveInpcMembersRewriter.All));
     }
 
     [Test]
@@ -36,7 +36,7 @@ public partial class SomeViewModel
     public void OnFooChanged(string oldValue, string newValue) { }
 }";
 
-        this.AssertThat(input, It.HasFile("SomeViewModel", RemoveInpcMembersRewriter.Instance));
+        this.AssertThat(input, It.HasFile("SomeViewModel", RemoveInpcMembersRewriter.All));
     }
 
     [Test]
@@ -50,7 +50,7 @@ public partial class SomeViewModel
     public void OnFooChanged(object oldValue, object newValue) { }
 }";
 
-        this.AssertThat(input, It.HasFile("SomeViewModel", RemoveInpcMembersRewriter.Instance));
+        this.AssertThat(input, It.HasFile("SomeViewModel", RemoveInpcMembersRewriter.All));
     }
 
     [Test]
@@ -64,7 +64,7 @@ public partial class SomeViewModel
     public void OnFooChanged(object oldValue, string newValue) { }
 }";
 
-        this.AssertThat(input, It.HasFile("SomeViewModel", RemoveInpcMembersRewriter.Instance)
+        this.AssertThat(input, It.HasFile("SomeViewModel", RemoveInpcMembersRewriter.All)
             .HasDiagnostics(
                 // (6,17): Warning INPC013: Found one or more On{PropertyName}Changed methods called 'OnFooChanged' for property 'Foo', but none had the correct signature, or were inaccessible. Skipping
                 // OnFooChanged
@@ -84,7 +84,7 @@ public partial class SomeViewModel
     private void OnBarChanged() { }
 }";
 
-        this.AssertThat(input, It.HasFile("SomeViewModel", RemoveInpcMembersRewriter.Instance));
+        this.AssertThat(input, It.HasFile("SomeViewModel", RemoveInpcMembersRewriter.All));
     }
 
     [Test]
@@ -99,7 +99,7 @@ public partial class SomeViewModel
     private void OnBarChanged(int oldValue, int newValue) { }
 }";
 
-        this.AssertThat(input, It.HasFile("SomeViewModel", RemoveInpcMembersRewriter.Instance));
+        this.AssertThat(input, It.HasFile("SomeViewModel", RemoveInpcMembersRewriter.All));
     }
     
     [Test]
@@ -117,7 +117,7 @@ public partial class Derived : Base
     private int _foo;
 }";
 
-        this.AssertThat(input, It.HasFile("Derived", RemoveInpcMembersRewriter.Instance));
+        this.AssertThat(input, It.HasFile("Derived", RemoveInpcMembersRewriter.All));
     }
 
     [Test]
@@ -135,7 +135,7 @@ public partial class Derived : Base
     private void OnBarChanged(int oldValue, int newValue) { }
 }";
 
-        this.AssertThat(input, It.HasFile("Derived", RemoveInpcMembersRewriter.Instance));
+        this.AssertThat(input, It.HasFile("Derived", RemoveInpcMembersRewriter.All));
     }
 
     [Test]
@@ -153,7 +153,7 @@ public partial class Derived : Base
     private int _foo;
 }";
 
-        this.AssertThat(input, It.HasFile("Derived", RemoveInpcMembersRewriter.Instance)
+        this.AssertThat(input, It.HasFile("Derived", RemoveInpcMembersRewriter.All)
             .HasDiagnostics(
                 // (5,18): Warning INPC013: Found one or more On{PropertyName}Changed methods called 'OnBarChanged' for property 'Bar', but none had the correct signature, or were inaccessible. Skipping
                 // OnBarChanged
@@ -171,7 +171,7 @@ public partial class SomeViewModel
     private int _foo;
 }";
 
-        this.AssertThat(input, It.HasFile("SomeViewModel", RemoveInpcMembersRewriter.Instance)
+        this.AssertThat(input, It.HasFile("SomeViewModel", RemoveInpcMembersRewriter.All)
             .HasDiagnostics(
                 // (4,14): Warning INPC009: Unable to find a property called 'Bar' on this type or its base types. This event will still be raised
                 // AlsoNotify("Bar")
@@ -192,7 +192,7 @@ public partial class SomeViewModel
     private void OnBarChanged(int oldValue, int newValue) { }
 }";
 
-        this.AssertThat(input, It.HasFile("SomeViewModel", RemoveInpcMembersRewriter.Instance));
+        this.AssertThat(input, It.HasFile("SomeViewModel", RemoveInpcMembersRewriter.All));
     }
 
     [Test]
@@ -209,6 +209,6 @@ public partial class SomeViewModel
     private void OnBazChanged(string oldValue, string newValue) { }
 }";
 
-        this.AssertThat(input, It.HasFile("SomeViewModel", RemoveInpcMembersRewriter.Instance));
+        this.AssertThat(input, It.HasFile("SomeViewModel", RemoveInpcMembersRewriter.All));
     }
 }

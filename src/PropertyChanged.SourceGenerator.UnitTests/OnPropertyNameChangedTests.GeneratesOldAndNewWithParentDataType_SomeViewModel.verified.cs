@@ -1,4 +1,4 @@
-﻿partial class SomeViewModel : global::System.ComponentModel.INotifyPropertyChanged
+﻿partial class SomeViewModel
 {
     public string Foo
     {
@@ -10,7 +10,7 @@
                 string old_Foo = this.Foo;
                 this._foo = value;
                 this.OnFooChanged(old_Foo, this.Foo);
-                this.OnPropertyChanged(global::PropertyChanged.SourceGenerator.Internal.PropertyChangedEventArgsCache.Foo);
+                this.OnPropertyChanged(global::PropertyChanged.SourceGenerator.Internal.EventArgsCache.PropertyChanged_Foo);
             }
         }
     }

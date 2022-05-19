@@ -85,7 +85,7 @@ public partial class SomeViewModel
     private int _foo;
     protected void OnPropertyChanged(string propertyName) => PropertyChanged?.Invoke(this, null);
 }";
-        this.AssertThat(input, It.DoesNotHaveFile("PropertyChangedEventArgsCache"));
+        this.AssertThat(input, It.DoesNotHaveFile("EventArgsCache"));
     }
 
     [Test]

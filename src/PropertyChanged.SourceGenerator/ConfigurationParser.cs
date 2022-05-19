@@ -25,9 +25,13 @@ public class ConfigurationParser
             : this.optionsProvider.GetOptions(syntaxTree);
         var config = new Configuration();
 
-        if (options.TryGetValue("propertychanged.onpropertychanged_method_name", out string? methodName))
+        if (options.TryGetValue("propertychanged.onpropertychanged_method_name", out string? changedMethodName))
         {
-            config.RaisePropertyChangedMethodNames = methodName.Split(';');
+            config.RaisePropertyChangedMethodNames = changedMethodName.Split(';');
+        }
+        if (options.TryGetValue("propertychanged.onpropertychanging_method_name", out string? changingMethodName))
+        {
+            config.RaisePropertyChangingMethodNames = changingMethodName.Split(';');
         }
         if (options.TryGetValue("propertychanged.remove_prefixes", out string? removePrefixes))
         {

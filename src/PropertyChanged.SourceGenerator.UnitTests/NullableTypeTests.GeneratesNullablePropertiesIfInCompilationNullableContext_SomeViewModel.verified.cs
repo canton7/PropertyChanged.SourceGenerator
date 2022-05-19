@@ -1,5 +1,5 @@
 ﻿#nullable enable
-partial class SomeViewModel : global::System.ComponentModel.INotifyPropertyChanged
+partial class SomeViewModel
 {
     public string? Nullable
     {
@@ -9,7 +9,7 @@ partial class SomeViewModel : global::System.ComponentModel.INotifyPropertyChang
             if (!global::System.Collections.Generic.EqualityComparer<string?>.Default.Equals(value, this._nullable))
             {
                 this._nullable = value;
-                this.OnPropertyChanged(global::PropertyChanged.SourceGenerator.Internal.PropertyChangedEventArgsCache.Nullable);
+                this.OnPropertyChanged(global::PropertyChanged.SourceGenerator.Internal.EventArgsCache.PropertyChanged_Nullable);
             }
         }
     }
@@ -21,7 +21,7 @@ partial class SomeViewModel : global::System.ComponentModel.INotifyPropertyChang
             if (!global::System.Collections.Generic.EqualityComparer<string>.Default.Equals(value, this._notNullable))
             {
                 this._notNullable = value;
-                this.OnPropertyChanged(global::PropertyChanged.SourceGenerator.Internal.PropertyChangedEventArgsCache.NotNullable);
+                this.OnPropertyChanged(global::PropertyChanged.SourceGenerator.Internal.EventArgsCache.PropertyChanged_NotNullable);
             }
         }
     }
@@ -34,7 +34,7 @@ partial class SomeViewModel : global::System.ComponentModel.INotifyPropertyChang
             if (!global::System.Collections.Generic.EqualityComparer<string>.Default.Equals(value, this._oblivious))
             {
                 this._oblivious = value;
-                this.OnPropertyChanged(global::PropertyChanged.SourceGenerator.Internal.PropertyChangedEventArgsCache.Oblivious);
+                this.OnPropertyChanged(global::PropertyChanged.SourceGenerator.Internal.EventArgsCache.PropertyChanged_Oblivious);
             }
         }
     }
@@ -47,7 +47,7 @@ partial class SomeViewModel : global::System.ComponentModel.INotifyPropertyChang
             if (!global::System.Collections.Generic.EqualityComparer<int?>.Default.Equals(value, this._nullableValue))
             {
                 this._nullableValue = value;
-                this.OnPropertyChanged(global::PropertyChanged.SourceGenerator.Internal.PropertyChangedEventArgsCache.NullableValue);
+                this.OnPropertyChanged(global::PropertyChanged.SourceGenerator.Internal.EventArgsCache.PropertyChanged_NullableValue);
             }
         }
     }

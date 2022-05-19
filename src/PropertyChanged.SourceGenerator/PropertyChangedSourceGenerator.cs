@@ -52,7 +52,7 @@ public class PropertyChangedSourceGenerator : ISourceGenerator
             {
                 var nameCacheGenerator = new Generator(eventArgsCache);
                 nameCacheGenerator.GenerateNameCache();
-                AddSource("PropertyChangedEventArgsCache", nameCacheGenerator.ToString());
+                AddSource(Generator.EventArgsCacheName, nameCacheGenerator.ToString());
             }
         }
         finally

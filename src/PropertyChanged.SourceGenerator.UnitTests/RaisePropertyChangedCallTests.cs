@@ -21,7 +21,7 @@ public partial class SomeViewModel
     private string _foo;
 }";
 
-        this.AssertThat(input, It.HasFile("SomeViewModel", StandardRewriters));
+        this.AssertThat(input, It.HasFile("SomeViewModel", RemovePropertiesRewriter.Instance));
     }
 
     [Test]
@@ -35,7 +35,7 @@ public partial class SomeViewModel : INotifyPropertyChanged
     private string _foo;
 }";
 
-        this.AssertThat(input, It.HasFile("SomeViewModel", StandardRewriters));
+        this.AssertThat(input, It.HasFile("SomeViewModel", RemovePropertiesRewriter.Instance));
     }
 
     [Test]
@@ -178,6 +178,23 @@ public partial class C : B
     }
 
     [Test]
+    public void TakesNameFromPropertyChangingIfPossible()
+    {
+        string input = @"
+using System.ComponentModel;
+public partial class SomeViewModel : INotifyPropertyChanging
+{
+    public event PropertyChangingEventHandler PropertyChanging;
+    protected virtual void NotifyOfPropertyChanging(string name) => PropertyChanging?.Invoke(this, new PropertyChangingEventArgs(name));
+
+    [Notify]
+    private int _foo;
+}";
+
+        this.AssertThat(input, It.HasFile("SomeViewModel", RemovePropertiesRewriter.Instance));
+    }
+
+    [Test]
     public void RaisesIfUserDefinedOverrideFound()
     {
         string input = @"
@@ -195,7 +212,7 @@ public partial class Derived : Base
 }";
 
         this.AssertThat(input, It.HasDiagnostics(
-            // (12,29): Warning INPC021: Method 'OnPropertyChanged' must not be overridden. Functionality such as automatic dependencies on base properties will not work. Define a method called TODO instead
+            // (12,29): Warning INPC021: Method 'OnPropertyChanged' must not be overridden. Functionality such as dependencies on base properties will not work. Define a method called 'OnAnyPropertyChanged' instead
             // OnPropertyChanged
             Diagnostic("INPC021", @"OnPropertyChanged").WithLocation(12, 29)));
     }

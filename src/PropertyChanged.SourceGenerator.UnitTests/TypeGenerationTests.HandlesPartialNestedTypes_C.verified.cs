@@ -2,7 +2,7 @@
 {
     partial class B
     {
-        partial class C : global::System.ComponentModel.INotifyPropertyChanged
+        partial class C
         {
             public string Field { get; set; }
         }

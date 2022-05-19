@@ -212,7 +212,7 @@ public partial class Derived : Base
 }";
 
         this.AssertThat(input, It.HasDiagnostics(
-            // (12,29): Warning INPC021: Method 'OnPropertyChanged' must not be overridden. Functionality such as automatic dependencies on base properties will not work. Define a method called TODO instead
+            // (12,29): Warning INPC021: Method 'OnPropertyChanged' must not be overridden. Functionality such as dependencies on base properties will not work. Define a method called 'OnAnyPropertyChanged' instead
             // OnPropertyChanged
             Diagnostic("INPC021", @"OnPropertyChanged").WithLocation(12, 29)));
     }

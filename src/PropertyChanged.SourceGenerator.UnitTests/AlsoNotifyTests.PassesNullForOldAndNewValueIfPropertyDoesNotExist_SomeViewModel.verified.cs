@@ -9,7 +9,8 @@
             {
                 string old_Foo = this.Foo;
                 this._foo = value;
-                this.OnPropertyChanged(@"Foo", old_Foo, this.Foo);
+                string new_Foo = this.Foo;
+                this.OnPropertyChanged(@"Foo", old_Foo, new_Foo);
                 this.OnPropertyChanged(@"", (object)null, (object)null);
                 this.OnPropertyChanged(@"Item[]", (object)null, (object)null);
                 this.OnPropertyChanged(@"NonExistent", (object)null, (object)null);

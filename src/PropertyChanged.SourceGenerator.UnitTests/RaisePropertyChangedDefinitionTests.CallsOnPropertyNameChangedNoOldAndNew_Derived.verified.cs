@@ -7,9 +7,12 @@
         switch (eventArgs.PropertyName)
         {
             case @"Foo":
+            {
+                string new_Bar = this.Bar;
                 this.OnBarChanged();
-                this.OnPropertyChanged(global::PropertyChanged.SourceGenerator.Internal.EventArgsCache.PropertyChanged_Bar, (object)null, this.Bar);
-                break;
+                this.OnPropertyChanged(global::PropertyChanged.SourceGenerator.Internal.EventArgsCache.PropertyChanged_Bar, (object)null, new_Bar);
+            }
+            break;
         }
     }
 }

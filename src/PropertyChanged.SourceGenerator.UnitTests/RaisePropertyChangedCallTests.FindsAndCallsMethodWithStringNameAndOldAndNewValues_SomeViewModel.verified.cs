@@ -9,7 +9,8 @@
             {
                 string old_Foo = this.Foo;
                 this._foo = value;
-                this.NotifyPropertyChanged(@"Foo", old_Foo, this.Foo);
+                string new_Foo = this.Foo;
+                this.NotifyPropertyChanged(@"Foo", old_Foo, new_Foo);
             }
         }
     }

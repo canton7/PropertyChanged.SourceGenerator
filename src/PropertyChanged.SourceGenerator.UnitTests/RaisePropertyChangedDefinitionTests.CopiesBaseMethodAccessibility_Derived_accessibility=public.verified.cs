@@ -7,8 +7,10 @@
         switch (propertyName)
         {
             case @"Foo":
+            {
                 this.OnPropertyChanged(@"Bar");
-                break;
+            }
+            break;
         }
     }
 }

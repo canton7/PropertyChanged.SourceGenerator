@@ -10,8 +10,10 @@
                 string old_Foo = this.Foo;
                 global::System.Collections.Generic.List<global::SomeViewModel> old_Bar = this.Bar;
                 this._foo = value;
-                this.OnPropertyChanged(@"Foo", old_Foo, this.Foo);
-                this.OnPropertyChanged(@"Bar", old_Bar, this.Bar);
+                string new_Foo = this.Foo;
+                global::System.Collections.Generic.List<global::SomeViewModel> new_Bar = this.Bar;
+                this.OnPropertyChanged(@"Foo", old_Foo, new_Foo);
+                this.OnPropertyChanged(@"Bar", old_Bar, new_Bar);
             }
         }
     }

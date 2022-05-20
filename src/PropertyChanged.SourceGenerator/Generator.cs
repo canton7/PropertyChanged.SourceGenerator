@@ -217,15 +217,22 @@ public class Generator
             foreach (var group in baseDependsOn)
             {
                 this.writer.WriteLine($"case {EscapeString(group.Key)}:");
+                this.writer.WriteLine("{");
                 this.writer.Indent++;
                 foreach (var (_, notifyProperty) in group)
                 {
                     var onPropertyNameChangedOrChangingInfo = onPropertyNameChangedOrChangingGetter(notifyProperty);
+                    if (onPropertyNameChangedOrChangingInfo?.HasNew == true ||
+                        (interfaceAnalysis.CanCallRaiseMethod && interfaceAnalysis.RaiseMethodSignature.HasNew))
+                    {
+                        this.GenerateNewVariable(notifyProperty);
+                    }
                     this.GenerateOnPropertyNameChangedOrChangingIfNecessary(notifyProperty, onPropertyNameChangedOrChangingInfo, hasOldVariable: false);
                     this.GenerateRaiseEvent(interfaceAnalysis, notifyProperty.Name, notifyProperty.IsCallable, hasOldVariable: false);
                 }
-                this.writer.WriteLine("break;");
                 this.writer.Indent--;
+                this.writer.WriteLine("}");
+                this.writer.WriteLine("break;");
             }
 
             this.writer.Indent--;
@@ -286,6 +293,12 @@ public class Generator
 
         this.writer.WriteLine($"{backingMemberReference} = value;");
 
+        this.GenerateNewVariableIfNecessary(type, member);
+        foreach (var alsoNotify in member.AlsoNotify)
+        {
+            this.GenerateNewVariableIfNecessary(type, alsoNotify);
+        }
+
         this.GenerateOnPropertyNameChangedOrChangingIfNecessary(member, member.OnPropertyNameChanged, hasOldVariable: true);
         this.GenerateRaiseEvent(type.INotifyPropertyChanged, member.Name, isCallable: true, hasOldVariable: true);
         foreach (var alsoNotify in member.AlsoNotify.OrderBy(x => x.Name))
@@ -310,7 +323,9 @@ public class Generator
         {
             this.writer.WriteLine(NullableContextToComment(type.NullableContext));
         }
+
     }
+    private delegate void Test<T>(T args) where T : IMember;
 
     private void GenerateOldVariableIfNecessary<T>(TypeAnalysis type, T member) where T : IMember
     {
@@ -320,6 +335,21 @@ public class Generator
         {
             this.writer.WriteLine($"{member.Type!.ToDisplayString(SymbolDisplayFormats.FullyQualifiedTypeName)} old_{member.Name} = this.{member.Name};");
         }
+    }
+
+    private void GenerateNewVariableIfNecessary<T>(TypeAnalysis? type, T member) where T : IMember
+    {
+        if (member.IsCallable &&
+            (type?.INotifyPropertyChanged.RaiseMethodSignature.HasNew == true || member.OnPropertyNameChanged?.HasNew == true ||
+            type?.INotifyPropertyChanging.RaiseMethodSignature.HasNew == true || member.OnPropertyNameChanging?.HasNew == true))
+        {
+            this.GenerateNewVariable(member);
+        }
+    }
+
+    private void GenerateNewVariable<T>(T member) where T : IMember
+    {
+        this.writer.WriteLine($"{member.Type!.ToDisplayString(SymbolDisplayFormats.FullyQualifiedTypeName)} new_{member.Name} = this.{member.Name};");
     }
 
     private void GenerateRaiseEvent(InterfaceAnalysis interfaceAnalysis, string? propertyName, bool isCallable, bool hasOldVariable)
@@ -358,7 +388,7 @@ public class Generator
         {
             if (isCallable)
             {
-                this.writer.Write($", this.{propertyName}");
+                this.writer.Write($", new_{propertyName}");
             }
             else
             {
@@ -394,7 +424,7 @@ public class Generator
                 {
                     this.writer.Write(", ");
                 }
-                this.writer.Write($"this.{member.Name}");
+                this.writer.Write($"new_{member.Name}");
             }
             this.writer.WriteLine(");");
         }

@@ -277,11 +277,7 @@ public class Generator
         this.writer.WriteLine("{");
         this.writer.Indent++;
 
-        this.GenerateOldVariableIfNecessary(type, member);
-        foreach (var alsoNotify in member.AlsoNotify)
-        {
-            this.GenerateOldVariableIfNecessary(type, alsoNotify);
-        }
+        this.GenerateOldVariablesIfNecessary(type, member);
 
         this.GenerateOnPropertyNameChangedOrChangingIfNecessary(member, member.OnPropertyNameChanging, hasOldVariable: true);
         this.GenerateRaiseEvent(type.INotifyPropertyChanging, member.Name, isCallable: true, hasOldVariable: true);
@@ -293,11 +289,7 @@ public class Generator
 
         this.writer.WriteLine($"{backingMemberReference} = value;");
 
-        this.GenerateNewVariableIfNecessary(type, member);
-        foreach (var alsoNotify in member.AlsoNotify)
-        {
-            this.GenerateNewVariableIfNecessary(type, alsoNotify);
-        }
+        this.GenerateNewVariablesIfNecessary(type, member);
 
         this.GenerateOnPropertyNameChangedOrChangingIfNecessary(member, member.OnPropertyNameChanged, hasOldVariable: true);
         this.GenerateRaiseEvent(type.INotifyPropertyChanged, member.Name, isCallable: true, hasOldVariable: true);
@@ -325,25 +317,48 @@ public class Generator
         }
 
     }
-    private delegate void Test<T>(T args) where T : IMember;
 
-    private void GenerateOldVariableIfNecessary<T>(TypeAnalysis type, T member) where T : IMember
+    private void GenerateOldVariablesIfNecessary(TypeAnalysis type, MemberAnalysis member)
     {
-        if (member.IsCallable &&
-            (type.INotifyPropertyChanged.RaiseMethodSignature.HasOld || member.OnPropertyNameChanged?.HasOld == true ||
-            type.INotifyPropertyChanging.RaiseMethodSignature.HasOld || member.OnPropertyNameChanging?.HasOld == true))
+        Write(member);
+
+        foreach (var alsoNotify in member.AlsoNotify)
         {
-            this.writer.WriteLine($"{member.Type!.ToDisplayString(SymbolDisplayFormats.FullyQualifiedTypeName)} old_{member.Name} = this.{member.Name};");
+            if (alsoNotify.IsCallable)
+            {
+                Write(alsoNotify);
+            }
+        }
+
+        void Write<T>(T member) where T : IMember
+        {
+            if (type.INotifyPropertyChanged.RaiseMethodSignature.HasOld || member.OnPropertyNameChanged?.HasOld == true ||
+                type.INotifyPropertyChanging.RaiseMethodSignature.HasOld || member.OnPropertyNameChanging?.HasOld == true)
+            {
+                this.writer.WriteLine($"{member.Type!.ToDisplayString(SymbolDisplayFormats.FullyQualifiedTypeName)} old_{member.Name} = this.{member.Name};");
+            }
         }
     }
 
-    private void GenerateNewVariableIfNecessary<T>(TypeAnalysis? type, T member) where T : IMember
+    private void GenerateNewVariablesIfNecessary(TypeAnalysis type, MemberAnalysis member)
     {
-        if (member.IsCallable &&
-            (type?.INotifyPropertyChanged.RaiseMethodSignature.HasNew == true || member.OnPropertyNameChanged?.HasNew == true ||
-            type?.INotifyPropertyChanging.RaiseMethodSignature.HasNew == true || member.OnPropertyNameChanging?.HasNew == true))
+        Write(member);
+
+        foreach (var alsoNotify in member.AlsoNotify)
         {
-            this.GenerateNewVariable(member);
+            if (alsoNotify.IsCallable)
+            {
+                Write(alsoNotify);
+            }
+        }
+
+        void Write<T>(T member) where T : IMember
+        {
+            if (type.INotifyPropertyChanged.RaiseMethodSignature.HasNew || member.OnPropertyNameChanged?.HasNew == true ||
+                type.INotifyPropertyChanging.RaiseMethodSignature.HasNew || member.OnPropertyNameChanging?.HasNew == true)
+            {
+                this.GenerateNewVariable(member);
+            }
         }
     }
 

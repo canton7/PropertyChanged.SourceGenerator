@@ -9,7 +9,6 @@ public class MemberAnalysis : IMember
     public ISymbol BackingMember { get; set; } = null!;
     public string Name { get; set; } = null!;
     public ITypeSymbol Type { get; set; } = null!;
-    bool IMember.IsCallable => true;
     public NullableContextOptions? NullableContextOverride { get; set; }
     public Accessibility GetterAccessibility { get; set; }
     public Accessibility SetterAccessibility { get; set; }

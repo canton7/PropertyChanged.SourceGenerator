@@ -10,7 +10,6 @@ public interface IMember
 {
     [MemberNotNullWhen(true, nameof(Type))]
     [MemberNotNullWhen(true, nameof(Name))]
-    bool IsCallable { get; }
     ITypeSymbol? Type { get; }
     string? Name { get; }
 

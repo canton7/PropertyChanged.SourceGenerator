@@ -7,9 +7,9 @@
         {
             if (!global::System.Collections.Generic.EqualityComparer<string>.Default.Equals(value, this._foo))
             {
-                string old_Foo = this.Foo;
+                string old_Foo = this._foo;
                 this._foo = value;
-                string new_Foo = this.Foo;
+                string new_Foo = this._foo;
                 this.NotifyPropertyChanged(@"Foo", old_Foo, new_Foo);
             }
         }

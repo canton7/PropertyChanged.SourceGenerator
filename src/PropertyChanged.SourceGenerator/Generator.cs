@@ -245,7 +245,7 @@ public class Generator
 
     private void GenerateMember(TypeAnalysis type, MemberAnalysis member)
     {
-        string backingMemberReference = "this." + member.BackingMember.ToDisplayString(SymbolDisplayFormats.SymbolName);
+        string backingMemberReference = GetBackingMemberReference(member);
 
         if (member.NullableContextOverride is { } context)
         {
@@ -318,31 +318,34 @@ public class Generator
 
     }
 
+    private static string GetBackingMemberReference(MemberAnalysis member) =>
+        "this." + member.BackingMember.ToDisplayString(SymbolDisplayFormats.SymbolName);
+
     private void GenerateOldVariablesIfNecessary(TypeAnalysis type, MemberAnalysis member)
     {
-        Write(member);
+        Write(member, GetBackingMemberReference(member));
 
         foreach (var alsoNotify in member.AlsoNotify)
         {
             if (alsoNotify.IsCallable)
             {
-                Write(alsoNotify);
+                Write(alsoNotify, $"this.{alsoNotify.Name}");
             }
         }
 
-        void Write<T>(T member) where T : IMember
+        void Write<T>(T member, string backingMemberReference) where T : IMember
         {
             if (type.INotifyPropertyChanged.RaiseMethodSignature.HasOld || member.OnPropertyNameChanged?.HasOld == true ||
                 type.INotifyPropertyChanging.RaiseMethodSignature.HasOld || member.OnPropertyNameChanging?.HasOld == true)
             {
-                this.writer.WriteLine($"{member.Type!.ToDisplayString(SymbolDisplayFormats.FullyQualifiedTypeName)} old_{member.Name} = this.{member.Name};");
+                this.writer.WriteLine($"{member.Type!.ToDisplayString(SymbolDisplayFormats.FullyQualifiedTypeName)} old_{member.Name} = {backingMemberReference};");
             }
         }
     }
 
     private void GenerateNewVariablesIfNecessary(TypeAnalysis type, MemberAnalysis member)
     {
-        Write(member);
+        Write(member, GetBackingMemberReference(member));
 
         foreach (var alsoNotify in member.AlsoNotify)
         {
@@ -352,19 +355,20 @@ public class Generator
             }
         }
 
-        void Write<T>(T member) where T : IMember
+        void Write<T>(T member, string? backingMemberReferenceOverride = null) where T : IMember
         {
             if (type.INotifyPropertyChanged.RaiseMethodSignature.HasNew || member.OnPropertyNameChanged?.HasNew == true ||
                 type.INotifyPropertyChanging.RaiseMethodSignature.HasNew || member.OnPropertyNameChanging?.HasNew == true)
             {
-                this.GenerateNewVariable(member);
+                this.GenerateNewVariable(member, backingMemberReferenceOverride);
             }
         }
     }
 
-    private void GenerateNewVariable<T>(T member) where T : IMember
+    private void GenerateNewVariable<T>(T member, string? backingMemberReferenceOverride = null) where T : IMember
     {
-        this.writer.WriteLine($"{member.Type!.ToDisplayString(SymbolDisplayFormats.FullyQualifiedTypeName)} new_{member.Name} = this.{member.Name};");
+        string backingMemberReference = backingMemberReferenceOverride ?? $"this.{member.Name}";
+        this.writer.WriteLine($"{member.Type!.ToDisplayString(SymbolDisplayFormats.FullyQualifiedTypeName)} new_{member.Name} = {backingMemberReference};");
     }
 
     private void GenerateRaiseEvent(InterfaceAnalysis interfaceAnalysis, string? propertyName, bool isCallable, bool hasOldVariable)

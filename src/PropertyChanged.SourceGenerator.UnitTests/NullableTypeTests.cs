@@ -24,7 +24,7 @@ public partial class SomeViewModel
 
         this.AssertThat(
             input,
-            It.HasFile("SomeViewModel", RemovePropertiesRewriter.Instance),
+            It.HasFile("SomeViewModel", RemovePropertiesRewriter.Instance, RemoveInpcMembersRewriter.CommentsOnly),
             nullableContextOptions: NullableContextOptions.Enable);
     }
 
@@ -41,7 +41,7 @@ public partial class SomeViewModel
 
         this.AssertThat(
             input,
-            It.HasFile("SomeViewModel", RemovePropertiesRewriter.Instance),
+            It.HasFile("SomeViewModel", RemovePropertiesRewriter.Instance, RemoveInpcMembersRewriter.CommentsOnly),
             nullableContextOptions: NullableContextOptions.Disable);
         ;
     }

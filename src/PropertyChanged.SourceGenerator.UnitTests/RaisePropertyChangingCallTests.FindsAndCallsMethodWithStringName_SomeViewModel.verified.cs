@@ -13,8 +13,4 @@
             }
         }
     }
-    protected virtual void NotifyPropertyChanged(global::System.ComponentModel.PropertyChangedEventArgs eventArgs)
-    {
-        this.PropertyChanged?.Invoke(this, eventArgs);
-    }
 }

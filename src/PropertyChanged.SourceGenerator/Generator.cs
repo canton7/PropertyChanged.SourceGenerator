@@ -127,6 +127,36 @@ public class Generator
             return;
         }
 
+        const string propertyNameParamName = "propertyName";
+        const string eventArgsParamName = "eventArgs";
+        const string oldValueParamName = "oldValue";
+        const string newValueParamName = "newValue";
+
+        if (interfaceAnalysis.RaiseMethodType != RaisePropertyChangedMethodType.Override)
+        {
+            this.writer.WriteLine("/// <summary>");
+            this.writer.WriteLine($"/// Raises the {interfaceAnalysis.EventName} event");
+            this.writer.WriteLine("/// </summary>");
+            switch (interfaceAnalysis.RaiseMethodSignature.NameType)
+            {
+                case RaisePropertyChangedOrChangingNameType.String:
+                    // I don't think it's currently possible to have non-override + string eventName, but in case things change...
+                    this.writer.WriteLine($"/// <param name=\"{propertyNameParamName}\">The name of the property to raise the event for</param>");
+                    break;
+                case RaisePropertyChangedOrChangingNameType.PropertyChangedEventArgs:
+                    this.writer.WriteLine($"/// <param name=\"{eventArgsParamName}\">The EventArgs to use to raise the event</param>");
+                    break;
+            }
+            if (interfaceAnalysis.RaiseMethodSignature.HasOld)
+            {
+                this.writer.WriteLine($"/// <param name=\"{oldValueParamName}\">Current value of the property</param>");
+            }
+            if (interfaceAnalysis.RaiseMethodSignature.HasNew)
+            {
+                this.writer.WriteLine($"/// <param name=\"{newValueParamName}\">New value of the property</param>");
+            }
+        }
+
         this.writer.Write(AccessibilityToString(interfaceAnalysis.RaiseMethodSignature.Accessibility));
         switch (interfaceAnalysis.RaiseMethodType)
         {
@@ -146,24 +176,24 @@ public class Generator
         switch (interfaceAnalysis.RaiseMethodSignature.NameType)
         {
             case RaisePropertyChangedOrChangingNameType.String:
-                this.writer.Write("string propertyName");
-                propertyNameOrEventArgsName = "propertyName";
-                propertyNameAccessor = "propertyName";
+                this.writer.Write($"string {propertyNameParamName}");
+                propertyNameOrEventArgsName = propertyNameParamName;
+                propertyNameAccessor = propertyNameParamName;
                 break;
             case RaisePropertyChangedOrChangingNameType.PropertyChangedEventArgs:
                 this.writer.Write(interfaceAnalysis.EventArgsSymbol.ToDisplayString(SymbolDisplayFormats.FullyQualifiedTypeName));
-                this.writer.Write(" eventArgs");
-                propertyNameOrEventArgsName = "eventArgs";
-                propertyNameAccessor = "eventArgs.PropertyName";
+                this.writer.Write($" {eventArgsParamName}");
+                propertyNameOrEventArgsName = eventArgsParamName;
+                propertyNameAccessor = $"{eventArgsParamName}.PropertyName";
                 break;
         }
         if (interfaceAnalysis.RaiseMethodSignature.HasOld)
         {
-            this.writer.Write(", object oldValue");
+            this.writer.Write($", object {oldValueParamName}");
         }
         if (interfaceAnalysis.RaiseMethodSignature.HasNew)
         {
-            this.writer.Write(", object newValue");
+            this.writer.Write($", object {newValueParamName}");
         }
         this.writer.WriteLine(")");
 
@@ -175,11 +205,11 @@ public class Generator
             this.writer.Write($"this.{onAnyPropertyChangedOrChangingInfo.Name}({propertyNameAccessor}");
             if (onAnyPropertyChangedOrChangingInfo.HasOld)
             {
-                this.writer.Write(interfaceAnalysis.RaiseMethodSignature.HasOld ? ", oldValue" : ", (object)null");
+                this.writer.Write(interfaceAnalysis.RaiseMethodSignature.HasOld ? $", {oldValueParamName}" : ", (object)null");
             }
             if (onAnyPropertyChangedOrChangingInfo.HasNew)
             {
-                this.writer.Write(interfaceAnalysis.RaiseMethodSignature.HasNew ? ", newValue" : ", (object)null");
+                this.writer.Write(interfaceAnalysis.RaiseMethodSignature.HasNew ? $", {newValueParamName}" : ", (object)null");
             }
             this.writer.WriteLine(");");
         }
@@ -190,17 +220,17 @@ public class Generator
             case RaisePropertyChangedMethodType.NonVirtual:
                 // If we're generating our own, we always use PropertyChangedEventArgs
                 Trace.Assert(interfaceAnalysis.RaiseMethodSignature.NameType == RaisePropertyChangedOrChangingNameType.PropertyChangedEventArgs);
-                this.writer.WriteLine($"this.{interfaceAnalysis.EventName}?.Invoke(this, eventArgs);");
+                this.writer.WriteLine($"this.{interfaceAnalysis.EventName}?.Invoke(this, {eventArgsParamName});");
                 break;
             case RaisePropertyChangedMethodType.Override:
                 this.writer.Write($"base.{interfaceAnalysis.RaiseMethodName}({propertyNameOrEventArgsName}");
                 if (interfaceAnalysis.RaiseMethodSignature.HasOld)
                 {
-                    this.writer.Write(", oldValue");
+                    this.writer.Write($", {oldValueParamName}");
                 }
                 if (interfaceAnalysis.RaiseMethodSignature.HasNew)
                 {
-                    this.writer.Write(", newValue");
+                    this.writer.Write($", {newValueParamName}");
                 }
                 this.writer.WriteLine(");");
                 break;

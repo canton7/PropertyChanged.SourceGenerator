@@ -11,12 +11,14 @@ namespace PropertyChanged.SourceGenerator.UnitTests.Framework;
 
 public class RemoveInpcMembersRewriter : CSharpSyntaxRewriter
 {
+    private static readonly Configuration config = new();
     private readonly bool removeChanged;
     private readonly bool removeChanging;
 
     public static RemoveInpcMembersRewriter All { get; } = new(true, true);
     public static RemoveInpcMembersRewriter Changed { get; } = new(true, false);
     public static RemoveInpcMembersRewriter Changing { get; } = new(false, true);
+    public static RemoveInpcMembersRewriter CommentsOnly { get; } = new(false, false);
 
     private RemoveInpcMembersRewriter(bool removeChanged, bool removeChanging)
     {
@@ -26,16 +28,54 @@ public class RemoveInpcMembersRewriter : CSharpSyntaxRewriter
 
     public override SyntaxNode? VisitMethodDeclaration(MethodDeclarationSyntax node)
     {
-        if (this.removeChanged && node.Identifier.ValueText == "OnPropertyChanged")
+        if (config.RaisePropertyChangedMethodNames.Contains(node.Identifier.ValueText))
         {
-            return null;
+            return this.removeChanged ? null : RemoveDocComments(node);
         }
-        if (this.removeChanging && node.Identifier.ValueText == "OnPropertyChanging")
+        if (config.RaisePropertyChangingMethodNames.Contains(node.Identifier.ValueText))
         {
-            return null;
+            return this.removeChanging ? null : RemoveDocComments(node);
         }
 
         return base.VisitMethodDeclaration(node);
+    }
+
+    private static SyntaxNode RemoveDocComments(SyntaxNode node)
+    {
+        // Need to remove the SingleLineDocumentationCommentTrivia, and the WhitespaceTrivia just before it
+
+        var trivia = node.GetLeadingTrivia();
+        return node.WithLeadingTrivia(Filter(trivia));
+
+        static IEnumerable<SyntaxTrivia> Filter(IEnumerable<SyntaxTrivia> input)
+        {
+            SyntaxTrivia? previous = null;
+            foreach (var item in input)
+            {
+                if (item.IsKind(SyntaxKind.SingleLineDocumentationCommentTrivia))
+                {
+                    // Don't yield this, and don't yield previous either if it's whitespace
+                    if (previous != null && !previous.Value.IsKind(SyntaxKind.WhitespaceTrivia))
+                    {
+                        yield return previous.Value;
+                    }
+                    previous = null;
+                }
+                else
+                {
+                    if (previous != null)
+                    {
+                        yield return previous.Value;
+                    }
+                    previous = item;
+                }
+            }
+
+            if (previous != null)
+            {
+                yield return previous.Value;
+            }
+        }
     }
 
     public override SyntaxNode? VisitEventFieldDeclaration(EventFieldDeclarationSyntax node) 

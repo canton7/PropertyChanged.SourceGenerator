@@ -44,4 +44,32 @@ public partial class SomeViewModel
 
         this.AssertThat(input, It.HasFile("SomeViewModel", StandardRewriters));
     }
+
+    [Test]
+    public void GeneratesOnPropertyChangedOrChangingDocNoOldAndNew()
+    {
+        string input = @"
+using System.ComponentModel;
+public partial class SomeViewModel : INotifyPropertyChanging
+{
+    [Notify] private int _foo;
+}";
+
+        this.AssertThat(input, It.HasFile("SomeViewModel", RemovePropertiesRewriter.Instance));
+    }
+
+    [Test]
+    public void GeneratesOnPropertyChangedOrChangingDocOldAndNew()
+    {
+        string input = @"
+using System.ComponentModel;
+public partial class SomeViewModel : INotifyPropertyChanging
+{
+    [Notify] private int _foo;
+    private void OnAnyPropertyChanged(string name, object oldValue, object newValue) { }
+    private void OnAnyPropertyChanging(string name, object oldValue) { }
+}";
+
+        this.AssertThat(input, It.HasFile("SomeViewModel", RemovePropertiesRewriter.Instance));
+    }
 }

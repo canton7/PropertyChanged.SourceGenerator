@@ -3,6 +3,8 @@ using System;
 
 namespace Sandbox;
 
+using System.ComponentModel;
+
 public class Program
 {
     public static void Main(string[] args)
@@ -13,7 +15,8 @@ public class Program
     }
 }
 
-public partial class SomeViewModel
+public partial class SomeViewModel : INotifyPropertyChanging
 {
     [Notify] private int _foo2;
+
 }

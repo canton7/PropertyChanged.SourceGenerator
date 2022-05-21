@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
 using NUnit.Framework;
 using PropertyChanged.SourceGenerator.UnitTests.Framework;
 
@@ -11,6 +13,11 @@ namespace PropertyChanged.SourceGenerator.UnitTests;
 [TestFixture]
 public class OnAnyPropertyChangedTests : TestsBase
 {
+    private static readonly CSharpSyntaxVisitor<SyntaxNode?>[] rewriters = new CSharpSyntaxVisitor<SyntaxNode?>[]
+    {
+        RemovePropertiesRewriter.Instance, RemoveInpcMembersRewriter.CommentsOnly
+    };
+
     [Test]
     public void GeneratesParameterlessWhenAlsoGeneratingRaisePropertyChanged()
     {
@@ -21,7 +28,7 @@ public partial class SomeViewModel
     private void OnAnyPropertyChanged(string propertyName) { }
 }";
 
-        this.AssertThat(input, It.HasFile("SomeViewModel", RemovePropertiesRewriter.Instance));
+        this.AssertThat(input, It.HasFile("SomeViewModel", rewriters));
     }
 
     [Test]
@@ -34,7 +41,7 @@ public partial class SomeViewModel
     private void OnAnyPropertyChanged(string propertyName, object oldValue, object newValue) { }
 }";
 
-        this.AssertThat(input, It.HasFile("SomeViewModel", RemovePropertiesRewriter.Instance));
+        this.AssertThat(input, It.HasFile("SomeViewModel", rewriters));
     }
 
     [Test]
@@ -53,7 +60,7 @@ public partial class Derived : Base
     private void OnAnyPropertyChanged(string name) { }
 }";
 
-        this.AssertThat(input, It.HasFile("Derived", RemovePropertiesRewriter.Instance));
+        this.AssertThat(input, It.HasFile("Derived", rewriters));
     }
 
     [Test]
@@ -72,7 +79,7 @@ public partial class Derived : Base
     private void OnAnyPropertyChanged(string name) { }
 }";
 
-        this.AssertThat(input, It.HasFile("Derived", RemovePropertiesRewriter.Instance));
+        this.AssertThat(input, It.HasFile("Derived", rewriters));
     }
 
     [Test]
@@ -91,7 +98,7 @@ public partial class Derived : Base
     private void OnAnyPropertyChanged(string name, object o, object n) { }
 }";
 
-        this.AssertThat(input, It.HasFile("Derived", RemovePropertiesRewriter.Instance).HasDiagnostics(
+        this.AssertThat(input, It.HasFile("Derived", rewriters).HasDiagnostics(
             // (11,18): Warning INPC025: The OnAnyPropertyChanged method has 'oldValue' and 'newValue' parameters, but the 'OnPropertyChanged' method defined in a base class does not. Please add these parameters to 'OnPropertyChanged'
             // OnAnyPropertyChanged
             Diagnostic("INPC025", @"OnAnyPropertyChanged").WithLocation(11, 18)
@@ -114,7 +121,7 @@ public partial class Derived : Base
     private void OnAnyPropertyChanged(string name, object o, object n) { }
 }";
 
-        this.AssertThat(input, It.HasFile("Derived", RemovePropertiesRewriter.Instance));
+        this.AssertThat(input, It.HasFile("Derived", rewriters));
     }
 
     [Test]
@@ -132,7 +139,7 @@ public partial class Derived : Base
     protected new void OnAnyPropertyChanged(string propertyName) { }
 }";
 
-        this.AssertThat(input, It.HasFile("Derived", RemovePropertiesRewriter.Instance));
+        this.AssertThat(input, It.HasFile("Derived", rewriters));
     }
 
     [Test]
@@ -150,8 +157,8 @@ public partial class Derived : Base
     protected override void OnAnyPropertyChanged(string propertyName) { }
 }";
 
-        this.AssertThat(input, It.HasFile("Base", RemovePropertiesRewriter.Instance)
-            .HasFile("Derived", RemovePropertiesRewriter.Instance));
+        this.AssertThat(input, It.HasFile("Base", rewriters)
+            .HasFile("Derived", rewriters));
     }
 
     [Test]

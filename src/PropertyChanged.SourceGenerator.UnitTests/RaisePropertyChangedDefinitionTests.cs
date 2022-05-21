@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
 using NUnit.Framework;
 using PropertyChanged.SourceGenerator.UnitTests.Framework;
 
@@ -11,6 +13,11 @@ namespace PropertyChanged.SourceGenerator.UnitTests;
 [TestFixture]
 public class RaisePropertyChangedDefinitionTests : TestsBase
 {
+    private static readonly CSharpSyntaxVisitor<SyntaxNode?>[] rewriters = new CSharpSyntaxVisitor<SyntaxNode?>[]
+    {
+        RemovePropertiesRewriter.Instance, RemoveInpcMembersRewriter.CommentsOnly
+    };
+
     [Test]
     public void GeneratesEventAndRaisePropertyChangedIfNotDefined()
     {
@@ -22,7 +29,7 @@ public partial class SomeViewModel : INotifyPropertyChanged
     private string _foo;
 }";
 
-        this.AssertThat(input, It.HasFile("SomeViewModel", RemovePropertiesRewriter.Instance));
+        this.AssertThat(input, It.HasFile("SomeViewModel", rewriters));
     }
 
     [Test]
@@ -37,7 +44,7 @@ public partial class SomeViewModel : INotifyPropertyChanged
     private string _foo;
 }";
 
-        this.AssertThat(input, It.HasFile("SomeViewModel", RemovePropertiesRewriter.Instance));
+        this.AssertThat(input, It.HasFile("SomeViewModel", rewriters));
     }
 
     [Test]
@@ -121,7 +128,7 @@ public partial class Derived
     [Notify, DependsOn(""Foo"")] private string _bar;
 }";
 
-        this.AssertThat(input, It.HasFile("Derived", RemovePropertiesRewriter.Instance));
+        this.AssertThat(input, It.HasFile("Derived", rewriters));
     }
 
     [Test]
@@ -139,7 +146,7 @@ public partial class Derived : Base
     [Notify, DependsOn(""Foo"")] private string _bar;
 }";
 
-        this.AssertThat(input, It.HasFile("Derived", RemovePropertiesRewriter.Instance));
+        this.AssertThat(input, It.HasFile("Derived", rewriters));
     }
 
     [Test]
@@ -157,7 +164,7 @@ public partial class Derived : Base
     [Notify, DependsOn(""Foo"")] private string _bar;
 }";
 
-        this.AssertThat(input, It.HasFile("Derived", RemovePropertiesRewriter.Instance));
+        this.AssertThat(input, It.HasFile("Derived", rewriters));
     }
 
     [Test]
@@ -175,7 +182,7 @@ public partial class Derived : Base
     [Notify, DependsOn(""Foo"")] private string _bar;
 }";
 
-        this.AssertThat(input, It.HasFile("Derived", RemovePropertiesRewriter.Instance));
+        this.AssertThat(input, It.HasFile("Derived", rewriters));
     }
 
     [Test]
@@ -193,7 +200,7 @@ public partial class Derived : Base
     [Notify, DependsOn(""Foo"")] private string _bar;
 }";
 
-        this.AssertThat(input, It.HasFile("Derived", RemovePropertiesRewriter.Instance));
+        this.AssertThat(input, It.HasFile("Derived", rewriters));
     }
 
     [Test]
@@ -212,7 +219,7 @@ public partial class Derived : Base
     private void OnBarChanged() { }
 }";
 
-        this.AssertThat(input, It.HasFile("Derived", RemovePropertiesRewriter.Instance));
+        this.AssertThat(input, It.HasFile("Derived", rewriters));
     }
 
     [Test]
@@ -231,7 +238,7 @@ public partial class Derived : Base
     private void OnBarChanged(string oldValue, string newValue) { }
 }";
 
-        this.AssertThat(input, It.HasFile("Derived", RemovePropertiesRewriter.Instance));
+        this.AssertThat(input, It.HasFile("Derived", rewriters));
     }
 
     [TestCase("public")]
@@ -253,7 +260,7 @@ public partial class Derived : Base
     [Notify, DependsOn(""Foo"")] private string _bar;
 }}";
 
-        this.AssertThat(input, It.HasFile("Derived", RemovePropertiesRewriter.Instance));
+        this.AssertThat(input, It.HasFile("Derived", rewriters));
     }
 
     [Test]
@@ -265,6 +272,6 @@ public sealed partial class SomeViewModel
     [Notify] string _foo;
 }";
 
-        this.AssertThat(input, It.HasFile("SomeViewModel", RemovePropertiesRewriter.Instance));
+        this.AssertThat(input, It.HasFile("SomeViewModel", rewriters));
     }
 }

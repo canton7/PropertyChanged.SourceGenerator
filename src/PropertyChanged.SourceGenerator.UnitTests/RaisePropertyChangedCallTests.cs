@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
 using NUnit.Framework;
 using PropertyChanged.SourceGenerator.UnitTests.Framework;
 
@@ -11,6 +13,11 @@ namespace PropertyChanged.SourceGenerator.UnitTests;
 [TestFixture]
 public class RaisePropertyChangedCallTests : TestsBase
 {
+    private static readonly CSharpSyntaxVisitor<SyntaxNode?>[] rewriters = new CSharpSyntaxVisitor<SyntaxNode?>[]
+    {
+        RemovePropertiesRewriter.Instance, RemoveInpcMembersRewriter.CommentsOnly
+    };
+
     [Test]
     public void GeneratesInpcInterfaceIfNotSpecified()
     {
@@ -21,7 +28,7 @@ public partial class SomeViewModel
     private string _foo;
 }";
 
-        this.AssertThat(input, It.HasFile("SomeViewModel", RemovePropertiesRewriter.Instance));
+        this.AssertThat(input, It.HasFile("SomeViewModel", rewriters));
     }
 
     [Test]
@@ -35,7 +42,7 @@ public partial class SomeViewModel : INotifyPropertyChanged
     private string _foo;
 }";
 
-        this.AssertThat(input, It.HasFile("SomeViewModel", RemovePropertiesRewriter.Instance));
+        this.AssertThat(input, It.HasFile("SomeViewModel", rewriters));
     }
 
     [Test]
@@ -191,7 +198,7 @@ public partial class SomeViewModel : INotifyPropertyChanging
     private int _foo;
 }";
 
-        this.AssertThat(input, It.HasFile("SomeViewModel", RemovePropertiesRewriter.Instance));
+        this.AssertThat(input, It.HasFile("SomeViewModel", rewriters));
     }
 
     [Test]
@@ -234,6 +241,6 @@ public partial class B : A<string>
     private string _bar;
 }";
         // It doesn't generate a new RaisePropertyChanged method
-        this.AssertThat(input, It.HasFile("B", RemovePropertiesRewriter.Instance));
+        this.AssertThat(input, It.HasFile("B", rewriters));
     }
 }

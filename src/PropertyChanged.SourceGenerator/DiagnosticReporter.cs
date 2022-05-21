@@ -69,6 +69,15 @@ public class DiagnosticReporter
         this.AddDiagnostic(couldNotFindCallableRaisePropertyChangedOverload, typeSymbol.Locations, name);
     }
 
+    private static readonly DiagnosticDescriptor couldNotFindCallableRaisePropertyChangingOverload = CreateDescriptor(
+        "INPC029",
+        "Could not find callable method to raise PropertyChanging event",
+        "Found one or more methods called '{0}' to raise the PropertyChanging event, but they had an unrecognised signatures or were inaccessible. No PropertyChanging events will be raised from this type");
+    public void ReportCouldNotFindCallableRaisePropertyChangingOverload(INamedTypeSymbol typeSymbol, string name)
+    {
+        this.AddDiagnostic(couldNotFindCallableRaisePropertyChangingOverload, typeSymbol.Locations, name);
+    }
+
     private static readonly DiagnosticDescriptor couldNotFindRaisePropertyChangedMethod = CreateDescriptor(
         "INPC007",
         "Could not find method to raise PropertyChanged event",
@@ -76,6 +85,15 @@ public class DiagnosticReporter
     public void ReportCouldNotFindRaisePropertyChangedMethod(INamedTypeSymbol typeSymbol)
     {
         this.AddDiagnostic(couldNotFindRaisePropertyChangedMethod, typeSymbol.Locations);
+    }
+
+    private static readonly DiagnosticDescriptor couldNotFindRaisePropertyChangingMethod = CreateDescriptor(
+        "INPC0028",
+        "Could not find method to raise PropertyChanging event",
+        "Could not find any suitable methods to raise the PropertyChanging event defined on a base class");
+    public void ReportCouldNotFindRaisePropertyChangingMethod(INamedTypeSymbol typeSymbol)
+    {
+        this.AddDiagnostic(couldNotFindRaisePropertyChangingMethod, typeSymbol.Locations);
     }
 
     private static readonly DiagnosticDescriptor alsoNotifyAttributeNotValidOnMember = CreateDescriptor(
@@ -121,6 +139,15 @@ public class DiagnosticReporter
     public void ReportInvalidOnPropertyNameChangedSignature(string name, string onChangedMethodName, IMethodSymbol method)
     {
         this.AddDiagnostic(invalidOnPropertyNameChangedSignature, method.Locations, onChangedMethodName, name);
+    }
+
+    private static readonly DiagnosticDescriptor invalidOnPropertyNameChangingSignature = CreateDescriptor(
+        "INPC030",
+        "On{PropertyName}Changing method signature not recognised",
+        "Found one or more On{{PropertyName}}Changing methods called '{0}' for property '{1}', but none had the correct signature, or were inaccessible. Skipping");
+    public void ReportInvalidOnPropertyNameChangingSignature(string name, string onChangedMethodName, IMethodSymbol method)
+    {
+        this.AddDiagnostic(invalidOnPropertyNameChangingSignature, method.Locations, onChangedMethodName, name);
     }
 
     private static readonly DiagnosticDescriptor multipleIsChangedProperties = CreateDescriptor(
@@ -191,28 +218,55 @@ public class DiagnosticReporter
     private static readonly DiagnosticDescriptor userDefinedRaisePropertyChangedMethodOverride = CreateDescriptor(
         "INPC021",
         "Do not define your own overrides of the method to raise PropertyChanged events",
-        "Method '{0}' must not be overridden. Functionality such as dependencies on base properties will not work. Define a method called '" + Analyser.OnAnyPropertyChangedMethodName + "' instead");
+        "Method '{0}' must not be overridden. Functionality such as dependencies on base properties will not work. Define a method called '" + PropertyChangedInterfaceAnalyser.OnAnyPropertyChangedMethodName + "' instead");
     public void ReportUserDefinedRaisePropertyChangedMethodOverride(IMethodSymbol method)
     {
         this.AddDiagnostic(userDefinedRaisePropertyChangedMethodOverride, method.Locations, method.Name);
     }
 
-    private static readonly DiagnosticDescriptor raisePropertyMethodIsNonVirtual = CreateDescriptor(
+    private static readonly DiagnosticDescriptor userDefinedRaisePropertyChangingMethodOverride = CreateDescriptor(
+        "INPC032",
+        "Do not define your own overrides of the method to raise PropertyChanging events",
+        "Method '{0}' must not be overridden. Functionality such as dependencies on base properties will not work. Define a method called '" + PropertyChangedInterfaceAnalyser.OnAnyPropertyChangedMethodName + "' instead");
+    public void ReportUserDefinedRaisePropertyChangingMethodOverride(IMethodSymbol method)
+    {
+        this.AddDiagnostic(userDefinedRaisePropertyChangingMethodOverride, method.Locations, method.Name);
+    }
+
+    private static readonly DiagnosticDescriptor raisePropertyChangedMethodIsNonVirtual = CreateDescriptor(
         "INPC022",
         "Method to raise PropertyChanged events must be virtual",
         "Method '{0}' is non-virtual. Functionality such as dependencies on base properties will not work. Please make this method virtual");
-    public void ReportRaisePropertyMethodIsNonVirtual(IMethodSymbol method)
+    public void ReportRaisePropertyChangedMethodIsNonVirtual(IMethodSymbol method)
     {
-        this.AddDiagnostic(raisePropertyMethodIsNonVirtual, method.Locations, method.Name);
+        this.AddDiagnostic(raisePropertyChangedMethodIsNonVirtual, method.Locations, method.Name);
     }
 
-    private static readonly DiagnosticDescriptor dependsOnSpecifiedButRaisepropertyChangedMethodCannotBeOverridden = CreateDescriptor(
-        "INPC023",
-        "DependsOn specified, but this will have no effect because the method to raise PropertyChanged events cannot be defined or overridden",
-        "[DependsOn(\"{0}\")] specified, but this will not be raised because the method to raise PropertyChanged events '{1}' cannot defined or overridden by the source generator");
-    public void ReportDependsOnSpecifiedButRaisepropertyChangedMethodCannotBeOverridden(AttributeData dependsOnAttribute, ISymbol member, string dependsOn, string raisePropertyChangedMethodName)
+    private static readonly DiagnosticDescriptor raisePropertyChangingMethodIsNonVirtual = CreateDescriptor(
+        "INPC031",
+        "Method to raise PropertyChanging events must be virtual",
+        "Method '{0}' is non-virtual. Functionality such as dependencies on base properties will not work. Please make this method virtual");
+    public void ReportRaisePropertyChangingMethodIsNonVirtual(IMethodSymbol method)
     {
-        this.AddDiagnostic(dependsOnSpecifiedButRaisepropertyChangedMethodCannotBeOverridden, AttributeLocations(dependsOnAttribute, member), dependsOn, raisePropertyChangedMethodName);
+        this.AddDiagnostic(raisePropertyChangingMethodIsNonVirtual, method.Locations, method.Name);
+    }
+
+    private static readonly DiagnosticDescriptor dependsOnSpecifiedButRaisePropertyChangedMethodCannotBeOverridden = CreateDescriptor(
+        "INPC023",
+        "DependsOn specified, but PropertyChanged events will not be raised because the method to raise PropertyChanged events cannot be defined or overridden",
+        "[DependsOn(\"{0}\")] specified, but PropertyChanged events will not be raised because the method to raise PropertyChanged events '{1}' cannot defined or overridden by the source generator");
+    public void ReportDependsOnSpecifiedButRaisePropertyChangedMethodCannotBeOverridden(AttributeData dependsOnAttribute, ISymbol member, string dependsOn, string raisePropertyChangedMethodName)
+    {
+        this.AddDiagnostic(dependsOnSpecifiedButRaisePropertyChangedMethodCannotBeOverridden, AttributeLocations(dependsOnAttribute, member), dependsOn, raisePropertyChangedMethodName);
+    }
+
+    private static readonly DiagnosticDescriptor dependsOnSpecifiedButRaisePropertyChangingMethodCannotBeOverridden = CreateDescriptor(
+       "INPC035",
+       "DependsOn specified, but PropertyChanging events will not be raised because the method to raise PropertyChanging events cannot be defined or overridden",
+       "[DependsOn(\"{0}\")] specified, but PropertyChanging events will not be raised because the method to raise PropertyChanging events '{1}' cannot defined or overridden by the source generator");
+    public void ReportDependsOnSpecifiedButRaisePropertyChangingMethodCannotBeOverridden(AttributeData dependsOnAttribute, ISymbol member, string dependsOn, string raisePropertyChangedMethodName)
+    {
+        this.AddDiagnostic(dependsOnSpecifiedButRaisePropertyChangingMethodCannotBeOverridden, AttributeLocations(dependsOnAttribute, member), dependsOn, raisePropertyChangedMethodName);
     }
 
     private static readonly DiagnosticDescriptor invalidOnAnyPropertyChangedSignature = CreateDescriptor(
@@ -233,6 +287,15 @@ public class DiagnosticReporter
         this.AddDiagnostic(cannotPopulateOnAnyPropertyChangedOldAndNew, method.Locations, raisePropertyChangedMethodName);
     }
 
+    private static readonly DiagnosticDescriptor cannotPopulateOnAnyPropertyChangingOldAndNew = CreateDescriptor(
+        "INPC034",
+        "OnAnyPropertyChanging method has an 'oldValue  parameter, but the method to raise PropertyChanging events does not",
+        "The OnAnyPropertyChanging method has an 'oldValue' parameter, but the '{0}' method defined in a base class does not. Please add this parameter to '{0}'");
+    public void ReportCannotPopulateOnAnyPropertyChangingOldAndNew(IMethodSymbol method, string raisePropertyChangedMethodName)
+    {
+        this.AddDiagnostic(cannotPopulateOnAnyPropertyChangingOldAndNew, method.Locations, raisePropertyChangedMethodName);
+    }
+
     private static readonly DiagnosticDescriptor cannotCallOnAnyPropertyChangedBecauseRaisePropertyChangedIsNonVirtual = CreateDescriptor(
         "INPC026",
         "OnAnyPropertyChanged method cannot be called, because the method to raise PropertyChanged events is non-virtual",
@@ -240,6 +303,15 @@ public class DiagnosticReporter
     public void ReportCannotCallOnAnyPropertyChangedBecauseRaisePropertyChangedIsNonVirtual(IMethodSymbol method, string raisePropertyChangedMethodName)
     {
         this.AddDiagnostic(cannotCallOnAnyPropertyChangedBecauseRaisePropertyChangedIsNonVirtual, method.Locations, raisePropertyChangedMethodName);
+    }
+
+    private static readonly DiagnosticDescriptor cannotCallOnAnyPropertyChangingBecauseRaisePropertyChangingIsNonVirtual = CreateDescriptor(
+        "INPC033",
+        "OnAnyPropertyChanging method cannot be called, because the method to raise PropertyChanging events is non-virtual",
+        "OnAnyPropertyChanging method will not be called because the method to raise PropertyChanging events '{0}' cannot defined or overridden by the source generator");
+    public void ReportCannotCallOnAnyPropertyChangingBecauseRaisePropertyChangingIsNonVirtual(IMethodSymbol method, string raisePropertyChangedMethodName)
+    {
+        this.AddDiagnostic(cannotCallOnAnyPropertyChangingBecauseRaisePropertyChangingIsNonVirtual, method.Locations, raisePropertyChangedMethodName);
     }
 
     private static readonly DiagnosticDescriptor unhandledException = CreateDescriptor(
@@ -259,6 +331,8 @@ public class DiagnosticReporter
     {
         this.AddDiagnostic(unhandledExceptionOnParent, typeSymbol.Locations, typeSymbol.Name);
     }
+
+    // INPC numbers are defined out of order!! The next one is not just the one above + 1
 
     private static DiagnosticDescriptor CreateDescriptor(string code, string title, string messageFormat, DiagnosticSeverity severity = DiagnosticSeverity.Warning)
     {

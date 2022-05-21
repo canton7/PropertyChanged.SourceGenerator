@@ -22,25 +22,8 @@ public partial class SomeViewModel
     [Notify]
     private string _foo;
 }";
-        string expected = @"
-partial class SomeViewModel : global::System.ComponentModel.INotifyPropertyChanged
-{
-    public string Foo
-    {
-        get => this._foo;
-        set
-        {
-            if (!global::System.Collections.Generic.EqualityComparer<string>.Default.Equals(value, this._foo))
-            {
-                this._foo = value;
-                this.OnPropertyChanged(global::PropertyChanged.SourceGenerator.Internal.PropertyChangedEventArgsCache.Foo);
-                this.IsChanged = true;
-            }
-        }
-    }
-}";
 
-        this.AssertThat(input, It.HasFile("SomeViewModel", expected, RemoveInpcMembersRewriter.Instance));
+        this.AssertThat(input, It.HasFile("SomeViewModel", RemoveInpcMembersRewriter.All));
     }
 
     [Test]
@@ -54,37 +37,8 @@ public partial class SomeViewModel
     [Notify]
     private string _foo;
 }";
-        string expected = @"
-partial class SomeViewModel : global::System.ComponentModel.INotifyPropertyChanged
-{
-    public bool IsChanged
-    {
-        get => this._isChanged;
-        set
-        {
-            if (!global::System.Collections.Generic.EqualityComparer<bool>.Default.Equals(value, this._isChanged))
-            {
-                this._isChanged = value;
-                this.OnPropertyChanged(global::PropertyChanged.SourceGenerator.Internal.PropertyChangedEventArgsCache.IsChanged);
-            }
-        }
-    }
-    public string Foo
-    {
-        get => this._foo;
-        set
-        {
-            if (!global::System.Collections.Generic.EqualityComparer<string>.Default.Equals(value, this._foo))
-            {
-                this._foo = value;
-                this.OnPropertyChanged(global::PropertyChanged.SourceGenerator.Internal.PropertyChangedEventArgsCache.Foo);
-                this.IsChanged = true;
-            }
-        }
-    }
-}";
 
-        this.AssertThat(input, It.HasFile("SomeViewModel", expected, RemoveInpcMembersRewriter.Instance));
+        this.AssertThat(input, It.HasFile("SomeViewModel", RemoveInpcMembersRewriter.All));
     }
 
     [Test]
@@ -99,25 +53,8 @@ public partial class Derived : Base
 {
     [Notify] private string _foo;
 }";
-        string expected = @"
-partial class Derived : global::System.ComponentModel.INotifyPropertyChanged
-{
-    public string Foo
-    {
-        get => this._foo;
-        set
-        {
-            if (!global::System.Collections.Generic.EqualityComparer<string>.Default.Equals(value, this._foo))
-            {
-                this._foo = value;
-                this.OnPropertyChanged(global::PropertyChanged.SourceGenerator.Internal.PropertyChangedEventArgsCache.Foo);
-                this.IsChanged = true;
-            }
-        }
-    }
-}";
 
-        this.AssertThat(input, It.HasFile("Derived", expected, RemoveInpcMembersRewriter.Instance));
+        this.AssertThat(input, It.HasFile("Derived", RemoveInpcMembersRewriter.All));
     }
 
     [Test]
@@ -202,24 +139,8 @@ public partial class Derived : Base
 {
     [Notify] private int? _foo;
 }";
-        string expected = @"
-partial class Derived : global::System.ComponentModel.INotifyPropertyChanged
-{
-    public int? Foo
-    {
-        get => this._foo;
-        set
-        {
-            if (!global::System.Collections.Generic.EqualityComparer<int?>.Default.Equals(value, this._foo))
-            {
-                this._foo = value;
-                this.OnPropertyChanged(global::PropertyChanged.SourceGenerator.Internal.PropertyChangedEventArgsCache.Foo);
-            }
-        }
-    }
-}";
 
-        this.AssertThat(input, It.HasFile("Derived", expected, RemoveInpcMembersRewriter.Instance));
+        this.AssertThat(input, It.HasFile("Derived", RemoveInpcMembersRewriter.All));
     }
 
     [Test]
@@ -234,23 +155,7 @@ public partial class Derived : Base
 {
     [Notify] private int? _foo;
 }";
-        string expected = @"
-partial class Derived
-{
-    public int? Foo
-    {
-        get => this._foo;
-        set
-        {
-            if (!global::System.Collections.Generic.EqualityComparer<int?>.Default.Equals(value, this._foo))
-            {
-                this._foo = value;
-                this.OnPropertyChanged(global::PropertyChanged.SourceGenerator.Internal.PropertyChangedEventArgsCache.Foo);
-            }
-        }
-    }
-}";
 
-        this.AssertThat(input, It.HasFile("Derived", expected, RemoveInpcMembersRewriter.Instance));
+        this.AssertThat(input, It.HasFile("Derived", RemoveInpcMembersRewriter.All));
     }
 }

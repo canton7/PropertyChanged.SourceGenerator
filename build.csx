@@ -38,4 +38,15 @@ CreateTask("coverage").Run(() =>
     Command.Run("dotnet", $"reportgenerator -reports:{testsDir}/coverage.xml -targetdir:coverage -assemblyfilters:+PropertyChanged.SourceGenerator");
 });
 
+CreateTask("accept-tests").Run(() =>
+{
+    var files = Directory.GetFiles(testsDir, "*.received.cs", SearchOption.AllDirectories);
+    foreach (var file in files)
+    {
+        var renamed = System.Text.RegularExpressions.Regex.Replace(file, @"\.received\.cs$", ".verified.cs");
+        Console.WriteLine($"{file} -> {renamed}");
+        File.Move(file, renamed, true);
+    }
+});
+
 return InvokeTask(Args);

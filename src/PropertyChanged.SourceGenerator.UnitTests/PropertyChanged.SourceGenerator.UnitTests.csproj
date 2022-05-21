@@ -9,16 +9,25 @@
 
   <ItemGroup>
     <None Remove="coverage.xml" />
+    <Compile Remove="**/*.received.cs" />
+    <Compile Remove="**/*.received.cs" />
+    <Compile Remove="**/*.verified.cs" />
+    <None Include="**/*.received.cs" />
+    <None Include="**/*.verified.cs" />
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="AltCover" Version="8.2.821" />
-    <PackageReference Include="Basic.Reference.Assemblies" Version="1.1.2" />
-    <PackageReference Include="Microsoft.CodeAnalysis.Analyzers" Version="3.3.2" />
-    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="3.9.0" />
-    <PackageReference Include="NUnit" Version="3.12.0" />
-    <PackageReference Include="NUnit3TestAdapter" Version="3.16.1" />
-    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="16.5.0" />
+    <PackageReference Include="AltCover" Version="8.2.837" />
+    <PackageReference Include="Basic.Reference.Assemblies" Version="1.2.4" />
+    <PackageReference Include="Microsoft.CodeAnalysis.Analyzers" Version="3.3.3">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.1.0" />
+    <PackageReference Include="NUnit" Version="3.13.3" />
+    <PackageReference Include="NUnit3TestAdapter" Version="4.2.1" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.1.0" />
+    <PackageReference Include="Verify.NUnit" Version="16.5.4" />
   </ItemGroup>
 
   <ItemGroup>

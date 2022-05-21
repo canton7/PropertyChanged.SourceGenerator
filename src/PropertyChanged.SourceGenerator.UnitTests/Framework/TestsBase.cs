@@ -15,11 +15,22 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using VerifyNUnit;
+using VerifyTests;
 
 namespace PropertyChanged.SourceGenerator.UnitTests.Framework;
 
 public abstract class TestsBase
 {
+    private readonly VerifySettings verifySettings;
+
+    public TestsBase()
+    {
+        this.verifySettings = new VerifySettings();
+        this.verifySettings.UseExtension("cs");
+        this.verifySettings.UseDirectory("../");
+    }
+
     private Compilation CreateCompilation(string input, NullableContextOptions nullableContextOptions, bool addAttributes = false)
     {
         input = @"using PropertyChanged.SourceGenerator;
@@ -70,7 +81,7 @@ public abstract class TestsBase
 
     protected static Expectation It { get; } = new Expectation();
     protected static ImmutableList<CSharpSyntaxVisitor<SyntaxNode?>> StandardRewriters { get; } = new CSharpSyntaxVisitor<SyntaxNode?>[] {
-        RemovePropertiesRewriter.Instance, RemoveInpcMembersRewriter.Instance
+        RemovePropertiesRewriter.Instance, RemoveInpcMembersRewriter.All
     }.ToImmutableList();
 
     protected void AssertThat(
@@ -87,7 +98,7 @@ public abstract class TestsBase
 
             // 0: Attributes
             // 1: Generated file
-            // 2: PropertyChangedEventArgsCache
+            // 2: EventArgsCache
             //Assert.AreEqual(3, runResult.GeneratedTrees.Length);
             //Assert.IsEmpty(runResult.Diagnostics);
 
@@ -108,7 +119,23 @@ public abstract class TestsBase
 
                 TestContext.WriteLine(actual.Replace("\"", "\"\""));
 
-                Assert.AreEqual(expectedFile.Source.Trim().Replace("\r\n", "\n"), actual);
+                if (expectedFile.Source != null)
+                {
+                    Assert.AreEqual(expectedFile.Source.Trim().Replace("\r\n", "\n"), actual);
+                }
+                else
+                {
+                    string testName = TestContext.CurrentContext.Test.Name;
+                    // If it's parameterised, strip off the parameters
+                    if (testName.IndexOf('(') is >= 0 and int index)
+                    {
+                        testName = testName.Substring(0, index);
+                    }
+
+                    Verifier.Verify(actual, this.verifySettings)
+                        .UseMethodName($"{testName}_{expectedFile.Name}")
+                        .GetAwaiter().GetResult();
+                }
             }
 
             foreach (string expectedMissingFile in expectation.ExpectedMissingFiles)
@@ -148,7 +175,7 @@ public abstract class TestsBase
     protected void AssertNotifiesFromBase(string input, string type, string memberName, string propertyName)
     {
         var analysis = this.Analyse(input, type);
-        Assert.That(analysis.RaisePropertyChangedMethod.BaseDependsOn
+        Assert.That(analysis.BaseDependsOn
             .Where(x => x.baseProperty == memberName).Select(x => x.notifyProperty.Name), Has.Member(propertyName));
     }
 
@@ -160,7 +187,7 @@ public abstract class TestsBase
         {
             Assert.IsEmpty(member!.AlsoNotify);
         }
-        Assert.IsEmpty(analysis.RaisePropertyChangedMethod.BaseDependsOn.Where(x => x.notifyProperty.Name == memberName));
+        Assert.IsEmpty(analysis.BaseDependsOn.Where(x => x.notifyProperty.Name == memberName));
     }
 }
 
@@ -208,6 +235,12 @@ public class Expectation
             this.AllowedCompilationDiagnostics);
     }
 
+    public Expectation HasFile(string name, params CSharpSyntaxVisitor<SyntaxNode?>[] rewriters) =>
+        this.HasFile(name, rewriters.AsEnumerable());
+
+    public Expectation HasFile(string name, IEnumerable<CSharpSyntaxVisitor<SyntaxNode?>> rewriters) =>
+        this.HasFile(name, null!, rewriters);
+
     public Expectation HasDiagnostics(params DiagnosticResult[] expectediagnostics)
     {
         return new Expectation(
@@ -239,10 +272,10 @@ public class Expectation
 public struct FileExpectation
 {
     public string Name { get; }
-    public string Source { get; }
+    public string? Source { get; }
     public ImmutableList<CSharpSyntaxVisitor<SyntaxNode?>> Rewriters { get; }
 
-    public FileExpectation(string name, string source, ImmutableList<CSharpSyntaxVisitor<SyntaxNode?>> rewriters)
+    public FileExpectation(string name, string? source, ImmutableList<CSharpSyntaxVisitor<SyntaxNode?>> rewriters)
     {
         this.Name = name;
         this.Source = source;

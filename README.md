@@ -3,7 +3,7 @@
 
 [![NuGet](https://img.shields.io/nuget/v/PropertyChanged.SourceGenerator.svg)](https://www.nuget.org/packages/PropertyChanged.SourceGenerator/) [![Build status](https://ci.appveyor.com/api/projects/status/r989lw0mclb6jmja?svg=true)](https://ci.appveyor.com/project/canton7/propertychanged-sourcegenerator)
 
-Implementing `INotifyPropertyChanged` is annoying. PropertyChanged.SourceGenerator hooks into your compilation process to generate the boilerplate for you, automatically.
+Implementing `INotifyPropertyChanged` / `INotifyPropertyChanging` is annoying. PropertyChanged.SourceGenerator hooks into your compilation process to generate the boilerplate for you, automatically.
 
 PropertyChanged.SourceGenerator works well if you're using an MVVM framework or going without, and supports various time-saving features such as:
 
@@ -26,12 +26,12 @@ PropertyChanged.SourceGenerator works well if you're using an MVVM framework or 
    1. [Manual Dependencies with `[DependsOn]`](#manual-dependencies-with-dependson)
    1. [Manual Dependencies with `[AlsoNotify]`](#manual-dependencies-with-alsonotify)
 1. [Property Changed Hooks](#property-changed-hooks)
-   1. [Type Hooks with `OnPropertyChanged`](#type-hooks-with-onpropertychanged)
-   1. [Property Hooks with `On{PropertyName}Changed`](#property-hooks-with-onpropertynamechanged)
+   1. [Type Hooks with `OnPropertyChanged` / `OnPropertyChanging`](#type-hooks-with-onanypropertychanged--onanypropertychanging)
+   1. [Property Hooks with `On{PropertyName}Changed` / `On{PropertyName}Changing`](#property-hooks-with-onpropertynamechanged--onpropertynamechanging)
 1. [Change Tracking with `[IsChanged]`](#change-tracking-with-ischanged)
 1. [Configuration](#configuration)
    1. [Generated Property Names](#generated-property-names)
-   1. [`OnPropertyChanged` Method Name](#onpropertychanged-method-name)
+   1. [`OnPropertyChanged` / `OnPropertyChanging` Method Name](#onpropertychanged--onpropertychanging-method-name)
 1. [Contributing](#contributing)
 1. [Comparison to PropertyChanged.Fody](#comparison-to-propertychangedfody)
 
@@ -39,7 +39,7 @@ PropertyChanged.SourceGenerator works well if you're using an MVVM framework or 
 Installation
 ------------
 
-[PropertyChanged.SourceGenerator is available on NuGet](https://www.nuget.org/packages/PropertyChanged.SourceGenerator). You'll need to be running Visual Studio 2019 16.9 or higher, or be building using the .NET SDK 5.0.200 or higher (your project doesn't have to target .NET 5, you just need to be building using a newish version of the .NET SDK).
+[PropertyChanged.SourceGenerator is available on NuGet](https://www.nuget.org/packages/PropertyChanged.SourceGenerator). You'll need to be running Visual Studio 2019 16.9 or higher, or by building using the .NET SDK 5.0.200 or higher (your project doesn't have to target .NET 5, you just need to be building using a newish version of the .NET SDK).
 
 These dependencies may change in future minor versions, see [Versioning](#versioning).
 
@@ -118,6 +118,8 @@ If/when PropertyChanged.SourceGenerator is updated to depend on a new version Vi
 Defining your ViewModel
 -----------------------
 
+### `INotifyPropertyChanged`
+
 When you define a ViewModel which makes use of PropertyChanged.SourceGenerator, that ViewModel must be `partial`. If it isn't, you'll get a warning.
 
 Your ViewModel can implement `INotifyPropertyChanged`, or not, or it can implement parts of it (such as implementing the interface but not defining the `PropertyChanged` event), or it can extend from a base class which implements `INotifyPropertyChanged`: PropertyChanged.SourceGenerator will figure it out and fill in the gaps.
@@ -130,6 +132,17 @@ If you've got a `ViewModel` base class which implements `INotifyPropertyChanged`
  - `void OnPropertyChanged(string propertyName, object oldValue, object newValue)`
 
 If it can't find a suitable method, you'll get a warning and it won't run on that particular ViewModel.
+
+### `INotifyPropertyChanging`
+
+Working with `INotifyPropertyChanging` is similar, with the caveat that your class or one of its base classes must implement `INotifyPropertyChanging` (not everone wants to implement this interface, so it's opt-in). You don't need to implement all of the interface members: PropertyChanged.SourceGenerator will step in and fill in the gaps.
+
+As with `INotifyPropertyChanged`, PropertyChanged.SourceGenerator will try and find a suitable method to call in order to raise the `PropertyChanging` event. It will look for a method called `OnPropertyChanging`, `RaisePropertyChanging`, `NotifyOfPropertyChanging`, or `NotifyPropertyChanging` (again this is configurable, see [Configuration](#configuration)), with one of the following signatures:
+
+ - `void OnPropertyChanging(PropertyChangingEventArgs args)`
+ - `void OnPropertyChanging(string propertyName)`
+ - `void OnPropertyChanging(PropertyChangingEventArgs args, object oldValue)`
+ - `void OnPropertyChanging(string propertyName, object oldValue)`
 
 
 Defining Properties
@@ -405,7 +418,9 @@ Property Changed Hooks
 Hooks are a way for you to be told when a generated property is changed, without needing to subscribe to a type's own PropertyChanged event.
 
 
-### Type Hooks with `OnAnyPropertyChanged`
+### Type Hooks with `OnAnyPropertyChanged` / `OnAnyPropertyChanging`
+
+#### `INotifyPropertyChanged`
 
 The easiest way to be notified when any generated property has changed is to specify an `OnAnyPropertyChanged` method. This is called from the generated `OnPropertyChanged` method.
 
@@ -420,8 +435,24 @@ In order for PropertyChanged.SourceGenerator to be able to supply values for `ol
 
 Note that the `oldValue` might be `null`, if the property is being raised because of a [property dependency](#property-dependencies).
 
+#### `INotifyPropertyChanging`
 
-### Property Hooks with `On{PropertyName}Changed`
+To be notified before a generated property changes, you can specify an `OnAnyPropertyChanging` method.
+
+This method can have the following signatures, and any accessibility:
+
+```cs
+void OnAnyPropertyChanged(string propertyName);
+void OnAnyPropertyChanged(string propertyName, object oldValue);
+```
+
+In order for PropertyChanged.SourceGenerator to be able to supply values for `oldValue`, the `OnPropertyChanging` method in your base class must have a signature which also has this parameter.
+
+Note that the `oldValue` might be `null`, if the property is being raised because of a [property dependency](#property-dependencies).
+
+### Property Hooks with `On{PropertyName}Changed` / `On{PropertyName}Changing`
+
+#### `INotifyPropertyChanged`
 
 Let's say you have a generated property called `FirstName`. If you define a method called `OnFirstNameChanged` in the same class, that method will be called every time `FirstName` changes.
 
@@ -453,6 +484,16 @@ public partial class MyViewModel
 
 Note that `oldValue` might have a value of `default(T)`, if the property is being raised because of a [property dependency](#property-dependencies).
 
+#### `INotifyPropertyChanging`
+
+Using the example above, if you define a method called `OnFirstNameChanging` in the same class, that method will be called just before `FirstName` changes.
+
+This method can have two signatures:
+
+ - `On{PropertyName}Changing()`.
+ - `On{PropertyName}Changing(T oldValue)` where `T` is the type of the property called `PropertyName`.
+
+Note that `oldValue` might have a value of `default(T)`, if the property is being raised because of a [property dependency](#property-dependencies).
 
 ## Change tracking with `[IsChanged]`
 
@@ -528,9 +569,9 @@ propertychanged.first_letter_capitalization = upper_case
 ```
 
 
-### `OnPropertyChanged` Method Name
+### `OnPropertyChanged` / `OnPropertyChanging` Method Name
 
-When PropertyChanged.SourceGenerator runs, it looks for a suitable pre-existing method which can be used to raise the PropertyChanged event. If none is found, it will generate a suitable method itself, if it can.
+When PropertyChanged.SourceGenerator runs, it looks for a suitable pre-existing method which can be used to raise the PropertyChanged and PropertyChanging event. If none is found, it will generate a suitable method itself, if it can.
 
 The names of the pre-existing methods which it searches for, and the name of the method which it will generate, can be configured.
 
@@ -541,6 +582,11 @@ The names of the pre-existing methods which it searches for, and the name of the
 # PropertyChanged event. If none is found, the first name listed here is used to generate one.
 # Default: 'OnPropertyChanged;RaisePropertyChanged;NotifyOfPropertyChange;NotifyPropertyChanged'
 propertychanged.onpropertychanged_method_name = OnPropertyChanged;RaisePropertyChanged;NotifyOfPropertyChange;NotifyPropertyChanged
+
+# A ';' separated list of method names to search for when finding a method to raise the
+# PropertyChanging event. If none is found, the first name listed here is used to generate one.
+# Default: 'OnPropertyChanging;RaisePropertyChanging;NotifyOfPropertyChanging;NotifyPropertyChanging'
+propertychanged.onpropertychanging_method_name = OnPropertyChanging;RaisePropertyChanging;NotifyOfPropertyChanging;NotifyPropertyChanging
 ```
 
 

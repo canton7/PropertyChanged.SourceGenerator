@@ -4,3 +4,4 @@ coverage.xml
 bin
 obj
 NuGet
+*.received.cs

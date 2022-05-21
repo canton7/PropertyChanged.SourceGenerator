@@ -21,25 +21,8 @@ public partial class SomeViewModel
     private string _foo;
     public void OnFooChanged() { }
 }";
-        string expected = @"
-partial class SomeViewModel : global::System.ComponentModel.INotifyPropertyChanged
-{
-    public string Foo
-    {
-        get => this._foo;
-        set
-        {
-            if (!global::System.Collections.Generic.EqualityComparer<string>.Default.Equals(value, this._foo))
-            {
-                this._foo = value;
-                this.OnFooChanged();
-                this.OnPropertyChanged(global::PropertyChanged.SourceGenerator.Internal.PropertyChangedEventArgsCache.Foo);
-            }
-        }
-    }
-}";
 
-        this.AssertThat(input, It.HasFile("SomeViewModel", expected, RemoveInpcMembersRewriter.Instance));
+        this.AssertThat(input, It.HasFile("SomeViewModel", RemoveInpcMembersRewriter.All));
     }
 
     [Test]
@@ -52,26 +35,8 @@ public partial class SomeViewModel
     private string _foo;
     public void OnFooChanged(string oldValue, string newValue) { }
 }";
-        string expected = @"
-partial class SomeViewModel : global::System.ComponentModel.INotifyPropertyChanged
-{
-    public string Foo
-    {
-        get => this._foo;
-        set
-        {
-            if (!global::System.Collections.Generic.EqualityComparer<string>.Default.Equals(value, this._foo))
-            {
-                string old_Foo = this.Foo;
-                this._foo = value;
-                this.OnFooChanged(old_Foo, this.Foo);
-                this.OnPropertyChanged(global::PropertyChanged.SourceGenerator.Internal.PropertyChangedEventArgsCache.Foo);
-            }
-        }
-    }
-}";
 
-        this.AssertThat(input, It.HasFile("SomeViewModel", expected, RemoveInpcMembersRewriter.Instance));
+        this.AssertThat(input, It.HasFile("SomeViewModel", RemoveInpcMembersRewriter.All));
     }
 
     [Test]
@@ -84,26 +49,8 @@ public partial class SomeViewModel
     private string _foo;
     public void OnFooChanged(object oldValue, object newValue) { }
 }";
-        string expected = @"
-partial class SomeViewModel : global::System.ComponentModel.INotifyPropertyChanged
-{
-    public string Foo
-    {
-        get => this._foo;
-        set
-        {
-            if (!global::System.Collections.Generic.EqualityComparer<string>.Default.Equals(value, this._foo))
-            {
-                string old_Foo = this.Foo;
-                this._foo = value;
-                this.OnFooChanged(old_Foo, this.Foo);
-                this.OnPropertyChanged(global::PropertyChanged.SourceGenerator.Internal.PropertyChangedEventArgsCache.Foo);
-            }
-        }
-    }
-}";
 
-        this.AssertThat(input, It.HasFile("SomeViewModel", expected, RemoveInpcMembersRewriter.Instance));
+        this.AssertThat(input, It.HasFile("SomeViewModel", RemoveInpcMembersRewriter.All));
     }
 
     [Test]
@@ -116,24 +63,8 @@ public partial class SomeViewModel
     private string _foo;
     public void OnFooChanged(object oldValue, string newValue) { }
 }";
-        string expected = @"
-partial class SomeViewModel : global::System.ComponentModel.INotifyPropertyChanged
-{
-    public string Foo
-    {
-        get => this._foo;
-        set
-        {
-            if (!global::System.Collections.Generic.EqualityComparer<string>.Default.Equals(value, this._foo))
-            {
-                this._foo = value;
-                this.OnPropertyChanged(global::PropertyChanged.SourceGenerator.Internal.PropertyChangedEventArgsCache.Foo);
-            }
-        }
-    }
-}";
 
-        this.AssertThat(input, It.HasFile("SomeViewModel", expected, RemoveInpcMembersRewriter.Instance)
+        this.AssertThat(input, It.HasFile("SomeViewModel", RemoveInpcMembersRewriter.All)
             .HasDiagnostics(
                 // (6,17): Warning INPC013: Found one or more On{PropertyName}Changed methods called 'OnFooChanged' for property 'Foo', but none had the correct signature, or were inaccessible. Skipping
                 // OnFooChanged
@@ -152,26 +83,8 @@ public partial class SomeViewModel
     public int Bar { get; }
     private void OnBarChanged() { }
 }";
-        string expected = @"
-partial class SomeViewModel : global::System.ComponentModel.INotifyPropertyChanged
-{
-    public int Foo
-    {
-        get => this._foo;
-        set
-        {
-            if (!global::System.Collections.Generic.EqualityComparer<int>.Default.Equals(value, this._foo))
-            {
-                this._foo = value;
-                this.OnPropertyChanged(global::PropertyChanged.SourceGenerator.Internal.PropertyChangedEventArgsCache.Foo);
-                this.OnBarChanged();
-                this.OnPropertyChanged(global::PropertyChanged.SourceGenerator.Internal.PropertyChangedEventArgsCache.Bar);
-            }
-        }
-    }
-}";
 
-        this.AssertThat(input, It.HasFile("SomeViewModel", expected, RemoveInpcMembersRewriter.Instance));
+        this.AssertThat(input, It.HasFile("SomeViewModel", RemoveInpcMembersRewriter.All));
     }
 
     [Test]
@@ -185,27 +98,8 @@ public partial class SomeViewModel
     public int Bar { get; }
     private void OnBarChanged(int oldValue, int newValue) { }
 }";
-        string expected = @"
-partial class SomeViewModel : global::System.ComponentModel.INotifyPropertyChanged
-{
-    public int Foo
-    {
-        get => this._foo;
-        set
-        {
-            if (!global::System.Collections.Generic.EqualityComparer<int>.Default.Equals(value, this._foo))
-            {
-                int old_Bar = this.Bar;
-                this._foo = value;
-                this.OnPropertyChanged(global::PropertyChanged.SourceGenerator.Internal.PropertyChangedEventArgsCache.Foo);
-                this.OnBarChanged(old_Bar, this.Bar);
-                this.OnPropertyChanged(global::PropertyChanged.SourceGenerator.Internal.PropertyChangedEventArgsCache.Bar);
-            }
-        }
-    }
-}";
 
-        this.AssertThat(input, It.HasFile("SomeViewModel", expected, RemoveInpcMembersRewriter.Instance));
+        this.AssertThat(input, It.HasFile("SomeViewModel", RemoveInpcMembersRewriter.All));
     }
     
     [Test]
@@ -222,27 +116,8 @@ public partial class Derived : Base
     [Notify, AlsoNotify(""Bar"")]
     private int _foo;
 }";
-        string expected = @"
-partial class Derived : global::System.ComponentModel.INotifyPropertyChanged
-{
-    public int Foo
-    {
-        get => this._foo;
-        set
-        {
-            if (!global::System.Collections.Generic.EqualityComparer<int>.Default.Equals(value, this._foo))
-            {
-                int old_Bar = this.Bar;
-                this._foo = value;
-                this.OnPropertyChanged(global::PropertyChanged.SourceGenerator.Internal.PropertyChangedEventArgsCache.Foo);
-                this.OnBarChanged(old_Bar, this.Bar);
-                this.OnPropertyChanged(global::PropertyChanged.SourceGenerator.Internal.PropertyChangedEventArgsCache.Bar);
-            }
-        }
-    }
-}";
 
-        this.AssertThat(input, It.HasFile("Derived", expected, RemoveInpcMembersRewriter.Instance));
+        this.AssertThat(input, It.HasFile("Derived", RemoveInpcMembersRewriter.All));
     }
 
     [Test]
@@ -259,25 +134,8 @@ public partial class Derived : Base
     private int _foo;
     private void OnBarChanged(int oldValue, int newValue) { }
 }";
-        string expected = @"
-partial class Derived : global::System.ComponentModel.INotifyPropertyChanged
-{
-    public int Foo
-    {
-        get => this._foo;
-        set
-        {
-            if (!global::System.Collections.Generic.EqualityComparer<int>.Default.Equals(value, this._foo))
-            {
-                this._foo = value;
-                this.OnPropertyChanged(global::PropertyChanged.SourceGenerator.Internal.PropertyChangedEventArgsCache.Foo);
-                this.OnPropertyChanged(global::PropertyChanged.SourceGenerator.Internal.PropertyChangedEventArgsCache.Bar);
-            }
-        }
-    }
-}";
 
-        this.AssertThat(input, It.HasFile("Derived", expected, RemoveInpcMembersRewriter.Instance));
+        this.AssertThat(input, It.HasFile("Derived", RemoveInpcMembersRewriter.All));
     }
 
     [Test]
@@ -294,25 +152,8 @@ public partial class Derived : Base
     [Notify, AlsoNotify(""Bar"")]
     private int _foo;
 }";
-        string expected = @"
-partial class Derived : global::System.ComponentModel.INotifyPropertyChanged
-{
-    public int Foo
-    {
-        get => this._foo;
-        set
-        {
-            if (!global::System.Collections.Generic.EqualityComparer<int>.Default.Equals(value, this._foo))
-            {
-                this._foo = value;
-                this.OnPropertyChanged(global::PropertyChanged.SourceGenerator.Internal.PropertyChangedEventArgsCache.Foo);
-                this.OnPropertyChanged(global::PropertyChanged.SourceGenerator.Internal.PropertyChangedEventArgsCache.Bar);
-            }
-        }
-    }
-}";
 
-        this.AssertThat(input, It.HasFile("Derived", expected, RemoveInpcMembersRewriter.Instance)
+        this.AssertThat(input, It.HasFile("Derived", RemoveInpcMembersRewriter.All)
             .HasDiagnostics(
                 // (5,18): Warning INPC013: Found one or more On{PropertyName}Changed methods called 'OnBarChanged' for property 'Bar', but none had the correct signature, or were inaccessible. Skipping
                 // OnBarChanged
@@ -329,25 +170,8 @@ public partial class SomeViewModel
     [Notify, AlsoNotify(""Bar"")]
     private int _foo;
 }";
-        string expected = @"
-partial class SomeViewModel : global::System.ComponentModel.INotifyPropertyChanged
-{
-    public int Foo
-    {
-        get => this._foo;
-        set
-        {
-            if (!global::System.Collections.Generic.EqualityComparer<int>.Default.Equals(value, this._foo))
-            {
-                this._foo = value;
-                this.OnPropertyChanged(global::PropertyChanged.SourceGenerator.Internal.PropertyChangedEventArgsCache.Foo);
-                this.OnPropertyChanged(global::PropertyChanged.SourceGenerator.Internal.PropertyChangedEventArgsCache.Bar);
-            }
-        }
-    }
-}";
 
-        this.AssertThat(input, It.HasFile("SomeViewModel", expected, RemoveInpcMembersRewriter.Instance)
+        this.AssertThat(input, It.HasFile("SomeViewModel", RemoveInpcMembersRewriter.All)
             .HasDiagnostics(
                 // (4,14): Warning INPC009: Unable to find a property called 'Bar' on this type or its base types. This event will still be raised
                 // AlsoNotify("Bar")
@@ -367,27 +191,8 @@ public partial class SomeViewModel
     public int Bar { get; }
     private void OnBarChanged(int oldValue, int newValue) { }
 }";
-        string expected = @"
-partial class SomeViewModel : global::System.ComponentModel.INotifyPropertyChanged
-{
-    public int Foo
-    {
-        get => this._foo;
-        set
-        {
-            if (!global::System.Collections.Generic.EqualityComparer<int>.Default.Equals(value, this._foo))
-            {
-                int old_Bar = this.Bar;
-                this._foo = value;
-                this.OnPropertyChanged(global::PropertyChanged.SourceGenerator.Internal.PropertyChangedEventArgsCache.Foo);
-                this.OnBarChanged(old_Bar, this.Bar);
-                this.OnPropertyChanged(global::PropertyChanged.SourceGenerator.Internal.PropertyChangedEventArgsCache.Bar);
-            }
-        }
-    }
-}";
 
-        this.AssertThat(input, It.HasFile("SomeViewModel", expected, RemoveInpcMembersRewriter.Instance));
+        this.AssertThat(input, It.HasFile("SomeViewModel", RemoveInpcMembersRewriter.All));
     }
 
     [Test]
@@ -403,29 +208,7 @@ public partial class SomeViewModel
     private void OnBarChanged(int oldValue, int newValue) { }
     private void OnBazChanged(string oldValue, string newValue) { }
 }";
-        string expected = @"
-partial class SomeViewModel : global::System.ComponentModel.INotifyPropertyChanged
-{
-    public int Foo
-    {
-        get => this._foo;
-        set
-        {
-            if (!global::System.Collections.Generic.EqualityComparer<int>.Default.Equals(value, this._foo))
-            {
-                int old_Bar = this.Bar;
-                string old_Baz = this.Baz;
-                this._foo = value;
-                this.OnPropertyChanged(global::PropertyChanged.SourceGenerator.Internal.PropertyChangedEventArgsCache.Foo);
-                this.OnBarChanged(old_Bar, this.Bar);
-                this.OnPropertyChanged(global::PropertyChanged.SourceGenerator.Internal.PropertyChangedEventArgsCache.Bar);
-                this.OnBazChanged(old_Baz, this.Baz);
-                this.OnPropertyChanged(global::PropertyChanged.SourceGenerator.Internal.PropertyChangedEventArgsCache.Baz);
-            }
-        }
-    }
-}";
 
-        this.AssertThat(input, It.HasFile("SomeViewModel", expected, RemoveInpcMembersRewriter.Instance));
+        this.AssertThat(input, It.HasFile("SomeViewModel", RemoveInpcMembersRewriter.All));
     }
 }

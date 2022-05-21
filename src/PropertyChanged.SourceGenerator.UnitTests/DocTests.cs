@@ -26,20 +26,8 @@ public partial class SomeViewModel
     /// </description>
     [Notify] private string _foo;
 }";
-        string expected = @"
-partial class SomeViewModel : global::System.ComponentModel.INotifyPropertyChanged
-{
-    /// <summary>
-    /// The Summary
-    /// </summary>
-    /// <description>
-    /// The Description.
-    ///     Indented line
-    /// </description>
-    public string Foo { get; set; }
-}";
 
-        this.AssertThat(input, It.HasFile("SomeViewModel", expected, StandardRewriters));
+        this.AssertThat(input, It.HasFile("SomeViewModel", StandardRewriters));
     }
 
     [Test]
@@ -53,11 +41,35 @@ public partial class SomeViewModel
 /// </summarry>
 [Notify] private string _foo;
 }";
-        string expected = @"
-partial class SomeViewModel : global::System.ComponentModel.INotifyPropertyChanged
+
+        this.AssertThat(input, It.HasFile("SomeViewModel", StandardRewriters));
+    }
+
+    [Test]
+    public void GeneratesOnPropertyChangedOrChangingDocNoOldAndNew()
+    {
+        string input = @"
+using System.ComponentModel;
+public partial class SomeViewModel : INotifyPropertyChanging
 {
-    public string Foo { get; set; }
+    [Notify] private int _foo;
 }";
-        this.AssertThat(input, It.HasFile("SomeViewModel", expected, StandardRewriters));
+
+        this.AssertThat(input, It.HasFile("SomeViewModel", RemovePropertiesRewriter.Instance));
+    }
+
+    [Test]
+    public void GeneratesOnPropertyChangedOrChangingDocOldAndNew()
+    {
+        string input = @"
+using System.ComponentModel;
+public partial class SomeViewModel : INotifyPropertyChanging
+{
+    [Notify] private int _foo;
+    private void OnAnyPropertyChanged(string name, object oldValue, object newValue) { }
+    private void OnAnyPropertyChanging(string name, object oldValue) { }
+}";
+
+        this.AssertThat(input, It.HasFile("SomeViewModel", RemovePropertiesRewriter.Instance));
     }
 }

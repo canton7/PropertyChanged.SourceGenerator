@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 using System.Text.RegularExpressions;
+using Microsoft.CodeAnalysis;
 
 namespace PropertyChanged.SourceGenerator;
 
@@ -16,14 +17,21 @@ public class EventArgsCache
 
     public bool IsEmpty => this.cacheNames.Count == 0;
 
-    public string GetOrAdd(string? propertyName)
+    public string GetOrAdd(string? propertyName, INamedTypeSymbol eventArgsTypeSymbol)
     {
-        if (this.propertyNameToCacheName.TryGetValue(propertyName, out string cacheName))
+        var key = new Key(propertyName, eventArgsTypeSymbol);
+        if (this.propertyNameToCacheName.TryGetValue(key, out string cacheName))
         {
             return cacheName;
         }
 
-        string safeName = propertyName switch
+        string typeName = eventArgsTypeSymbol.Name;
+        if (typeName.EndsWith("EventArgs"))
+        {
+            typeName = typeName.Substring(0, typeName.Length - "EventArgs".Length);
+        }
+
+        string safeName = $"{typeName}_" + propertyName switch
         {
             null => "Null",
             "" => "Empty",
@@ -39,16 +47,16 @@ public class EventArgsCache
             cacheName = safeName + i;
         }
 
-        this.propertyNameToCacheName.Add(propertyName, cacheName);
+        this.propertyNameToCacheName.Add(key, cacheName);
         this.cacheNames.Add(cacheName);
         return cacheName;
     }
 
-    public IEnumerable<(string cacheName, string? propertyName)> GetEntries()
+    public IEnumerable<(string cacheName, INamedTypeSymbol eventArgsType, string? propertyName)> GetEntries()
     {
         foreach (var kvp in this.propertyNameToCacheName)
         {
-            yield return (kvp.Value, kvp.Key);
+            yield return (kvp.Value, kvp.Key.EventArgsTypeSymbol, kvp.Key.PropertyName);
         }
     }
 
@@ -59,17 +67,35 @@ public class EventArgsCache
 
     private struct Key : IEquatable<Key>
     {
-        private readonly string? key;
-        public Key(string? key) => this.key = key;
+        public string? PropertyName { get; }
+        public INamedTypeSymbol EventArgsTypeSymbol { get; }
 
-        public bool Equals(Key other) => string.Equals(this.key, other.key, StringComparison.Ordinal);
+        public Key(string? propertyName, INamedTypeSymbol eventArgsTypeSymbol)
+        {
+            this.PropertyName = propertyName;
+            this.EventArgsTypeSymbol = eventArgsTypeSymbol;
+        }
+
+        public bool Equals(Key other)
+        {
+            return string.Equals(this.PropertyName, other.PropertyName, StringComparison.Ordinal) &&
+                SymbolEqualityComparer.Default.Equals(this.EventArgsTypeSymbol, other.EventArgsTypeSymbol);
+        }
+
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                int hash = 17;
+                hash = hash * 23 + (this.PropertyName == null ? 0 : StringComparer.Ordinal.GetHashCode(this.PropertyName));
+                hash = hash * 23 + SymbolEqualityComparer.Default.GetHashCode(this.EventArgsTypeSymbol);
+                return hash;
+            }
+        }
+
         public override bool Equals(object? obj) => obj is Key other && this.Equals(other);
-        public override int GetHashCode() => this.key == null ? 0 : StringComparer.Ordinal.GetHashCode(this.key);
-
+        
         public static bool operator ==(Key left, Key right) => left.Equals(right);
         public static bool operator !=(Key left, Key right) => !left.Equals(right);
-
-        public static implicit operator Key(string? key) => new(key);
-        public static implicit operator string?(Key key) => key.key;
     }
 }

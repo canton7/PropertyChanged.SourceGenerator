@@ -20,13 +20,8 @@ public partial class SomeViewModel
     [Notify(""Prop"")]
     private string _foo;
 }";
-        string expected = @"
-partial class SomeViewModel : global::System.ComponentModel.INotifyPropertyChanged
-{
-    public string Prop { get; set; }
-}";
 
-        this.AssertThat(input, It.HasFile("SomeViewModel", expected, StandardRewriters));
+        this.AssertThat(input, It.HasFile("SomeViewModel", StandardRewriters));
     }
 
     [Test]
@@ -39,12 +34,8 @@ public partial class SomeViewModel
     private string _foo;
     public string Foo;
 }";
-        string expected = @"
-partial class SomeViewModel : global::System.ComponentModel.INotifyPropertyChanged
-{
-}";
 
-        this.AssertThat(input, It.HasFile("SomeViewModel", expected, StandardRewriters)
+        this.AssertThat(input, It.HasFile("SomeViewModel", StandardRewriters)
             .HasDiagnostics(
             // (5,20): Warning INPC003: Attempted to generate property 'Foo' for member '_foo', but a member with that name already exists. Skipping this property
             // _foo
@@ -62,12 +53,8 @@ public partial class SomeViewModel
     private string _foo;
     public string Prop;
 }";
-        string expected = @"
-partial class SomeViewModel : global::System.ComponentModel.INotifyPropertyChanged
-{
-}";
 
-        this.AssertThat(input, It.HasFile("SomeViewModel", expected, StandardRewriters)
+        this.AssertThat(input, It.HasFile("SomeViewModel", StandardRewriters)
             .HasDiagnostics(
             // (5,20): Warning INPC003: Attempted to generate property 'Prop' for member '_foo', but a member with that name already exists. Skipping this property
             // _foo
@@ -88,12 +75,8 @@ public partial class SomeViewModel : SomeViewModelBase
     [Notify(""Prop"")]
     private string _foo;
 }";
-        string expected = @"
-partial class SomeViewModel : global::System.ComponentModel.INotifyPropertyChanged
-{
-}";
 
-        this.AssertThat(input, It.HasFile("SomeViewModel", expected, StandardRewriters)
+        this.AssertThat(input, It.HasFile("SomeViewModel", StandardRewriters)
             .HasDiagnostics(
             // (9,20): Warning INPC003: Attempted to generate property 'Prop' for member '_foo', but a member with that name already exists. Skipping this property
             // _foo
@@ -112,12 +95,8 @@ public partial class SomeViewModel
     [Notify(""Prop"")]
     private string _bar;
 }";
-        string expected = @"
-partial class SomeViewModel : global::System.ComponentModel.INotifyPropertyChanged
-{
-}";
 
-        this.AssertThat(input, It.HasFile("SomeViewModel", expected, StandardRewriters)
+        this.AssertThat(input, It.HasFile("SomeViewModel", StandardRewriters)
             .HasDiagnostics(
             // (5,20): Warning INPC004: Member '_foo' will have the same generated property name 'Prop' as member '_bar'
             // _foo
@@ -143,19 +122,10 @@ public partial class Derived : Base
     [Notify(""Prop"")]
     private int _bar;
 }";
-        string expectedBase = @"
-partial class Base : global::System.ComponentModel.INotifyPropertyChanged
-{
-    public int Prop { get; set; }
-}";
-        string expectedDerived = @"
-partial class Derived
-{
-}";
 
         this.AssertThat(input, It
-            .HasFile("Base", expectedBase, StandardRewriters)
-            .HasFile("Derived", expectedDerived, StandardRewriters)
+            .HasFile("Base", StandardRewriters)
+            .HasFile("Derived", StandardRewriters)
             .HasDiagnostics(
                 // (10,17): Warning INPC003: Attempted to generate property 'Prop' for member '_bar', but a member with that name already exists. Skipping this property
                 // _bar

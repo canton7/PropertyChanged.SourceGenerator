@@ -78,7 +78,7 @@ public class PropertyChangedSourceGenerator : ISourceGenerator
                 }
             }
 
-            context.AddSource(fileName, SourceText.From(sourceText, Encoding.UTF8));
+            context.AddSource(fileName + ".g", SourceText.From(sourceText, Encoding.UTF8));
         }
     }
 }

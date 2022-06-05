@@ -216,10 +216,9 @@ public partial class Analyser
         }
 
         bool IsPartial(INamedTypeSymbol type) =>
-            type.DeclaringSyntaxReferences
-                .Select(x => x.GetSyntax())
-                .OfType<ClassDeclarationSyntax>()
-                .Any(x => x.Modifiers.Any(m => m.IsKind(SyntaxKind.PartialKeyword)));
+            type.DeclaringSyntaxReferences.Any(x =>
+                x.GetSyntax() is TypeDeclarationSyntax syntax &&
+                syntax.Modifiers.Any(SyntaxKind.PartialKeyword));
     }
 
     private MemberAnalysis? AnalyseField(IFieldSymbol field, AttributeData notifyAttribute, Configuration config)

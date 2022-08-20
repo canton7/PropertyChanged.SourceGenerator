@@ -14,6 +14,8 @@ public class MemberAnalysis : IMember
     public Accessibility SetterAccessibility { get; set; }
     public OnPropertyNameChangedInfo? OnPropertyNameChanged { get; set; }
     public OnPropertyNameChangedInfo? OnPropertyNameChanging { get; set; }
+    public List<string>? AttributesForGeneratedProperty { get; set; }
+
     public string[]? DocComment { get; set; }
 
     private HashSet<AlsoNotifyMember>? alsoNotify;

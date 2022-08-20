@@ -105,6 +105,15 @@ public class DiagnosticReporter
         this.AddDiagnostic(alsoNotifyAttributeNotValidOnMember, AttributeLocations(attribute, member));
     }
 
+    private static readonly DiagnosticDescriptor propertyAttributeNotValidOnMember = CreateDescriptor(
+        "INPC036",
+        "PropertyAttribute is not valid here",
+        "[PropertyAttribute is only valid on members which also have [Notify]. Skipping");
+    public void ReportyPropertyAttributeNotValidOnMember(AttributeData attribute, ISymbol member)
+    {
+        this.AddDiagnostic(propertyAttributeNotValidOnMember, AttributeLocations(attribute, member));
+    }
+
     private static readonly DiagnosticDescriptor alsoNotifyPropertyDoesNotExist = CreateDescriptor(
         "INPC009",
         "AlsoNotify property name does not exist",

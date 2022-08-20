@@ -21,6 +21,7 @@ PropertyChanged.SourceGenerator works well if you're using an MVVM framework or 
    1. [Property Names](#property-names)
    1. [Property Accessibility](#property-accessibility)
    1. [Property Doc Comments](#property-doc-comments)
+   1. [Attributes on Generated Properties](#attributes-on-generated-properties)
 1. [Property Dependencies](#property-dependencies)
    1. [Automatic Dependencies](#automatic-dependencies)
    1. [Manual Dependencies with `[DependsOn]`](#manual-dependencies-with-dependson)
@@ -43,13 +44,7 @@ Installation
 
 These dependencies may change in future minor versions, see [Versioning](#versioning).
 
-If you're using WPF, you may need to add this to your csproj, see [dotnet/wpf#3404](https://github.com/dotnet/wpf/issues/3404).
-
-```xml
-<PropertyGroup>
-    <IncludePackageReferencesDuringMarkupCompilation>true</IncludePackageReferencesDuringMarkupCompilation>
-</PropertyGroup>
-```
+If you're using Visual Studio 17.2.6 with WPF and you get lots of "... already contains a definition for ..." error messages, [see this bug and workaround](https://github.com/dotnet/wpf/issues/6792#issuecomment-1183633402).
 
 
 Quick Start
@@ -273,6 +268,32 @@ partial class MyViewModel
         // ...
     }
 }
+```
+
+
+### Attributes on Generated Properties
+
+Sometimes you need the to place attributes onto the generated property, e.g. to control validation or serialization. You can do this by passing a string containing this attribute to the `[PropertyAttribute]` attribute, e.g.:
+
+```cs
+using PropertyChanged.SourceGenerator;
+public partial class MyViewModel
+{
+    [PropertyAttribute("[System.Xml.Serialization.XmlIgnore]")]
+    [Notify] private int _foo;
+}
+```
+
+The string that you pass to `[PropertAttribute]` will be pasted into the generated file verbatim. It's important to note that the generated file doesn't have any `using` statements, so you need to fully-qualify all types. For example:
+
+```cs
+[PropertyAttribute("[System.ComponentModel.EditorBrowsable(System.ComponentModel.EditorBrowsableState.Never)]")]
+```
+
+rather than just:
+
+```cs
+[PropertyAttribute("[EditorBrowsable(EditorBrowsabeState.Never)]")]
 ```
 
 

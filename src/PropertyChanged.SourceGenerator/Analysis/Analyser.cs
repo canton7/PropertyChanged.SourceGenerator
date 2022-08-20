@@ -20,6 +20,7 @@ public partial class Analyser
     private readonly INamedTypeSymbol alsoNotifyAttributeSymbol;
     private readonly INamedTypeSymbol dependsOnAttributeSymbol;
     private readonly INamedTypeSymbol isChangedAttributeSymbol;
+    private readonly INamedTypeSymbol propertyAttributeSymbol;
 
     private readonly PropertyChangedInterfaceAnalyser? propertyChangedInterfaceAnalyser;
     private readonly PropertyChangingInterfaceAnalyser? propertyChangingInterfaceAnalyser;
@@ -59,7 +60,8 @@ public partial class Analyser
            ?? throw new InvalidOperationException("DependsOnAttribute must have been added to the assembly");
         this.isChangedAttributeSymbol = compilation.GetTypeByMetadataName("PropertyChanged.SourceGenerator.IsChangedAttribute")
            ?? throw new InvalidOperationException("IsChangedAttribute must have been added to the assembly");
-
+        this.propertyAttributeSymbol = compilation.GetTypeByMetadataName("PropertyChanged.SourceGenerator.PropertyAttributeAttribute")
+           ?? throw new InvalidOperationException("PropertyAttributeAttribute must have been added to the assembly");
     }
 
     public IEnumerable<TypeAnalysis> Analyse(HashSet<INamedTypeSymbol> typeSymbols)
@@ -216,10 +218,9 @@ public partial class Analyser
         }
 
         bool IsPartial(INamedTypeSymbol type) =>
-            type.DeclaringSyntaxReferences
-                .Select(x => x.GetSyntax())
-                .OfType<ClassDeclarationSyntax>()
-                .Any(x => x.Modifiers.Any(m => m.IsKind(SyntaxKind.PartialKeyword)));
+            type.DeclaringSyntaxReferences.Any(x =>
+                x.GetSyntax() is TypeDeclarationSyntax syntax &&
+                syntax.Modifiers.Any(SyntaxKind.PartialKeyword));
     }
 
     private MemberAnalysis? AnalyseField(IFieldSymbol field, AttributeData notifyAttribute, Configuration config)
@@ -289,6 +290,7 @@ public partial class Analyser
             SetterAccessibility = setterAccessibility,
             OnPropertyNameChanged = this.propertyChangedInterfaceAnalyser!.FindOnPropertyNameChangedMethod(backingMember.ContainingType, name, type, backingMember.ContainingType),
             OnPropertyNameChanging = this.propertyChangingInterfaceAnalyser!.FindOnPropertyNameChangedMethod(backingMember.ContainingType, name, type, backingMember.ContainingType),
+            AttributesForGeneratedProperty = this.GetAttributesForGeneratedProperty(backingMember),
             DocComment = ParseDocComment(backingMember.GetDocumentationCommentXml()),
         };
 
@@ -410,6 +412,10 @@ public partial class Analyser
             {
                 this.diagnostics.ReportAlsoNotifyAttributeNotValidOnMember(attribute, member);
             }
+            else if (SymbolEqualityComparer.Default.Equals(attribute.AttributeClass, this.propertyAttributeSymbol))
+            {
+                this.diagnostics.ReportAlsoNotifyAttributeNotValidOnMember(attribute, member);
+            }
         }
     }
 
@@ -426,6 +432,26 @@ public partial class Analyser
     private AttributeData? GetNotifyAttribute(ISymbol member)
     {
         return member.GetAttributes().SingleOrDefault(x => SymbolEqualityComparer.Default.Equals(x.AttributeClass, this.notifyAttributeSymbol));
+    }
+
+    private List<string>? GetAttributesForGeneratedProperty(ISymbol member)
+    {
+        List<string>? result = null;
+        var attributes = member.GetAttributes().Where(x => SymbolEqualityComparer.Default.Equals(x.AttributeClass, this.propertyAttributeSymbol));
+        foreach (var attribute in attributes)
+        {
+            if (attribute.ConstructorArguments.ElementAtOrDefault(0).Value is string str)
+            {
+                // If they haven't put [ nad ] around it, be nice
+                if (!str.StartsWith("[") && !str.EndsWith("]"))
+                {
+                    str = "[" + str + "]";
+                }
+                result ??= new();
+                result.Add(str);
+            }
+        }
+        return result;
     }
 
     private static string[]? ParseDocComment(string? xml)

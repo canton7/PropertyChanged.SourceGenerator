@@ -292,6 +292,14 @@ public class Generator
             }
         }
 
+        if (member.AttributesForGeneratedProperty != null)
+        {
+            foreach (string attr in member.AttributesForGeneratedProperty)
+            {
+                this.writer.WriteLine(attr);
+            }
+        }
+
         this.writer.WriteLine($"{propertyAccessibility}{member.Type.ToDisplayString(SymbolDisplayFormats.FullyQualifiedTypeName)} {member.Name}");
         this.writer.WriteLine("{");
         this.writer.Indent++;

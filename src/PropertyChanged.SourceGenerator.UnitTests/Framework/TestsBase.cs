@@ -104,7 +104,7 @@ public abstract class TestsBase
 
             foreach (var expectedFile in expectation.ExpectedFiles)
             {
-                var generatedTree = runResult.GeneratedTrees.FirstOrDefault(x => Path.GetFileNameWithoutExtension(x.FilePath) == expectedFile.Name);
+                var generatedTree = runResult.GeneratedTrees.FirstOrDefault(x => Path.GetFileNameWithoutExtension(x.FilePath) == expectedFile.Name + ".g");
                 Assert.NotNull(generatedTree, $"No output file with name {expectedFile.Name}");
 
                 var rootSyntaxNode = generatedTree!.GetRoot();

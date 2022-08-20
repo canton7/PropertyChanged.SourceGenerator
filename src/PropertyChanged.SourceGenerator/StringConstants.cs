@@ -110,5 +110,22 @@ namespace PropertyChanged.SourceGenerator
     internal class IsChangedAttribute : global::System.Attribute
     {
     }
+
+    /// <summary>
+    /// Specifies an attribute which will be added to the generated property for this backing field
+    /// </summary>
+    /// <remarks>
+    /// The string passed to this attribute will be placed verbatim into the generated code. All types must therefore by fully-qualified.
+    /// </remarks>
+    [global::System.AttributeUsage(global::System.AttributeTargets.Field | global::System.AttributeTargets.Property, AllowMultiple = true)]
+    [global::System.Diagnostics.Conditional(""DEBUG"")]
+    internal class PropertyAttributeAttribute : global::System.Attribute
+    {
+        /// <summary>
+        /// Specify an attribute which iwll be added to the generated property for this backing field
+        /// </summary>
+        /// <param name=""attribute"">An attribute to place on the generated property</param>
+        public PropertyAttributeAttribute(string attribute) { }
+    }
 }";
 }

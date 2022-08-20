@@ -1,7 +1,12 @@
+v1.0.5
+------
+
+ - Support placing attributes on generated properties with `[PropertyAttribute]`
+
 v1.0.4
 ------
 
- - Add support for `INotifPropertyChanging`
+ - Add support for `INotifyPropertyChanging`
  - Generate doc comments on `OnPropertyChanged`/`OnPropertyChanging`
 
 v1.0.3

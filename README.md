@@ -44,13 +44,7 @@ Installation
 
 These dependencies may change in future minor versions, see [Versioning](#versioning).
 
-If you're using WPF, you may need to add this to your csproj, see [dotnet/wpf#3404](https://github.com/dotnet/wpf/issues/3404).
-
-```xml
-<PropertyGroup>
-    <IncludePackageReferencesDuringMarkupCompilation>true</IncludePackageReferencesDuringMarkupCompilation>
-</PropertyGroup>
-```
+If you're using Visual Studio 17.2.6 with WPF and you get lots of "... already contains a definition for ..." error messages, [see this bug and workaround](https://github.com/dotnet/wpf/issues/6792#issuecomment-1183633402).
 
 
 Quick Start

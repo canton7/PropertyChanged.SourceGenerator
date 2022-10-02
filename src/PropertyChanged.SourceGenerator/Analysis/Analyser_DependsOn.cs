@@ -17,7 +17,7 @@ public partial class Analyser
     private void ResolveDependsOn(TypeAnalysis typeAnalysis)
     {
         var lookups = new TypeAnalysisLookups(typeAnalysis);
-        foreach (var member in typeAnalysis.TypeSymbol.GetMembers().Where(x => x is IFieldSymbol or IPropertySymbol))
+        foreach (var member in typeAnalysis.TypeSymbol.GetMembers().Where(x => !x.IsImplicitlyDeclared && x is IFieldSymbol or IPropertySymbol))
         {
             var dependsOnAttributes = member.GetAttributes()
                 .Where(x => SymbolEqualityComparer.Default.Equals(x.AttributeClass, this.dependsOnAttributeSymbol))
@@ -139,7 +139,7 @@ public partial class Analyser
                         this.FindOnPropertyNameChangedMethod(typeAnalysis.TypeSymbol, notifyProperty)));
                 }
                 else if (typeAnalysis.TypeSymbol.GetMembers().OfType<IPropertySymbol>()
-                    .FirstOrDefault(x => x.Name == node.Identifier.ValueText) is { } dependsOn)
+                    .FirstOrDefault(x => !x.IsImplicitlyDeclared && x.Name == node.Identifier.ValueText) is { } dependsOn)
                 {
                     // Is it another property defined on the same type, which might itself have a body
                     // we need to analyse?
@@ -150,7 +150,7 @@ public partial class Analyser
                     }
                 }
                 else if (TypeAndBaseTypes(typeAnalysis.TypeSymbol.BaseType!).SelectMany(x => x.GetMembers().OfType<IPropertySymbol>())
-                    .FirstOrDefault(x => x.Name == node.Identifier.ValueText) is { } baseProperty)
+                    .FirstOrDefault(x => !x.IsImplicitlyDeclared && x.Name == node.Identifier.ValueText) is { } baseProperty)
                 {
                     // Is it another property defined on a base type? We'll need to stick it in
                     // the RaisePropertyChanged method

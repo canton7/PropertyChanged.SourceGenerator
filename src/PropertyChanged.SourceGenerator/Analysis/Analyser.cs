@@ -164,7 +164,7 @@ public partial class Analyser
         InterfaceAnalyser.PopulateRaiseMethodNameIfEmpty(typeAnalysis.INotifyPropertyChanged, typeAnalysis.INotifyPropertyChanging, config);
         this.ResoveInheritedIsChanged(typeAnalysis, baseTypeAnalyses);
 
-        foreach (var member in typeSymbol.GetMembers())
+        foreach (var member in typeSymbol.GetMembers().Where(x => !x.IsImplicitlyDeclared))
         {
             MemberAnalysis? memberAnalysis = null;
             switch (member)

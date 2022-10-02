@@ -197,4 +197,31 @@ public partial class SomeViewModel
         this.AssertNotifies(input, "SomeViewModel", "Foo", "Baz");
 
     }
+
+    [Test]
+    public void HandlesRecursiveProperties()
+    {
+        string input = @"
+partial class SomeViewModel
+{
+    public SomeViewModel Test => Test;
+    [Notify] string _value;
+}";
+
+        this.AssertDoesNotNotify(input, "SomeViewModel", "Test");
+    }
+
+    [Test]
+    public void HandlesMutuallyRecursiveProperties()
+    {
+        string input = @"
+partial class SomeViewModel
+{
+    public SomeViewModel Test1 => Test2;
+    public SomeViewModel Test2 => Test1;
+    [Notify] string _value;
+}";
+
+        this.AssertDoesNotNotify(input, "SomeViewModel", "Test");
+    }
 }

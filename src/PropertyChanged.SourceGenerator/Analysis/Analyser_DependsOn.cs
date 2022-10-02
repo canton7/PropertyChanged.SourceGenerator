@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Linq;
 using System.Text;
 using Microsoft.CodeAnalysis;
@@ -11,6 +12,8 @@ namespace PropertyChanged.SourceGenerator.Analysis;
 
 public partial class Analyser
 {
+    private static readonly ImmutableHashSet<IPropertySymbol> emptyPropertyHashSet = ImmutableHashSet<IPropertySymbol>.Empty.WithComparer(SymbolEqualityComparer.Default);
+
     private void ResolveDependsOn(TypeAnalysis typeAnalysis)
     {
         var lookups = new TypeAnalysisLookups(typeAnalysis);
@@ -25,7 +28,7 @@ public partial class Analyser
             }
             else if (member is IPropertySymbol propertySymbol)
             {
-                this.ResolveAutoDependsOn(typeAnalysis, propertySymbol, propertySymbol, lookups);
+                this.ResolveAutoDependsOn(typeAnalysis, propertySymbol, propertySymbol, lookups, emptyPropertyHashSet);
             }
         }
     }
@@ -86,7 +89,12 @@ public partial class Analyser
 
     /// <param name="notifyProperty">The property to raise an event for</param>
     /// <param name="analyseProperty">The property whose body should be analysed</param>
-    private void ResolveAutoDependsOn(TypeAnalysis typeAnalysis, IPropertySymbol notifyProperty, IPropertySymbol analyseProperty, TypeAnalysisLookups lookups)
+    private void ResolveAutoDependsOn(
+        TypeAnalysis typeAnalysis,
+        IPropertySymbol notifyProperty,
+        IPropertySymbol analyseProperty,
+        TypeAnalysisLookups lookups,
+        ImmutableHashSet<IPropertySymbol> visitedProperties)
     {
         if (analyseProperty.GetMethod?.Locations.FirstOrDefault() is { } location &&
             location.SourceTree?.GetRoot()?.FindNode(location.SourceSpan) is { } getterNode)
@@ -135,7 +143,11 @@ public partial class Analyser
                 {
                     // Is it another property defined on the same type, which might itself have a body
                     // we need to analyse?
-                    this.ResolveAutoDependsOn(typeAnalysis, notifyProperty, dependsOn, lookups);
+                    // Avoid infinite recursion if a property refers to itself, or two properties refer to each other.
+                    if (!visitedProperties.Contains(dependsOn))
+                    {
+                        this.ResolveAutoDependsOn(typeAnalysis, notifyProperty, dependsOn, lookups, visitedProperties.Add(dependsOn));
+                    }
                 }
                 else if (TypeAndBaseTypes(typeAnalysis.TypeSymbol.BaseType!).SelectMany(x => x.GetMembers().OfType<IPropertySymbol>())
                     .FirstOrDefault(x => x.Name == node.Identifier.ValueText) is { } baseProperty)

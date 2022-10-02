@@ -1,3 +1,8 @@
+v1.0.6
+------
+
+ - Don't crash when analysing a property which refers to itself (#24)
+
 v1.0.5
 ------
 

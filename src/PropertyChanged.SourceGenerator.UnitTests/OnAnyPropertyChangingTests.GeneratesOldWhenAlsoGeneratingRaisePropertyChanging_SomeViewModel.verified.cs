@@ -1,5 +1,6 @@
 ﻿partial class SomeViewModel
 {
+    /// <inheritdoc />
     public event global::System.ComponentModel.PropertyChangingEventHandler PropertyChanging;
     public string Foo { get; set; }
     protected virtual void OnPropertyChanging(global::System.ComponentModel.PropertyChangingEventArgs eventArgs, object oldValue)

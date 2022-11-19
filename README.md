@@ -571,17 +571,17 @@ There are a few settings which control how PropertyChanged.SourceGenerator turns
 # Default: ''
 propertychanged.add_prefix =
 
-# A string to remove from the beginning of any generated property name, if present
+# A semicolon-delimeted list of values to remove from the beginning of any generated property name, if present
 # Default: '_'
-propertychanged.remove_prefix = _
+propertychanged.remove_prefixes = _
 
 # A string to add to the end of any generated property name
 # Default: ''
 propertychanged.add_suffix =
 
-# A string to remove from the end of any generated property name
+# A semicolon-delimeted list of values to remove from the end of any generated property name
 # Default: ''
-propertychanged.remove_suffix =
+propertychanged.remove_suffixes =
 
 # How the first letter of the generated property name should be capitalised
 # Valid values: none, upper_case, lower_Case

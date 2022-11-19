@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
 using NUnit.Framework;
 using PropertyChanged.SourceGenerator.UnitTests.Framework;
 
@@ -12,6 +13,11 @@ namespace PropertyChanged.SourceGenerator.UnitTests;
 [TestFixture]
 public class NullableTypeTests : TestsBase
 {
+    private static readonly CSharpSyntaxVisitor<SyntaxNode?>[] rewriters = new CSharpSyntaxVisitor<SyntaxNode?>[]
+    {
+        RemovePropertiesRewriter.Instance, RemoveDocumentationRewriter.Instance,
+    };
+
     [Test]
     public void GeneratesNullableEventIfInCompilationNullableContext()
     {
@@ -24,7 +30,7 @@ public partial class SomeViewModel
 
         this.AssertThat(
             input,
-            It.HasFile("SomeViewModel", RemovePropertiesRewriter.Instance, RemoveInpcMembersRewriter.CommentsOnly),
+            It.HasFile("SomeViewModel", rewriters),
             nullableContextOptions: NullableContextOptions.Enable);
     }
 
@@ -41,7 +47,7 @@ public partial class SomeViewModel
 
         this.AssertThat(
             input,
-            It.HasFile("SomeViewModel", RemovePropertiesRewriter.Instance, RemoveInpcMembersRewriter.CommentsOnly),
+            It.HasFile("SomeViewModel", rewriters),
             nullableContextOptions: NullableContextOptions.Disable);
         ;
     }

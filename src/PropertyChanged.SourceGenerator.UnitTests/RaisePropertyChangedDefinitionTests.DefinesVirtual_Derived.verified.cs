@@ -1,6 +1,5 @@
 ﻿partial class Derived : global::System.ComponentModel.INotifyPropertyChanged
 {
-    /// <inheritdoc />
     public event global::System.ComponentModel.PropertyChangedEventHandler PropertyChanged;
     public string Bar { get; set; }
     protected virtual void OnPropertyChanged(global::System.ComponentModel.PropertyChangedEventArgs eventArgs)

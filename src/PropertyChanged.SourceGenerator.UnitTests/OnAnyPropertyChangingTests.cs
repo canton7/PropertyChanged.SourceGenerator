@@ -15,7 +15,7 @@ public class OnAnyPropertyChangingTests : TestsBase
 {
     private static readonly CSharpSyntaxVisitor<SyntaxNode?>[] rewriters = new CSharpSyntaxVisitor<SyntaxNode?>[]
     {
-        RemoveInpcMembersRewriter.Changed, RemovePropertiesRewriter.Instance
+        RemoveInpcMembersRewriter.Changed, RemovePropertiesRewriter.Instance, RemoveDocumentationRewriter.Instance
     };
 
     [Test]

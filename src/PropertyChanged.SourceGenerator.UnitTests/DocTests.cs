@@ -21,18 +21,19 @@ public class DocTests : TestsBase
     [Test]
     public void CopiesDocs()
     {
-        string input = @"
-public partial class SomeViewModel
-{
-    /// <summary>
-    /// The Summary
-    /// </summary>
-    /// <description>
-    /// The Description.
-    ///     Indented line
-    /// </description>
-    [Notify] private string _foo;
-}";
+        string input = """
+            public partial class SomeViewModel
+            {
+                /// <summary>
+                /// The Summary
+                /// </summary>
+                /// <description>
+                /// The Description.
+                ///     Indented line
+                /// </description>
+                [Notify] private string _foo;
+            }
+            """;
 
         this.AssertThat(input, It.HasFile("SomeViewModel", rewriters));
     }
@@ -40,14 +41,15 @@ public partial class SomeViewModel
     [Test]
     public void HandlesMalformedXml()
     {
-        string input = @"
-public partial class SomeViewModel
-{
-/// <summary>
-/// Test
-/// </summarry>
-[Notify] private string _foo;
-}";
+        string input = """
+            public partial class SomeViewModel
+            {
+            /// <summary>
+            /// Test
+            /// </summarry>
+            [Notify] private string _foo;
+            }
+            """;
 
         this.AssertThat(input, It.HasFile("SomeViewModel", rewriters));
     }
@@ -55,12 +57,13 @@ public partial class SomeViewModel
     [Test]
     public void GeneratesOnPropertyChangedOrChangingDocNoOldAndNew()
     {
-        string input = @"
-using System.ComponentModel;
-public partial class SomeViewModel : INotifyPropertyChanging
-{
-    [Notify] private int _foo;
-}";
+        string input = """
+            using System.ComponentModel;
+            public partial class SomeViewModel : INotifyPropertyChanging
+            {
+                [Notify] private int _foo;
+            }
+            """;
 
         this.AssertThat(input, It.HasFile("SomeViewModel", RemovePropertiesRewriter.Instance));
     }
@@ -68,14 +71,15 @@ public partial class SomeViewModel : INotifyPropertyChanging
     [Test]
     public void GeneratesOnPropertyChangedOrChangingDocOldAndNew()
     {
-        string input = @"
-using System.ComponentModel;
-public partial class SomeViewModel : INotifyPropertyChanging
-{
-    [Notify] private int _foo;
-    private void OnAnyPropertyChanged(string name, object oldValue, object newValue) { }
-    private void OnAnyPropertyChanging(string name, object oldValue) { }
-}";
+        string input = """
+            using System.ComponentModel;
+            public partial class SomeViewModel : INotifyPropertyChanging
+            {
+                [Notify] private int _foo;
+                private void OnAnyPropertyChanged(string name, object oldValue, object newValue) { }
+                private void OnAnyPropertyChanging(string name, object oldValue) { }
+            }
+            """;
 
         this.AssertThat(input, It.HasFile("SomeViewModel", RemovePropertiesRewriter.Instance));
     }

@@ -15,7 +15,7 @@ public class RaisePropertyChangedDefinitionTests : TestsBase
 {
     private static readonly CSharpSyntaxVisitor<SyntaxNode?>[] rewriters = new CSharpSyntaxVisitor<SyntaxNode?>[]
     {
-        RemovePropertiesRewriter.Instance, RemoveInpcMembersRewriter.CommentsOnly
+        RemovePropertiesRewriter.Instance, RemoveDocumentationRewriter.Instance,
     };
 
     [Test]

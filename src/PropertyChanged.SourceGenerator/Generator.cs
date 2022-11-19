@@ -88,10 +88,12 @@ public class Generator
         string nullable = typeAnalysis.NullableContext.HasFlag(NullableContextOptions.Annotations) ? "?" : "";
         if (typeAnalysis.INotifyPropertyChanged.RequiresEvent)
         {
+            this.writer.WriteLine("/// <inheritdoc />");
             this.writer.WriteLine($"public event global::System.ComponentModel.PropertyChangedEventHandler{nullable} PropertyChanged;");
         }
         if (typeAnalysis.INotifyPropertyChanging.RequiresEvent)
         {
+            this.writer.WriteLine("/// <inheritdoc />");
             this.writer.WriteLine($"public event global::System.ComponentModel.PropertyChangingEventHandler{nullable} PropertyChanging;");
         }
 

@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Microsoft.CodeAnalysis.CSharp;
+using Microsoft.CodeAnalysis;
 using NUnit.Framework;
 using PropertyChanged.SourceGenerator.UnitTests.Framework;
 
@@ -11,6 +13,11 @@ namespace PropertyChanged.SourceGenerator.UnitTests;
 [TestFixture]
 public class DocTests : TestsBase
 {
+    private static readonly CSharpSyntaxVisitor<SyntaxNode?>[] rewriters = new CSharpSyntaxVisitor<SyntaxNode?>[]
+    {
+        RemovePropertiesRewriter.Instance, RemoveInpcMembersRewriter.All
+    };
+
     [Test]
     public void CopiesDocs()
     {
@@ -27,7 +34,7 @@ public partial class SomeViewModel
     [Notify] private string _foo;
 }";
 
-        this.AssertThat(input, It.HasFile("SomeViewModel", StandardRewriters));
+        this.AssertThat(input, It.HasFile("SomeViewModel", rewriters));
     }
 
     [Test]
@@ -42,7 +49,7 @@ public partial class SomeViewModel
 [Notify] private string _foo;
 }";
 
-        this.AssertThat(input, It.HasFile("SomeViewModel", StandardRewriters));
+        this.AssertThat(input, It.HasFile("SomeViewModel", rewriters));
     }
 
     [Test]

@@ -297,6 +297,32 @@ rather than just:
 ```
 
 
+### Virtual Properties
+
+If you want the generated property to be `virtual`, use:
+
+```cs
+using PropertyChanged.SourceGenerator;
+public partial class MyViewModel : INotifyPropertyChanged
+{
+    [Notify(IsVirtual = true]
+    private int _foo;
+}
+```
+
+Generates:
+
+```cs
+partial class MyViewModel
+{
+    public virtual int Foo
+    {
+        // ...
+    }
+}
+```
+
+
 Property Dependencies
 ---------------------
 

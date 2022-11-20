@@ -54,6 +54,6 @@ public class PropertyAttributeTests : TestsBase
             // (3,6): Warning INPC008: [AlsoNotify] is only valid on members which also have [Notify]. Skipping
             // PropertyAttribute("System.Xml.Serialization.XmlIgnore")
             Diagnostic("INPC008", @"PropertyAttribute(""System.Xml.Serialization.XmlIgnore"")").WithLocation(3, 6)
-            ));
+        ));
     }
 }

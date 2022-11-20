@@ -302,7 +302,7 @@ public class Generator
             }
         }
 
-        this.writer.WriteLine($"{propertyAccessibility}{member.Type.ToDisplayString(SymbolDisplayFormats.FullyQualifiedTypeName)} {member.Name}");
+        this.writer.WriteLine($"{propertyAccessibility}{(member.IsVirtual ? "virtual " : "")}{member.Type.ToDisplayString(SymbolDisplayFormats.FullyQualifiedTypeName)} {member.Name}");
         this.writer.WriteLine("{");
         this.writer.Indent++;
 

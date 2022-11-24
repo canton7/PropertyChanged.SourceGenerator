@@ -25,5 +25,6 @@ public class Configuration
     public string[] RemoveSuffixes { get; set; } = Array.Empty<string>();
     public string? AddPrefix { get; set; } = null;
     public string? AddSuffix { get; set; } = null;
-    public Capitalisation FirstLetterCapitalisation { get; set; } = Capitalisation.Uppercase; 
+    public Capitalisation FirstLetterCapitalisation { get; set; } = Capitalisation.Uppercase;
+    public bool EnableAutoNotify { get; set; } = true;
 }

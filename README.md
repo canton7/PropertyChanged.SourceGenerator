@@ -33,6 +33,7 @@ PropertyChanged.SourceGenerator works well if you're using an MVVM framework or 
 1. [Configuration](#configuration)
    1. [Generated Property Names](#generated-property-names)
    1. [`OnPropertyChanged` / `OnPropertyChanging` Method Name](#onpropertychanged--onpropertychanging-method-name)
+   1. [Automatic Dependencies](#automatic-dependencies-1)
 1. [Contributing](#contributing)
 1. [Comparison to PropertyChanged.Fody](#comparison-to-propertychangedfody)
 
@@ -413,6 +414,8 @@ partial class Derived
 
 Note that this cannot work for getters which access properties on other types, or on other instances of the current type. Also note that your property getter must reference the generated property and not its backing field (i.e. `LastName`, not `_lastName` above).
 
+Automatic dependency resolution does not happen if the property is decorated with `[DependsOn(...)]`. Therefore, to disable automatic dependency resolution for a single property, you can decorate it with an empty `[DependsOn]`. To disable automatic dependency resolution across your entire project, set `propertychanged.auto_notify = false` in your .editorconfig, see [Configuration](#configuration).
+
 
 ### Manual Dependencies with `[DependsOn]`
 
@@ -611,7 +614,7 @@ propertychanged.remove_suffixes =
 
 # How the first letter of the generated property name should be capitalised
 # Valid values: none, upper_case, lower_Case
-# Default: 'upper_case'
+# Default: upper_case
 propertychanged.first_letter_capitalization = upper_case
 ```
 
@@ -627,15 +630,28 @@ The names of the pre-existing methods which it searches for, and the name of the
 
 # A ';' separated list of method names to search for when finding a method to raise the
 # PropertyChanged event. If none is found, the first name listed here is used to generate one.
-# Default: 'OnPropertyChanged;RaisePropertyChanged;NotifyOfPropertyChange;NotifyPropertyChanged'
+# Default: OnPropertyChanged;RaisePropertyChanged;NotifyOfPropertyChange;NotifyPropertyChanged
 propertychanged.onpropertychanged_method_name = OnPropertyChanged;RaisePropertyChanged;NotifyOfPropertyChange;NotifyPropertyChanged
 
 # A ';' separated list of method names to search for when finding a method to raise the
 # PropertyChanging event. If none is found, the first name listed here is used to generate one.
-# Default: 'OnPropertyChanging;RaisePropertyChanging;NotifyOfPropertyChanging;NotifyPropertyChanging'
+# Default: OnPropertyChanging;RaisePropertyChanging;NotifyOfPropertyChanging;NotifyPropertyChanging
 propertychanged.onpropertychanging_method_name = OnPropertyChanging;RaisePropertyChanging;NotifyOfPropertyChanging;NotifyPropertyChanging
 ```
 
+
+### Automatic Dependencies
+
+To disable [automatic property dependency resolution](#automatic-dependencies) across your whole project, set:
+
+```
+[*.cs]
+
+# Whether to enable automatic property dependency resolution
+# Valid values: true, false
+# Default: true
+propertychanged.auto_notify = false 
+```
 
 Contributing
 ------------

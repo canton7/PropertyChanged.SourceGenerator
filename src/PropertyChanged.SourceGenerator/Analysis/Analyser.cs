@@ -194,7 +194,7 @@ public partial class Analyser
 
         this.ReportPropertyNameCollisions(typeAnalysis, baseTypeAnalyses);
         this.ResolveAlsoNotify(typeAnalysis, baseTypeAnalyses);
-        this.ResolveDependsOn(typeAnalysis);
+        this.ResolveDependsOn(typeAnalysis, config);
 
         if (!IsPartial(typeSymbol))
         {

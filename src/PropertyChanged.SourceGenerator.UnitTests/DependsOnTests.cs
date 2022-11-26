@@ -139,4 +139,24 @@ public class DependsOnTests : TestsBase
             Diagnostic("INPC023", @"DependsOn(""Foo"")").WithLocation(9, 14)
         ));
     }
+
+    [Test]
+    public void UsesShortNameForExplicitlyImplementedProperties()
+    {
+        string input = """
+            public interface I1
+            {
+                string Foo { get; }
+            }
+            public partial class SomeViewModel : I1
+            {
+                [Notify]
+                private string _bar;
+                
+                [DependsOn(nameof(Bar))]
+                string I1.Foo => "Foo";
+            }
+            """;
+        this.AssertNotifies(input, "SomeViewModel", "Bar", "Foo");
+    }
 }

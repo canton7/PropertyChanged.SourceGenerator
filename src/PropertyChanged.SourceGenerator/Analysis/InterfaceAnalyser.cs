@@ -75,13 +75,14 @@ public abstract class InterfaceAnalyser
         // If there's no event, the base type in our hierarchy is defining it
         interfaceAnalysis.RequiresEvent = eventSymbol == null && !isGeneratingAnyParent;
 
-        // Try and find a method with a name we recognise and a signature we know how to call
+        // Try and find a method with a name we recognise and a signature we know how to call.
         // We prioritise the method name over things like the signature or where in the type hierarchy
-        // it is. One we've found any method with a name we're looking for, stop: it's most likely they've 
-        // just messed up the signature
-        interfaceAnalysis.CanCallRaiseMethod = true;
+        // it is.
+        // We'll look for methods all the way down the class hierarchy, but we'll only complain if we find one
+        // with an unknown signature on a class which implements INPC.
         RaisePropertyChangedOrChangingMethodSignature? signature = null;
         IMethodSymbol? method = null;
+        var methodNamesFoundButDidntKnowHowToCall = new List<string>();
         foreach (string name in this.GetRaisePropertyChangedOrChangingEventNames(config))
         {
             // We don't filter on IsOverride. That means if there is an override, we'll pick it up before the
@@ -93,18 +94,24 @@ public abstract class InterfaceAnalyser
                 .ToList();
             if (methods.Count > 0)
             {
-                if (!this.TryFindCallableRaisePropertyChangedOrChangingOverload(methods, out method, out signature, typeSymbol))
+                // TryFindCallableRaisePropertyChangedOrChangingOverload mutates methods, so we need to check this now
+                bool anyImplementsInpc = methods.Any(x => x.ContainingType.AllInterfaces.Contains(this.interfaceSymbol, SymbolEqualityComparer.Default));
+                if (this.TryFindCallableRaisePropertyChangedOrChangingOverload(methods, out method, out signature, typeSymbol))
                 {
-                    interfaceAnalysis.CanCallRaiseMethod = false;
-                    this.ReportCouldNotFindCallableRaisePropertyChangedOrChangingOverload(typeSymbol, name);
+                    break;
                 }
-                break;
+                else if (anyImplementsInpc)
+                {
+                    methodNamesFoundButDidntKnowHowToCall.Add(name);
+                    break;
+                }
             }
         }
 
         // Get this populated now -- we'll need to adjust our behaviour based on what we find
         this.FindOnAnyPropertyChangedOrChangingMethod(typeSymbol, interfaceAnalysis, out var onAnyPropertyChangedMethod);
 
+        interfaceAnalysis.CanCallRaiseMethod = true;
         if (signature != null)
         {
             // We found a method which we know how to call.
@@ -143,8 +150,13 @@ public abstract class InterfaceAnalyser
             interfaceAnalysis.RaiseMethodName = method!.Name;
             interfaceAnalysis.RaiseMethodSignature = signature.Value;
         }
-        else if (interfaceAnalysis.CanCallRaiseMethod)
+        else
         {
+            if (methodNamesFoundButDidntKnowHowToCall.Count > 0)
+            {
+                this.ReportCouldNotFindCallableRaisePropertyChangedOrChangingOverload(typeSymbol, methodNamesFoundButDidntKnowHowToCall[0]);
+            }
+
             // The base type in our hierarchy is defining its own
             // Make sure that that type can actually access the event, if it's pre-existing
             if (eventSymbol != null && !isGeneratingAnyParent &&
@@ -152,7 +164,12 @@ public abstract class InterfaceAnalyser
             {
                 interfaceAnalysis.CanCallRaiseMethod = false;
                 interfaceAnalysis.RaiseMethodType = RaisePropertyChangedMethodType.None;
-                this.ReportCouldNotFindRaisePropertyChangingOrChangedMethod(typeSymbol);
+
+                // Don't raise this if we raised ReportCouldNotFindCallableRaisePropertyChangedOrChangingOverload above
+                if (methodNamesFoundButDidntKnowHowToCall.Count == 0)
+                {
+                    this.ReportCouldNotFindRaisePropertyChangingOrChangedMethod(typeSymbol);
+                }
             }
             else if (isGeneratingAnyParent)
             {

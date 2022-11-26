@@ -63,7 +63,7 @@ public class DiagnosticReporter
     private static readonly DiagnosticDescriptor couldNotFindCallableRaisePropertyChangedOverload = CreateDescriptor(
         "INPC006",
         "Could not find callable method to raise PropertyChanged event",
-        "Found one or more methods called '{0}' to raise the PropertyChanged event, but they had an unrecognised signatures or were inaccessible. No PropertyChanged events will be raised from this type");
+        "Found one or more methods called '{0}' to raise the PropertyChanged event, but they had an unrecognised signatures or were inaccessible. These methods will not be used");
     public void ReportCouldNotFindCallableRaisePropertyChangedOverload(INamedTypeSymbol typeSymbol, string name)
     {
         this.AddDiagnostic(couldNotFindCallableRaisePropertyChangedOverload, typeSymbol.Locations, name);
@@ -72,7 +72,7 @@ public class DiagnosticReporter
     private static readonly DiagnosticDescriptor couldNotFindCallableRaisePropertyChangingOverload = CreateDescriptor(
         "INPC029",
         "Could not find callable method to raise PropertyChanging event",
-        "Found one or more methods called '{0}' to raise the PropertyChanging event, but they had an unrecognised signatures or were inaccessible. No PropertyChanging events will be raised from this type");
+        "Found one or more methods called '{0}' to raise the PropertyChanging event, but they had an unrecognised signatures or were inaccessible. These methods will not be used");
     public void ReportCouldNotFindCallableRaisePropertyChangingOverload(INamedTypeSymbol typeSymbol, string name)
     {
         this.AddDiagnostic(couldNotFindCallableRaisePropertyChangingOverload, typeSymbol.Locations, name);

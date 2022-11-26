@@ -123,11 +123,11 @@ public class RaisePropertyChangedCallTests : TestsBase
     }
 
     [Test]
-    public void RaisesIfMethodFoundWithBadSignature()
+    public void RaisesIfMethodFoundWithBadSignatureIfTypeImplementsInpc()
     {
         string input = """
             using System.ComponentModel;
-            public partial class SomeViewModel
+            public partial class SomeViewModel : INotifyPropertyChanged
             {
                 public event PropertyChangedEventHandler PropertyChanged;
                 internal void OnPropertyChanged(string name, string other) =>
@@ -145,11 +145,29 @@ public class RaisePropertyChangedCallTests : TestsBase
     }
 
     [Test]
-    public void PrefersMethodEarlierInListWithBadSignatureToOneLaterInListWithGoodSignature()
+    public void DoesNotRaiseIfMethodFoundWithBadSignatureIfTypeDoesNotImplementInpc()
     {
         string input = """
             using System.ComponentModel;
             public partial class SomeViewModel
+            {
+                public event PropertyChangedEventHandler PropertyChanged;
+                internal void OnPropertyChanged(string name, string other) =>
+                    PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
+                [Notify]
+                private string _foo;
+            }
+            """;
+
+        this.AssertThat(input, It.HasDiagnostics());
+    }
+
+    [Test]
+    public void PrefersMethodEarlierInListWithBadSignatureToOneLaterInListWithGoodSignature()
+    {
+        string input = """
+            using System.ComponentModel;
+            public partial class SomeViewModel : INotifyPropertyChanged
             {
                 public event PropertyChangedEventHandler PropertyChanged;
                 internal void OnPropertyChanged(string name, string other) =>

@@ -63,7 +63,7 @@ public class DiagnosticReporter
     private static readonly DiagnosticDescriptor couldNotFindCallableRaisePropertyChangedOverload = CreateDescriptor(
         "INPC006",
         "Could not find callable method to raise PropertyChanged event",
-        "Found one or more methods called '{0}' to raise the PropertyChanged event, but they had an unrecognised signatures or were inaccessible. No PropertyChanged events will be raised from this type");
+        "Found one or more methods called '{0}' to raise the PropertyChanged event, but they had an unrecognised signatures or were inaccessible. These methods will not be used");
     public void ReportCouldNotFindCallableRaisePropertyChangedOverload(INamedTypeSymbol typeSymbol, string name)
     {
         this.AddDiagnostic(couldNotFindCallableRaisePropertyChangedOverload, typeSymbol.Locations, name);
@@ -72,7 +72,7 @@ public class DiagnosticReporter
     private static readonly DiagnosticDescriptor couldNotFindCallableRaisePropertyChangingOverload = CreateDescriptor(
         "INPC029",
         "Could not find callable method to raise PropertyChanging event",
-        "Found one or more methods called '{0}' to raise the PropertyChanging event, but they had an unrecognised signatures or were inaccessible. No PropertyChanging events will be raised from this type");
+        "Found one or more methods called '{0}' to raise the PropertyChanging event, but they had an unrecognised signatures or were inaccessible. These methods will not be used");
     public void ReportCouldNotFindCallableRaisePropertyChangingOverload(INamedTypeSymbol typeSymbol, string name)
     {
         this.AddDiagnostic(couldNotFindCallableRaisePropertyChangingOverload, typeSymbol.Locations, name);
@@ -186,15 +186,6 @@ public class DiagnosticReporter
     public void ReportIsChangedDoesNotHaveSetter(ISymbol member)
     {
         this.AddDiagnostic(isChangedDoesNotHaveSetter, member.Locations, member.Name);
-    }
-
-    private static readonly DiagnosticDescriptor unknownFirstLetterCapitalisation = CreateDescriptor(
-        "INPC017",
-        "Unrecognised config value for propertychanged_first_letter_capitalization",
-        "Unrecognised value '{0}' for config value propertychanged_first_letter_capitalization. Expected 'upper_case', 'lower_case' or 'none'");
-    public void ReportUnknownFirstLetterCapitalisation(string firstLetterCapitalisation)
-    {
-        this.AddDiagnostic(unknownFirstLetterCapitalisation, (Location?)null, firstLetterCapitalisation);
     }
 
     private static readonly DiagnosticDescriptor readonlyBackingMember = CreateDescriptor(
@@ -339,6 +330,24 @@ public class DiagnosticReporter
     public void ReportUnhandledExceptionOnParent(INamedTypeSymbol typeSymbol)
     {
         this.AddDiagnostic(unhandledExceptionOnParent, typeSymbol.Locations, typeSymbol.Name);
+    }
+
+    private static readonly DiagnosticDescriptor unknownFirstLetterCapitalisation = CreateDescriptor(
+        "INPC017",
+        "Unrecognised config value for propertychanged_first_letter_capitalization",
+        "Unrecognised value '{0}' for config key propertychanged_first_letter_capitalization. Expected 'upper_case', 'lower_case' or 'none'");
+    public void ReportUnknownFirstLetterCapitalisation(string firstLetterCapitalisation)
+    {
+        this.AddDiagnostic(unknownFirstLetterCapitalisation, (Location?)null, firstLetterCapitalisation);
+    }
+
+    private static readonly DiagnosticDescriptor cannotParseConfigBool = CreateDescriptor(
+        "INPC037",
+        "Unable to parse boolean from .editorconfig configuration value",
+        "Unable to parse booleam value '{0}' for config key '{1}'. Expected 'true' or 'false'");
+    public void ReportCannotParseConfigBool(string key, string value)
+    {
+        this.AddDiagnostic(cannotParseConfigBool, (Location?)null, value, key);
     }
 
     // INPC numbers are defined out of order!! The next one is not just the one above + 1

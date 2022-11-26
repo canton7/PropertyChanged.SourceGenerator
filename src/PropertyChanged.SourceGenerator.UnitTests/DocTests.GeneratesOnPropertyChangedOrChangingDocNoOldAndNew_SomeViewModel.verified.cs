@@ -1,6 +1,8 @@
 ﻿partial class SomeViewModel : global::System.ComponentModel.INotifyPropertyChanged
 {
+    /// <inheritdoc />
     public event global::System.ComponentModel.PropertyChangedEventHandler PropertyChanged;
+    /// <inheritdoc />
     public event global::System.ComponentModel.PropertyChangingEventHandler PropertyChanging;
     public int Foo { get; set; }
     /// <summary>

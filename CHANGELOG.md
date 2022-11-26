@@ -1,3 +1,13 @@
+v1.0.7
+------
+
+ - Allow automatic property depenency resolution to be disabled project-wide (#36)
+ - Tweak what errors are raised when a suitable method to raise the PropertyChanged event could not be found (#33)
+ - Properly support explicitly-implemented properties (#35)
+ - Support generating virtual properties (#27)
+ - Add `<inheritdoc/>` to generated events (#29)
+ - Fix README documentation on remove_{prefixes/suffixes} (#25)
+
 v1.0.6
 ------
 

@@ -15,17 +15,18 @@ public class TypeGenerationTests : TestsBase
     [Test]
     public void GeneratesNamespace()
     {
-        string input = @"
-using System.ComponentModel;
-namespace Test.Foo
-{
-    public partial class SomeViewModel : INotifyPropertyChanged
-    {
-        public event PropertyChangedEventHandler PropertyChanged;
-        [Notify]
-        private string _foo;
-    }
-}";
+        string input = """
+            using System.ComponentModel;
+            namespace Test.Foo
+            {
+                public partial class SomeViewModel : INotifyPropertyChanged
+                {
+                    public event PropertyChangedEventHandler PropertyChanged;
+                    [Notify]
+                    private string _foo;
+                }
+            }
+            """;
 
         this.AssertThat(input, It.HasFile("SomeViewModel", StandardRewriters));
     }
@@ -33,31 +34,33 @@ namespace Test.Foo
     [Test]
     public void RaisesIfTypeIsNotPartialAndHasNotifyProperties()
     {
-        string input = @"
-using System.ComponentModel;
-public class SomeViewModel : INotifyPropertyChanged
-{
-    public event PropertyChangedEventHandler PropertyChanged;
-    [Notify]
-    private string _foo;
-}";
+        string input = """
+            using System.ComponentModel;
+            public class SomeViewModel : INotifyPropertyChanged
+            {
+                public event PropertyChangedEventHandler PropertyChanged;
+                [Notify]
+                private string _foo;
+            }
+            """;
 
         this.AssertThat(input, It.HasDiagnostics(
-            // (3,14): Warning INPC002: Type 'SomeViewModel' must be partial in order for PropertyChanged.SourceGenerator to generate properties
+            // (2,14): Warning INPC002: Type 'SomeViewModel' must be partial in order for PropertyChanged.SourceGenerator to generate properties
             // SomeViewModel
-            Diagnostic("INPC002", @"SomeViewModel").WithLocation(3, 14)
+            Diagnostic("INPC002", @"SomeViewModel").WithLocation(2, 14)
         ));
     }
 
     [Test]
     public void HandlesBadlyNamedGenericTypes()
     {
-        string input = @"
-public partial class SomeViewModel<@class>
-{
-    [Notify]
-    private string _foo;
-}";
+        string input = """
+            public partial class SomeViewModel<@class>
+            {
+                [Notify]
+                private string _foo;
+            }
+            """;
 
         this.AssertThat(input, It.HasFile("SomeViewModel", StandardRewriters));
     }
@@ -65,12 +68,13 @@ public partial class SomeViewModel<@class>
     [Test]
     public void HandlesGenericTypesWithConstraints()
     {
-        string input = @"
-public partial class SomeViewModel<T> where T : class
-{
-    [Notify]
-    private string _foo;
-}";
+        string input = """
+            public partial class SomeViewModel<T> where T : class
+            {
+                [Notify]
+                private string _foo;
+            }
+            """;
 
         this.AssertThat(input, It.HasFile("SomeViewModel", StandardRewriters));
     }
@@ -78,13 +82,14 @@ public partial class SomeViewModel<T> where T : class
     [Test]
     public void DoesNotGenerateEmptyCache()
     {
-        string input = @"
-public partial class SomeViewModel
-{
-    [Notify]
-    private int _foo;
-    protected void OnPropertyChanged(string propertyName) => PropertyChanged?.Invoke(this, null);
-}";
+        string input = """
+            public partial class SomeViewModel
+            {
+                [Notify]
+                private int _foo;
+                protected void OnPropertyChanged(string propertyName) => PropertyChanged?.Invoke(this, null);
+            }
+            """;
         this.AssertThat(input, It.DoesNotHaveFile("EventArgsCache"));
     }
 
@@ -93,17 +98,18 @@ public partial class SomeViewModel
     {
         // https://github.com/canton7/PropertyChanged.SourceGenerator/issues/2
 
-        string input = @"
-partial class A
-{
-    partial class B
-    {
-        partial class C
-        {
-            [Notify] private string _field;
-        }
-    }
-}";
+        string input = """
+            partial class A
+            {
+                partial class B
+                {
+                    partial class C
+                    {
+                        [Notify] private string _field;
+                    }
+                }
+            }
+            """;
 
         this.AssertThat(input, It.HasFile("C", StandardRewriters));
     }
@@ -111,40 +117,42 @@ partial class A
     [Test]
     public void ComplainsIfOuterTypeIsNotPartial()
     {
-        string input = @"
-public class A
-{
-    partial class C
-    {
-        [Notify] private string _field;
-    }
-}";
+        string input = """
+            public class A
+            {
+                partial class C
+                {
+                    [Notify] private string _field;
+                }
+            }
+            """;
 
         this.AssertThat(input, It.HasDiagnostics(
-            // (2,14): Warning INPC020: Type 'A' must be partial in order for PropertyChanged.SourceGenerator to generate properties for inner type 'C'
+            // (1,14): Warning INPC020: Type 'A' must be partial in order for PropertyChanged.SourceGenerator to generate properties for inner type 'C'
             // A
-            Diagnostic("INPC020", @"A").WithLocation(2, 14)));
+            Diagnostic("INPC020", @"A").WithLocation(1, 14)));
     }
 
     [Test]
     public void HandlesTwoClassesSameNameDifferentNamespaces()
     {
-        string input = @"
-namespace NS1
-{
-    partial class SomeViewModel
-    {
-        [Notify] string _a;
-    }
-}
+        string input = """
+            namespace NS1
+            {
+                partial class SomeViewModel
+                {
+                    [Notify] string _a;
+                }
+            }
 
-namespace NS2
-{
-    partial class SomeViewModel
-    {
-        [Notify] string _a;
-    }
-}";
+            namespace NS2
+            {
+                partial class SomeViewModel
+                {
+                    [Notify] string _a;
+                }
+            }
+            """;
 
         this.AssertThat(input,
             It.HasFile("SomeViewModel", StandardRewriters)

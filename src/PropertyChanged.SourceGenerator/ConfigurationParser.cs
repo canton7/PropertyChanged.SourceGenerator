@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Net;
+using System.Reflection.Metadata.Ecma335;
 using System.Text;
 using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Diagnostics;
 
 namespace PropertyChanged.SourceGenerator;
@@ -68,7 +70,30 @@ public class ConfigurationParser
                 this.diagnostics.ReportUnknownFirstLetterCapitalisation(firstLetterCapitalisation);
             }
         }
+        config.EnableAutoNotify = this.ParseBool(options, "propertychanged.auto_notify", true);
 
         return config;
+    }
+
+    private bool ParseBool(AnalyzerConfigOptions options, string key, bool defaultValue)
+    {
+        if (options.TryGetValue(key, out string? value))
+        {
+            if (string.Equals(value, "true", StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+            if (string.Equals(value, "false", StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+
+            this.diagnostics.ReportCannotParseConfigBool(key, value);
+            return defaultValue;
+        }
+        else
+        {
+            return defaultValue;
+        }
     }
 }

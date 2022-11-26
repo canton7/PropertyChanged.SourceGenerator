@@ -81,7 +81,7 @@ public abstract class TestsBase
 
     protected static Expectation It { get; } = new Expectation();
     protected static ImmutableList<CSharpSyntaxVisitor<SyntaxNode?>> StandardRewriters { get; } = new CSharpSyntaxVisitor<SyntaxNode?>[] {
-        RemovePropertiesRewriter.Instance, RemoveInpcMembersRewriter.All
+        RemovePropertiesRewriter.Instance, RemoveInpcMembersRewriter.All, RemoveDocumentationRewriter.Instance,
     }.ToImmutableList();
 
     protected void AssertThat(

@@ -30,12 +30,21 @@ public struct AlsoNotifyMember : IMember, IEquatable<AlsoNotifyMember>
 
     public static AlsoNotifyMember NonCallable(string? name) =>
         new(name, null, null, null);
+
     public static AlsoNotifyMember FromMemberAnalysis(MemberAnalysis memberAnalysis) =>
         new(memberAnalysis.Name, memberAnalysis.Type, memberAnalysis.OnPropertyNameChanged, memberAnalysis.OnPropertyNameChanging);
+    
     public static AlsoNotifyMember FromProperty(
         IPropertySymbol property,
-        (OnPropertyNameChangedInfo? onPropertyNameChanged, OnPropertyNameChangedInfo? onPropertyNameChanging) namedChangedInfo) =>
-        new(property.Name, property.Type, namedChangedInfo.onPropertyNameChanged, namedChangedInfo.onPropertyNameChanging);
+        (OnPropertyNameChangedInfo? onPropertyNameChanged, OnPropertyNameChangedInfo? onPropertyNameChanging) namedChangedInfo)
+    {
+        // If we have an explicitly-implemented property, use e.g. 'Foo' as the name, not ISomeInterface.Foo
+        return new(
+            property.ToDisplayString(SymbolDisplayFormats.SymbolName),
+            property.Type,
+            namedChangedInfo.onPropertyNameChanged,
+            namedChangedInfo.onPropertyNameChanging);
+    }
 
     public override bool Equals(object obj) => obj is AlsoNotifyMember other && this.Equals(other);
     public bool Equals(AlsoNotifyMember other) => string.Equals(this.Name, other.Name, StringComparison.Ordinal);

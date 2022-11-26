@@ -15,77 +15,81 @@ public class AlsoNotifyTests : TestsBase
     [Test]
     public void RaisesIfAlsoNotifyAppliedToMemberWithoutNotifyAttribute()
     {
-        string input = @"
-public partial class SomeViewModel
-{
-    [Notify]
-    private string _foo;
+        string input = """
+            public partial class SomeViewModel
+            {
+                [Notify]
+                private string _foo;
 
-    [AlsoNotify(""Foo"")]
-    private string _bar;
-}";
+                [AlsoNotify("Foo")]
+                private string _bar;
+            }
+            """;
         this.AssertThat(input, It.HasDiagnostics(
-            // (7,6): Warning INPC008: [AlsoNotify] is only valid on members which also have [Notify]. Skipping
+            // (6,6): Warning INPC008: [AlsoNotify] is only valid on members which also have [Notify]. Skipping
             // AlsoNotify("Foo")
-            Diagnostic("INPC008", @"AlsoNotify(""Foo"")").WithLocation(7, 6)
+            Diagnostic("INPC008", @"AlsoNotify(""Foo"")").WithLocation(6, 6)
         ));
     }
 
     [Test]
     public void RaisesIfBackingMemberNameUsed()
     {
-        string input = @"
-public partial class SomeViewModel
-{
-    [Notify, AlsoNotify(nameof(_bar))]
-    private string _foo;
+        string input = """
+            public partial class SomeViewModel
+            {
+                [Notify, AlsoNotify(nameof(_bar))]
+                private string _foo;
 
-    [Notify]
-    private string _bar;
-}";
+                [Notify]
+                private string _bar;
+            }
+            """;
 
         this.AssertThat(input, It.HasDiagnostics(
-            // (4,14): Warning INPC009: Unable to find a property called '_bar' on this type or its base types. This event will still be raised
+            // (3,14): Warning INPC009: Unable to find a property called '_bar' on this type or its base types. This event will still be raised
             // AlsoNotify(nameof(_bar))
-            Diagnostic("INPC009", @"AlsoNotify(nameof(_bar))").WithLocation(4, 14)
+            Diagnostic("INPC009", @"AlsoNotify(nameof(_bar))").WithLocation(3, 14)
         ));
     }
 
     [Test]
     public void RaisesIfPropertyDefinedOnChildClass()
     {
-        string input = @"
-public partial class Base
-{
-    [Notify, AlsoNotify(""Bar"")]
-    private string _foo;
-}
-public partial class Derived : Base
-{
-    [Notify]
-    private string _bar;
-}";
+        string input = """
+            public partial class Base
+            {
+                [Notify, AlsoNotify("Bar")]
+                private string _foo;
+            }
+            public partial class Derived : Base
+            {
+                [Notify]
+                private string _bar;
+            }
+            """;
 
         this.AssertThat(input, It.HasFile("Base", RemoveInpcMembersRewriter.All)
             .HasDiagnostics(
-            // (4,14): Warning INPC009: Unable to find a property called 'Bar' on this type or its base types. This event will still be raised
+            // (3,14): Warning INPC009: Unable to find a property called 'Bar' on this type or its base types. This event will still be raised
             // AlsoNotify("Bar")
-            Diagnostic("INPC009", @"AlsoNotify(""Bar"")").WithLocation(4, 14)
+            Diagnostic("INPC009", @"AlsoNotify(""Bar"")").WithLocation(3, 14)
         ));
     }
 
     [Test]
     public void NotifiesGeneratedProperty()
     {
-        string input = @"
-public partial class SomeViewModel
-{
-    [Notify, AlsoNotify(""Bar"")]
-    private string _foo;
+        string input = """
+            public partial class SomeViewModel
+            {
+                [Notify, AlsoNotify("Bar")]
+                private string _foo;
 
-    [Notify]
-    private string _bar;
-}";
+                [Notify]
+                private string _bar;
+            }
+            """;
 
         this.AssertThat(input, It.HasFile("SomeViewModel", RemoveInpcMembersRewriter.All));
     }
@@ -93,14 +97,15 @@ public partial class SomeViewModel
     [Test]
     public void NotifiesPreExistingProperty()
     {
-        string input = @"
-public partial class SomeViewModel
-{
-    [Notify, AlsoNotify(nameof(Bar))]
-    private string _foo;
+        string input = """
+            public partial class SomeViewModel
+            {
+                [Notify, AlsoNotify(nameof(Bar))]
+                private string _foo;
 
-    public string Bar { get; set; }
-}";
+                public string Bar { get; set; }
+            }
+            """;
 
         this.AssertThat(input, It.HasFile("SomeViewModel", RemoveInpcMembersRewriter.All));
     }
@@ -108,17 +113,18 @@ public partial class SomeViewModel
     [Test]
     public void NotifiesGeneratedPropertyOnBaseClass()
     {
-        string input = @"
-public partial class Base
-{
-    [Notify]
-    private string _foo;
-}
-public partial class Derived : Base
-{
-    [Notify, AlsoNotify(""Foo"")]
-    private string _bar;
-}";
+        string input = """
+            public partial class Base
+            {
+                [Notify]
+                private string _foo;
+            }
+            public partial class Derived : Base
+            {
+                [Notify, AlsoNotify("Foo")]
+                private string _bar;
+            }
+            """;
 
         this.AssertThat(input, It.HasFile("Derived", RemoveInpcMembersRewriter.All));
     }
@@ -126,16 +132,17 @@ public partial class Derived : Base
     [Test]
     public void NotifiesPreExistingPropertyOnBaseClass()
     {
-        string input = @"
-public class Base
-{
-    public string Foo { get; set; }
-}
-public partial class Derived : Base
-{
-    [Notify, AlsoNotify(nameof(Foo))]
-    private string _bar;
-}";
+        string input = """
+            public class Base
+            {
+                public string Foo { get; set; }
+            }
+            public partial class Derived : Base
+            {
+                [Notify, AlsoNotify(nameof(Foo))]
+                private string _bar;
+            }
+            """;
 
         this.AssertThat(input, It.HasFile("Derived", RemoveInpcMembersRewriter.All));
     }
@@ -143,14 +150,15 @@ public partial class Derived : Base
     [Test]
     public void HandlesStandardNonPropertyNames()
     {
-        string input = @"
-public partial class SomeViewModel
-{
-    public string this[int index] => """";
+        string input = """
+            public partial class SomeViewModel
+            {
+                public string this[int index] => "";
 
-    [Notify, AlsoNotify(null, """", ""Item[]"")]
-    private string _foo;
-}";
+                [Notify, AlsoNotify(null, "", "Item[]")]
+                private string _foo;
+            }
+            """;
 
         this.AssertThat(input, It
             .HasFile("SomeViewModel", RemoveInpcMembersRewriter.All)
@@ -160,34 +168,36 @@ public partial class SomeViewModel
     [Test]
     public void RaisesIfAutoNotifyingSelf()
     {
-        string input = @"
-public partial class SomeViewModel
-{
-    [Notify, AlsoNotify(""Foo"")]
-    private string _foo;
-}";
+        string input = """
+            public partial class SomeViewModel
+            {
+                [Notify, AlsoNotify("Foo")]
+                private string _foo;
+            }
+            """;
 
         this.AssertThat(input, It.HasFile("SomeViewModel", RemoveInpcMembersRewriter.All).HasDiagnostics(
-            // (4,14): Warning INPC012: Property 'Foo' cannot have an [AlsoNotify] attribute which refers to that same property
+            // (3,14): Warning INPC012: Property 'Foo' cannot have an [AlsoNotify] attribute which refers to that same property
             // AlsoNotify("Foo")
-            Diagnostic("INPC012", @"AlsoNotify(""Foo"")").WithLocation(4, 14)));
+            Diagnostic("INPC012", @"AlsoNotify(""Foo"")").WithLocation(3, 14)));
     }
 
     [Test]
     public void PassesOldAndNewValue()
     {
-        string input = @"
-using System.ComponentModel;
-using System.Collections.Generic;
-public partial class SomeViewModel
-{
-    [Notify, AlsoNotify(""Bar"")]
-    private string _foo;
+        string input = """
+            using System.ComponentModel;
+            using System.Collections.Generic;
+            public partial class SomeViewModel
+            {
+                [Notify, AlsoNotify("Bar")]
+                private string _foo;
 
-    public List<SomeViewModel> Bar { get; set; }
+                public List<SomeViewModel> Bar { get; set; }
 
-    public void OnPropertyChanged(string propertyName, object oldValue, object newValue) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
-}";
+                public void OnPropertyChanged(string propertyName, object oldValue, object newValue) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+            }
+            """;
 
         this.AssertThat(input, It.HasFile("SomeViewModel", RemoveInpcMembersRewriter.All));
     }
@@ -195,43 +205,45 @@ public partial class SomeViewModel
     [Test]
     public void PassesNullForOldAndNewValueIfPropertyDoesNotExist()
     {
-        string input = @"
-public partial class SomeViewModel
-{
-    [Notify, AlsoNotify(""Item[]"", ""NonExistent"", """")]
-    private string _foo;
+        string input = """
+            public partial class SomeViewModel
+            {
+                [Notify, AlsoNotify("Item[]", "NonExistent", "")]
+                private string _foo;
 
-    public void OnPropertyChanged(string propertyName, object oldValue, object newValue) { }
-}";
+                public void OnPropertyChanged(string propertyName, object oldValue, object newValue) { }
+            }
+            """;
 
         this.AssertThat(input, It.HasFile("SomeViewModel", RemoveInpcMembersRewriter.All)
             .HasDiagnostics(
-                // (4,14): Warning INPC009: Unable to find a property called 'Item[]' on this type or its base types. This event will still be raised
+                // (3,14): Warning INPC009: Unable to find a property called 'Item[]' on this type or its base types. This event will still be raised
                 // AlsoNotify("Item[]", "NonExistent", "")
-                Diagnostic("INPC009", @"AlsoNotify(""Item[]"", ""NonExistent"", """")").WithLocation(4, 14),
+                Diagnostic("INPC009", @"AlsoNotify(""Item[]"", ""NonExistent"", """")").WithLocation(3, 14),
 
-                // (4,14): Warning INPC009: Unable to find a property called 'NonExistent' on this type or its base types. This event will still be raised
+                // (3,14): Warning INPC009: Unable to find a property called 'NonExistent' on this type or its base types. This event will still be raised
                 // AlsoNotify("Item[]", "NonExistent", "")
-                Diagnostic("INPC009", @"AlsoNotify(""Item[]"", ""NonExistent"", """")").WithLocation(4, 14)
+                Diagnostic("INPC009", @"AlsoNotify(""Item[]"", ""NonExistent"", """")").WithLocation(3, 14)
                 ));
     }
 
     [Test]
     public void HandlesPathologicalAttributeCases()
     {
-        string input = @"
-public partial class SomeViewModel
-{
-    [Notify, AlsoNotify, AlsoNotify(new string[0]), AlsoNotify(new[] { null, """" }), AlsoNotify(nameof(NonExistent))]
-    private string _foo;
-}";
+        string input = """
+            public partial class SomeViewModel
+            {
+                [Notify, AlsoNotify, AlsoNotify(new string[0]), AlsoNotify(new[] { null, "" }), AlsoNotify(nameof(NonExistent))]
+                private string _foo;
+            }
+            """;
 
         this.AssertThat(input, It
             .HasFile("SomeViewModel", RemoveInpcMembersRewriter.All)
             .HasDiagnostics(
-                // (4,85): Warning INPC009: Unable to find a property called 'NonExistent' on this type or its base types. This event will still be raised
+                // (3,85): Warning INPC009: Unable to find a property called 'NonExistent' on this type or its base types. This event will still be raised
                 // AlsoNotify(nameof(NonExistent))
-                Diagnostic("INPC009", @"AlsoNotify(nameof(NonExistent))").WithLocation(4, 85)
+                Diagnostic("INPC009", @"AlsoNotify(nameof(NonExistent))").WithLocation(3, 85)
              )
             .AllowCompilationDiagnostics("CS0103")); // Unknown member NonExistent
     }

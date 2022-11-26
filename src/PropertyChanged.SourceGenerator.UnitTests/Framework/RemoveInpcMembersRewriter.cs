@@ -18,7 +18,6 @@ public class RemoveInpcMembersRewriter : CSharpSyntaxRewriter
     public static RemoveInpcMembersRewriter All { get; } = new(true, true);
     public static RemoveInpcMembersRewriter Changed { get; } = new(true, false);
     public static RemoveInpcMembersRewriter Changing { get; } = new(false, true);
-    public static RemoveInpcMembersRewriter CommentsOnly { get; } = new(false, false);
 
     private RemoveInpcMembersRewriter(bool removeChanged, bool removeChanging)
     {
@@ -30,52 +29,14 @@ public class RemoveInpcMembersRewriter : CSharpSyntaxRewriter
     {
         if (config.RaisePropertyChangedMethodNames.Contains(node.Identifier.ValueText))
         {
-            return this.removeChanged ? null : RemoveDocComments(node);
+            return this.removeChanged ? null : node;
         }
         if (config.RaisePropertyChangingMethodNames.Contains(node.Identifier.ValueText))
         {
-            return this.removeChanging ? null : RemoveDocComments(node);
+            return this.removeChanging ? null : node;
         }
 
         return base.VisitMethodDeclaration(node);
-    }
-
-    private static SyntaxNode RemoveDocComments(SyntaxNode node)
-    {
-        // Need to remove the SingleLineDocumentationCommentTrivia, and the WhitespaceTrivia just before it
-
-        var trivia = node.GetLeadingTrivia();
-        return node.WithLeadingTrivia(Filter(trivia));
-
-        static IEnumerable<SyntaxTrivia> Filter(IEnumerable<SyntaxTrivia> input)
-        {
-            SyntaxTrivia? previous = null;
-            foreach (var item in input)
-            {
-                if (item.IsKind(SyntaxKind.SingleLineDocumentationCommentTrivia))
-                {
-                    // Don't yield this, and don't yield previous either if it's whitespace
-                    if (previous != null && !previous.Value.IsKind(SyntaxKind.WhitespaceTrivia))
-                    {
-                        yield return previous.Value;
-                    }
-                    previous = null;
-                }
-                else
-                {
-                    if (previous != null)
-                    {
-                        yield return previous.Value;
-                    }
-                    previous = item;
-                }
-            }
-
-            if (previous != null)
-            {
-                yield return previous.Value;
-            }
-        }
     }
 
     public override SyntaxNode? VisitEventFieldDeclaration(EventFieldDeclarationSyntax node) 

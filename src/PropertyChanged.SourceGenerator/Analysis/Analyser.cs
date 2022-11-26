@@ -194,7 +194,7 @@ public partial class Analyser
 
         this.ReportPropertyNameCollisions(typeAnalysis, baseTypeAnalyses);
         this.ResolveAlsoNotify(typeAnalysis, baseTypeAnalyses);
-        this.ResolveDependsOn(typeAnalysis);
+        this.ResolveDependsOn(typeAnalysis, config);
 
         if (!IsPartial(typeSymbol))
         {
@@ -271,6 +271,15 @@ public partial class Analyser
             }
         }
 
+        bool isVirtual = false;
+        foreach (var arg in notifyAttribute.NamedArguments)
+        {
+            if (arg.Key == "IsVirtual")
+            {
+                isVirtual = (bool)arg.Value.Value!;
+            }
+        }
+
         // We can't have a getter/setter being internal, and the setter/getter being protected
         if ((getterAccessibility == Accessibility.Internal && setterAccessibility == Accessibility.Protected) ||
             (getterAccessibility == Accessibility.Protected && setterAccessibility == Accessibility.Internal))
@@ -286,6 +295,7 @@ public partial class Analyser
             BackingMember = backingMember,
             Name = name,
             Type = type,
+            IsVirtual = isVirtual,
             GetterAccessibility = getterAccessibility,
             SetterAccessibility = setterAccessibility,
             OnPropertyNameChanged = this.propertyChangedInterfaceAnalyser!.FindOnPropertyNameChangedMethod(backingMember.ContainingType, name, type, backingMember.ContainingType),

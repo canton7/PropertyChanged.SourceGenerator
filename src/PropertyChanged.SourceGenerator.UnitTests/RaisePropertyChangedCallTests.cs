@@ -48,6 +48,30 @@ public class RaisePropertyChangedCallTests : TestsBase
     }
 
     [Test]
+    public void FindsExplicitlyImplementedEvent()
+    {
+        string input = """
+            using System.ComponentModel;
+            public partial class SomeViewModel : INotifyPropertyChanged
+            {
+                event PropertyChangedEventHandler INotifyPropertyChanged.PropertyChanged
+                {
+                    add { }
+                    remove { }
+                }
+
+                [Notify]
+                private string _foo;
+            }
+            """;
+
+        this.AssertThat(input, It.HasFile("SomeViewModel", rewriters).HasDiagnostics(
+            // (2,22): Warning INPC007: Could not find any suitable methods to raise the SomeViewModel.INotifyPropertyChanged.PropertyChanged event
+            // SomeViewModel
+            Diagnostic("INPC007", @"SomeViewModel").WithLocation(2, 22)));
+    }
+
+    [Test]
     public void FindsAndCallsMethodWithEventArgs()
     {
         string input = """

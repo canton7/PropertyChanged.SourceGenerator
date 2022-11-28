@@ -81,19 +81,19 @@ public class DiagnosticReporter
     private static readonly DiagnosticDescriptor couldNotFindRaisePropertyChangedMethod = CreateDescriptor(
         "INPC007",
         "Could not find method to raise PropertyChanged event",
-        "Could not find any suitable methods to raise the PropertyChanged event defined on a base class");
-    public void ReportCouldNotFindRaisePropertyChangedMethod(INamedTypeSymbol typeSymbol)
+        "Could not find any suitable methods to raise the {0} event");
+    public void ReportCouldNotFindRaisePropertyChangedMethod(INamedTypeSymbol typeSymbol, string eventName)
     {
-        this.AddDiagnostic(couldNotFindRaisePropertyChangedMethod, typeSymbol.Locations);
+        this.AddDiagnostic(couldNotFindRaisePropertyChangedMethod, typeSymbol.Locations, eventName);
     }
 
     private static readonly DiagnosticDescriptor couldNotFindRaisePropertyChangingMethod = CreateDescriptor(
         "INPC0028",
         "Could not find method to raise PropertyChanging event",
-        "Could not find any suitable methods to raise the PropertyChanging event defined on a base class");
-    public void ReportCouldNotFindRaisePropertyChangingMethod(INamedTypeSymbol typeSymbol)
+        "Could not find any suitable methods to raise the {0} event");
+    public void ReportCouldNotFindRaisePropertyChangingMethod(INamedTypeSymbol typeSymbol, string eventName)
     {
-        this.AddDiagnostic(couldNotFindRaisePropertyChangingMethod, typeSymbol.Locations);
+        this.AddDiagnostic(couldNotFindRaisePropertyChangingMethod, typeSymbol.Locations, eventName);
     }
 
     private static readonly DiagnosticDescriptor alsoNotifyAttributeNotValidOnMember = CreateDescriptor(

@@ -1,3 +1,8 @@
+v1.0.8
+------
+
+ - Support the user explicitly implementing the `PropertyChanged`/`PropertyChanging` event (#38)
+
 v1.0.7
 ------
 

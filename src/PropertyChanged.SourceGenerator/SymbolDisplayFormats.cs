@@ -28,6 +28,12 @@ public static class SymbolDisplayFormats
     /// </summary>
     public static SymbolDisplayFormat FullyQualifiedTypeName { get; }
 
+    /// <summary>
+    /// A string suitable for indicating what type an event is defined on, and whether it is implicitly
+    /// or explicitly implemented
+    /// </summary>
+    public static SymbolDisplayFormat EventDefinition { get; }
+
     static SymbolDisplayFormats()
     {
         SymbolName = new SymbolDisplayFormat(
@@ -49,5 +55,12 @@ public static class SymbolDisplayFormats
             miscellaneousOptions: SymbolDisplayMiscellaneousOptions.EscapeKeywordIdentifiers
                 | SymbolDisplayMiscellaneousOptions.UseSpecialTypes
                 | SymbolDisplayMiscellaneousOptions.IncludeNullableReferenceTypeModifier);
+
+        EventDefinition = new SymbolDisplayFormat(
+            typeQualificationStyle: SymbolDisplayTypeQualificationStyle.NameAndContainingTypes,
+            propertyStyle: SymbolDisplayPropertyStyle.NameOnly,
+            memberOptions: SymbolDisplayMemberOptions.IncludeContainingType
+                | SymbolDisplayMemberOptions.IncludeExplicitInterface,
+            miscellaneousOptions: SymbolDisplayMiscellaneousOptions.EscapeKeywordIdentifiers);
     }
 }

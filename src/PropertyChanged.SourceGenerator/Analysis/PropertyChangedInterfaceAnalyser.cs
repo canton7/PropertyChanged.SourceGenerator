@@ -141,8 +141,8 @@ public class PropertyChangedInterfaceAnalyser : InterfaceAnalyser
         }
     }
 
-    protected override void ReportCouldNotFindRaisePropertyChangingOrChangedMethod(INamedTypeSymbol typeSymbol) =>
-        this.Diagnostics.ReportCouldNotFindRaisePropertyChangedMethod(typeSymbol);
+    protected override void ReportCouldNotFindRaisePropertyChangingOrChangedMethod(INamedTypeSymbol typeSymbol, string eventName) =>
+        this.Diagnostics.ReportCouldNotFindRaisePropertyChangedMethod(typeSymbol, eventName);
     protected override void ReportCouldNotFindCallableRaisePropertyChangedOrChangingOverload(INamedTypeSymbol typeSymbol, string name) =>
         this.Diagnostics.ReportCouldNotFindCallableRaisePropertyChangedOverload(typeSymbol, name);
 

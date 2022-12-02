@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 using static PropertyChanged.SourceGenerator.Analysis.Utils;
 
 namespace PropertyChanged.SourceGenerator.Analysis;
@@ -13,6 +14,7 @@ public abstract class InterfaceAnalyser
     private readonly INamedTypeSymbol eventHandlerSymbol;
     protected readonly INamedTypeSymbol EventArgsSymbol;
     private readonly string eventName;
+    private readonly IEventSymbol interfaceEventSymbol;
     protected readonly DiagnosticReporter Diagnostics;
     protected readonly Compilation Compilation;
     private readonly Func<TypeAnalysis, InterfaceAnalysis> interfaceAnalysisGetter;
@@ -30,6 +32,7 @@ public abstract class InterfaceAnalyser
         this.eventHandlerSymbol = eventHandlerSymbol;
         this.EventArgsSymbol = eventArgsSymbol;
         this.eventName = eventName;
+        this.interfaceEventSymbol = this.interfaceSymbol.GetMembers(this.eventName).OfType<IEventSymbol>().First();
         this.Diagnostics = diagnostics;
         this.Compilation = compilation;
         this.interfaceAnalysisGetter = interfaceAnalysisGetter;
@@ -62,13 +65,21 @@ public abstract class InterfaceAnalyser
         //   a. If PropertyChanged is in a base class, we'll need to abort if we can't find one
         //   b. If PropertyChanged is in our class, we'll just define one and call it
 
-        // They might have defined the event but not the interface, so we'll just look for the event by its
-        // signature
-        var eventSymbol = TypeAndBaseTypes(typeSymbol)
-            .SelectMany(x => x.GetMembers(this.eventName))
-            .OfType<IEventSymbol>()
-            .FirstOrDefault(x => SymbolEqualityComparer.Default.Equals(x.Type, this.eventHandlerSymbol) &&
-                !x.IsStatic);
+        // Start by looking for the event by its implementation. This catches explicitly-implemented events as
+        // well as being slightly cheaper.
+        var eventSymbol = (IEventSymbol?)typeSymbol.FindImplementationForInterfaceMember(this.interfaceEventSymbol);
+
+        // Fall back to searching for it by signature, as they might have defined the event but not the interface.
+        // Do this for all types in the hierarchy. It's possible for them to define the event but not implement
+        // the interface in a base type, and if they do that we need to not generate a duplicate event.
+        if (eventSymbol == null)
+        {
+            eventSymbol = TypeAndBaseTypes(typeSymbol)
+                .SelectMany(x => x.GetMembers(this.eventName))
+                .OfType<IEventSymbol>()
+                .FirstOrDefault(x => SymbolEqualityComparer.Default.Equals(x.Type, this.eventHandlerSymbol) &&
+                    !x.IsStatic);
+        }
 
         bool isGeneratingAnyParent = baseTypeAnalyses.Any(x => x.CanGenerate);
 
@@ -158,9 +169,10 @@ public abstract class InterfaceAnalyser
             }
 
             // The base type in our hierarchy is defining its own
-            // Make sure that that type can actually access the event, if it's pre-existing
+            // Make sure that that type can actually access the event, if it's pre-existing. If it's explicitly implemented, we can't raise it
             if (eventSymbol != null && !isGeneratingAnyParent &&
-                !SymbolEqualityComparer.Default.Equals(eventSymbol.ContainingType, typeSymbol))
+                (!SymbolEqualityComparer.Default.Equals(eventSymbol.ContainingType, typeSymbol) ||
+                eventSymbol.ExplicitInterfaceImplementations.Contains(this.interfaceEventSymbol, SymbolEqualityComparer.Default)))
             {
                 interfaceAnalysis.CanCallRaiseMethod = false;
                 interfaceAnalysis.RaiseMethodType = RaisePropertyChangedMethodType.None;
@@ -168,7 +180,7 @@ public abstract class InterfaceAnalyser
                 // Don't raise this if we raised ReportCouldNotFindCallableRaisePropertyChangedOrChangingOverload above
                 if (methodNamesFoundButDidntKnowHowToCall.Count == 0)
                 {
-                    this.ReportCouldNotFindRaisePropertyChangingOrChangedMethod(typeSymbol);
+                    this.ReportCouldNotFindRaisePropertyChangingOrChangedMethod(typeSymbol, eventSymbol.ToDisplayString(SymbolDisplayFormats.EventDefinition));
                 }
             }
             else if (isGeneratingAnyParent)
@@ -243,7 +255,7 @@ public abstract class InterfaceAnalyser
 
     protected abstract void FindOnAnyPropertyChangedOrChangingMethod(INamedTypeSymbol typeSymbol, InterfaceAnalysis interfaceAnalysis, out IMethodSymbol? method);
 
-    protected abstract void ReportCouldNotFindRaisePropertyChangingOrChangedMethod(INamedTypeSymbol typeSymbol);
+    protected abstract void ReportCouldNotFindRaisePropertyChangingOrChangedMethod(INamedTypeSymbol typeSymbol, string eventName);
 
     protected abstract void ReportCouldNotFindCallableRaisePropertyChangedOrChangingOverload(INamedTypeSymbol typeSymbol, string name);
 

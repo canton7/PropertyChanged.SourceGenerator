@@ -158,4 +158,35 @@ public class TypeGenerationTests : TestsBase
             It.HasFile("SomeViewModel", StandardRewriters)
                 .HasFile("SomeViewModel2", StandardRewriters));
     }
+
+    [Test]
+    public void HandlesStruct()
+    {
+        string input = """
+            using System.ComponentModel;
+            partial struct SomeViewModel
+            {
+                public event PropertyChangedEventHandler PropertyChanged;
+
+                [Notify]
+                private int _foo;
+            }
+            """;
+
+        this.AssertThat(input, It.HasFile("SomeViewModel", StandardRewriters));
+    }
+
+    [Test]
+    public void HandlesRecord()
+    {
+        string input = """
+            partial record SomeViewModel
+            {
+                [Notify]
+                private int _foo;
+            }
+            """;
+
+        this.AssertThat(input, It.HasFile("SomeViewModel", StandardRewriters));
+    }
 }

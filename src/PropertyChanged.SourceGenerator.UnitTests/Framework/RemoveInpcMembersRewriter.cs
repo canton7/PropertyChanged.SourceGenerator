@@ -53,24 +53,31 @@ public class RemoveInpcMembersRewriter : CSharpSyntaxRewriter
         return base.VisitEventFieldDeclaration(node);
     }
 
-    public override SyntaxNode? VisitClassDeclaration(ClassDeclarationSyntax node)
-    {
-        var rewritten = (ClassDeclarationSyntax)base.VisitClassDeclaration(node)!;
+    public override SyntaxNode? VisitClassDeclaration(ClassDeclarationSyntax node) =>
+        this.RewriteTypeDeclaration((TypeDeclarationSyntax)base.VisitClassDeclaration(node)!);
 
-        if (rewritten.BaseList?.Types.Count == 0)
+    public override SyntaxNode? VisitStructDeclaration(StructDeclarationSyntax node) =>
+        this.RewriteTypeDeclaration((TypeDeclarationSyntax)base.VisitStructDeclaration(node)!);
+
+    public override SyntaxNode? VisitRecordDeclaration(RecordDeclarationSyntax node) =>
+        this.RewriteTypeDeclaration((TypeDeclarationSyntax)base.VisitRecordDeclaration(node)!);
+
+    private TypeDeclarationSyntax RewriteTypeDeclaration(TypeDeclarationSyntax node)
+    {
+        if (node.BaseList?.Types.Count == 0)
         {
             // The newline is normally attached to the final item in the BaseList
-            rewritten = rewritten.ReplaceNode(rewritten.BaseList, rewritten.BaseList.WithTrailingTrivia(SyntaxFactory.Whitespace("\r\n")));
-            rewritten = rewritten.RemoveNode(rewritten.BaseList!, SyntaxRemoveOptions.KeepTrailingTrivia)!;
+            node = node.ReplaceNode(node.BaseList, node.BaseList.WithTrailingTrivia(SyntaxFactory.Whitespace("\r\n")));
+            node = node.RemoveNode(node.BaseList!, SyntaxRemoveOptions.KeepTrailingTrivia)!;
             // Remove any trailing space from the class name
-            rewritten = rewritten.WithIdentifier(rewritten.Identifier.WithTrailingTrivia(default(SyntaxTriviaList)));
-            if (rewritten.TypeParameterList != null)
+            node = node.WithIdentifier(node.Identifier.WithTrailingTrivia(default(SyntaxTriviaList)));
+            if (node.TypeParameterList != null)
             {
-                rewritten = rewritten.WithTypeParameterList(rewritten.TypeParameterList.WithTrailingTrivia(default(SyntaxTriviaList)));
+                node = node.WithTypeParameterList(node.TypeParameterList.WithTrailingTrivia(default(SyntaxTriviaList)));
             }
         }
 
-        return rewritten;
+        return node;
     }
 
     public override SyntaxNode? VisitSimpleBaseType(SimpleBaseTypeSyntax node)

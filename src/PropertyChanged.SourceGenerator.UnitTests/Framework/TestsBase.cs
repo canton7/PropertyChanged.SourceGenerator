@@ -57,7 +57,7 @@ public abstract class TestsBase
 
         var generator = new PropertyChangedSourceGenerator();
 
-        GeneratorDriver driver = CSharpGeneratorDriver.Create(new[] { generator }, optionsProvider: new TestOptionsProvider());
+        GeneratorDriver driver = CSharpGeneratorDriver.Create(new[] { generator });
         driver = driver.RunGeneratorsAndUpdateCompilation(inputCompilation, out var outputCompilation, out var diagnostics);
 
         return (driver, outputCompilation, diagnostics);

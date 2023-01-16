@@ -13,8 +13,6 @@ namespace PropertyChanged.SourceGenerator.Analysis;
 
 public partial class Analyser
 {
-    private readonly DiagnosticReporter diagnostics;
-    private readonly Compilation compilation;
     private readonly ConfigurationParser configurationParser;
     private readonly INamedTypeSymbol notifyAttributeSymbol;
     private readonly INamedTypeSymbol alsoNotifyAttributeSymbol;
@@ -26,12 +24,9 @@ public partial class Analyser
     private readonly PropertyChangingInterfaceAnalyser? propertyChangingInterfaceAnalyser;
 
     public Analyser(
-        DiagnosticReporter diagnostics,
         Compilation compilation,
         ConfigurationParser configurationParser)
     {
-        this.diagnostics = diagnostics;
-        this.compilation = compilation;
         this.configurationParser = configurationParser;
 
         var inpchangedSymbol = compilation.GetTypeByMetadataName("System.ComponentModel.INotifyPropertyChanged");
@@ -117,7 +112,7 @@ public partial class Analyser
     }
 
     private TypeAnalysis Analyse(INamedTypeSymbol typeSymbol, List<TypeAnalysis> baseTypeAnalyses)
-    { 
+    {
         var typeAnalysis = new TypeAnalysis()
         {
             CanGenerate = true,

@@ -12,15 +12,13 @@ namespace PropertyChanged.SourceGenerator;
 public class ConfigurationParser
 {
     private readonly AnalyzerConfigOptionsProvider optionsProvider;
-    private readonly DiagnosticReporter diagnostics;
 
-    public ConfigurationParser(AnalyzerConfigOptionsProvider optionsProvider, DiagnosticReporter diagnostics)
+    public ConfigurationParser(AnalyzerConfigOptionsProvider optionsProvider)
     {
         this.optionsProvider = optionsProvider;
-        this.diagnostics = diagnostics;
     }
 
-    public Configuration Parse(SyntaxTree? syntaxTree)
+    public Configuration Parse(SyntaxTree? syntaxTree, DiagnosticReporter diagnostics)
     {
         var options = syntaxTree == null
             ? this.optionsProvider.GlobalOptions
@@ -67,15 +65,15 @@ public class ConfigurationParser
             }
             else
             {
-                this.diagnostics.ReportUnknownFirstLetterCapitalisation(firstLetterCapitalisation);
+                diagnostics.ReportUnknownFirstLetterCapitalisation(firstLetterCapitalisation);
             }
         }
-        config.EnableAutoNotify = this.ParseBool(options, "propertychanged.auto_notify", true);
+        config.EnableAutoNotify = this.ParseBool(options, diagnostics, "propertychanged.auto_notify", true);
 
         return config;
     }
 
-    private bool ParseBool(AnalyzerConfigOptions options, string key, bool defaultValue)
+    private bool ParseBool(AnalyzerConfigOptions options, DiagnosticReporter diagnostics, string key, bool defaultValue)
     {
         if (options.TryGetValue(key, out string? value))
         {
@@ -88,7 +86,7 @@ public class ConfigurationParser
                 return false;
             }
 
-            this.diagnostics.ReportCannotParseConfigBool(key, value);
+            diagnostics.ReportCannotParseConfigBool(key, value);
             return defaultValue;
         }
         else

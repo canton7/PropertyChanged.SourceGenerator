@@ -16,9 +16,17 @@ public class PropertyChangedSourceGenerator : IIncrementalGenerator
 {
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
-        var typesSource = context.SyntaxProvider.CreateSyntaxProvider(
-            static (n, _) => n is FieldDeclarationSyntax or PropertyDeclarationSyntax,
-            this.SyntaxNodeToTypeHierarchy);
+        //var typesSource = context.SyntaxProvider.CreateSyntaxProvider(
+        //    static (n, _) => n is FieldDeclarationSyntax or PropertyDeclarationSyntax,
+        //    this.SyntaxNodeToTypeHierarchy);
+
+        // Collect all types which contain a field/property decorated with NotifyAttribute.
+        // These will never be cached! That's OK: we'll generate a model in the next step which can be.
+        // There will probably be duplicate symbols in here.
+        var typesSource = context.SyntaxProvider.ForAttributeWithMetadataName(
+            "PropertyChanged.SourceGenerator.NotifyAttribute",
+            static (node, _) => node is FieldDeclarationSyntax or PropertyDeclarationSyntax,
+            static (ctx, token) => ctx.TargetSymbol.ContainingType).Collect();
 
         var nullableContextOptions = context.CompilationProvider.Select(static (compilation, _) => compilation.Options.NullableContextOptions);
 
@@ -30,15 +38,24 @@ public class PropertyChangedSourceGenerator : IIncrementalGenerator
             return analyzer;
         });
 
-        typesSource.Combine(compilationInfo).Select((input, token) =>
+        var modelsSource = analyzerSource.Combine(typesSource).SelectMany((input, token) =>
         {
+            var (analyzer, inputTypes) = input;
+            var types = new HashSet<INamedTypeSymbol>(inputTypes, SymbolEqualityComparer.Default);
 
+            var analyses = analyzer.Analyse(types);
+            return analyses;
         });
+
+        //typesSource.Combine(compilationInfo).Select((input, token) =>
+        //{
+
+        //});
     }
 
-    private ReadOnlyEquatableList<INamedTypeSymbol> SyntaxNodeToTypeHierarchy(GeneratorSyntaxContext ctx, CancellationToken token)
+    private INamedTypeSymbol? SyntaxNodeToTypeHierarchy(GeneratorAttributeSyntaxContext ctx, CancellationToken token)
     {
-        switch (ctx.Node)
+        switch (ctx)
         {
             case FieldDeclarationSyntax fieldDeclaration:
             {
@@ -46,7 +63,7 @@ public class PropertyChangedSourceGenerator : IIncrementalGenerator
                 {
                     if (GetContainingTypeIfHasAttribute(node) is { } type)
                     {
-                        return CreateHierarchy(type);
+                        return type;
                     }
                 }
                 break;
@@ -55,13 +72,13 @@ public class PropertyChangedSourceGenerator : IIncrementalGenerator
             {
                 if (GetContainingTypeIfHasAttribute(propertyDeclaration) is { } type)
                 {
-                    return CreateHierarchy(type);
+                    return type;
                 }
                 break;
             }
         }
 
-        return new ReadOnlyEquatableList<INamedTypeSymbol>(Array.Empty<INamedTypeSymbol>(), SymbolEqualityComparer.Default);
+        return null;
 
         INamedTypeSymbol? GetContainingTypeIfHasAttribute(SyntaxNode node)
         {
@@ -73,18 +90,6 @@ public class PropertyChangedSourceGenerator : IIncrementalGenerator
             }
 
             return null;
-        }
-
-        ReadOnlyEquatableList<INamedTypeSymbol> CreateHierarchy(INamedTypeSymbol type)
-        {
-            var typeHierarchy = new List<INamedTypeSymbol>();
-            for (var t = type;
-                t != null && SymbolEqualityComparer.Default.Equals(t.ContainingAssembly, type.ContainingAssembly);
-                t = t.BaseType)
-            {
-                typeHierarchy.Add(t);
-            }
-            return new ReadOnlyEquatableList<INamedTypeSymbol>(typeHierarchy, SymbolEqualityComparer.Default);
         }
     }
 

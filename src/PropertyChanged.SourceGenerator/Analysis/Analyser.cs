@@ -13,6 +13,8 @@ namespace PropertyChanged.SourceGenerator.Analysis;
 
 public partial class Analyser
 {
+    private readonly DiagnosticReporter diagnostics;
+    private readonly NullableContextOptions nullableContextOptions;
     private readonly ConfigurationParser configurationParser;
     private readonly INamedTypeSymbol notifyAttributeSymbol;
     private readonly INamedTypeSymbol alsoNotifyAttributeSymbol;
@@ -24,9 +26,13 @@ public partial class Analyser
     private readonly PropertyChangingInterfaceAnalyser? propertyChangingInterfaceAnalyser;
 
     public Analyser(
+        DiagnosticReporter diagnostics,
         Compilation compilation,
+        NullableContextOptions nullableContextOptions,
         ConfigurationParser configurationParser)
     {
+        this.diagnostics = diagnostics;
+        this.nullableContextOptions = nullableContextOptions;
         this.configurationParser = configurationParser;
 
         var inpchangedSymbol = compilation.GetTypeByMetadataName("System.ComponentModel.INotifyPropertyChanged");
@@ -39,12 +45,13 @@ public partial class Analyser
             var propertyChangedEventHandlerSymbol = compilation.GetTypeByMetadataName("System.ComponentModel.PropertyChangedEventHandler");
             var propertyChangedEventArgsSymbol = compilation.GetTypeByMetadataName("System.ComponentModel.PropertyChangedEventArgs");
 
+            // TODO: Get rid of as many of these as we can
             var inpchangingSymbol = compilation.GetTypeByMetadataName("System.ComponentModel.INotifyPropertyChanging"); ;
             var propertyChangingEventHandlerSymbol = compilation.GetTypeByMetadataName("System.ComponentModel.PropertyChangingEventHandler");
             var propertyChangingEventArgsSymbol = compilation.GetTypeByMetadataName("System.ComponentModel.PropertyChangingEventArgs");
         
-            this.propertyChangedInterfaceAnalyser = new(inpchangedSymbol, propertyChangedEventHandlerSymbol!, propertyChangedEventArgsSymbol!, this.diagnostics, this.compilation);
-            this.propertyChangingInterfaceAnalyser = new(inpchangingSymbol!, propertyChangingEventHandlerSymbol!, propertyChangingEventArgsSymbol!, this.diagnostics, this.compilation);
+            this.propertyChangedInterfaceAnalyser = new(inpchangedSymbol, propertyChangedEventHandlerSymbol!, propertyChangedEventArgsSymbol!, this.diagnostics, compilation);
+            this.propertyChangingInterfaceAnalyser = new(inpchangingSymbol!, propertyChangingEventHandlerSymbol!, propertyChangingEventArgsSymbol!, this.diagnostics, compilation);
         }
 
         this.notifyAttributeSymbol = compilation.GetTypeByMetadataName("PropertyChanged.SourceGenerator.NotifyAttribute")
@@ -150,9 +157,9 @@ public partial class Analyser
         if (this.propertyChangedInterfaceAnalyser == null)
             throw new InvalidOperationException();
 
-        var config = this.configurationParser.Parse(typeSymbol.DeclaringSyntaxReferences.FirstOrDefault()?.SyntaxTree);
+        var config = this.configurationParser.Parse(typeSymbol.DeclaringSyntaxReferences.FirstOrDefault()?.SyntaxTree, this.diagnostics);
 
-        typeAnalysis.NullableContext = this.compilation.Options.NullableContextOptions;
+        typeAnalysis.NullableContext = this.nullableContextOptions;
 
         this.propertyChangedInterfaceAnalyser.PopulateInterfaceAnalysis(typeAnalysis.TypeSymbol, typeAnalysis.INotifyPropertyChanged, baseTypeAnalyses, config);
         this.propertyChangingInterfaceAnalyser!.PopulateInterfaceAnalysis(typeAnalysis.TypeSymbol, typeAnalysis.INotifyPropertyChanging, baseTypeAnalyses, config);
@@ -301,11 +308,11 @@ public partial class Analyser
 
         if (type.IsReferenceType)
         {
-            if (this.compilation.Options.NullableContextOptions.HasFlag(NullableContextOptions.Annotations) && type.NullableAnnotation == NullableAnnotation.None)
+            if (this.nullableContextOptions.HasFlag(NullableContextOptions.Annotations) && type.NullableAnnotation == NullableAnnotation.None)
             {
                 result.NullableContextOverride = NullableContextOptions.Disable;
             }
-            else if (this.compilation.Options.NullableContextOptions == NullableContextOptions.Disable && type.NullableAnnotation != NullableAnnotation.None)
+            else if (this.nullableContextOptions == NullableContextOptions.Disable && type.NullableAnnotation != NullableAnnotation.None)
             {
                 result.NullableContextOverride = NullableContextOptions.Annotations;
             }

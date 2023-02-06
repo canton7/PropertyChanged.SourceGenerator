@@ -20,31 +20,48 @@ public class PropertyChangedSourceGenerator : IIncrementalGenerator
         //    static (n, _) => n is FieldDeclarationSyntax or PropertyDeclarationSyntax,
         //    this.SyntaxNodeToTypeHierarchy);
 
+        context.RegisterPostInitializationOutput(ctx => ctx.AddSource("Attributes", StringConstants.Attributes));
+
         // Collect all types which contain a field/property decorated with NotifyAttribute.
         // These will never be cached! That's OK: we'll generate a model in the next step which can be.
         // There will probably be duplicate symbols in here.
         var typesSource = context.SyntaxProvider.ForAttributeWithMetadataName(
             "PropertyChanged.SourceGenerator.NotifyAttribute",
-            static (node, _) => node is FieldDeclarationSyntax or PropertyDeclarationSyntax,
-            static (ctx, token) => ctx.TargetSymbol.ContainingType).Collect();
+            // TODO: More filtering on VariableDeclaratorSyntax
+            static (node, _) => node is VariableDeclaratorSyntax or PropertyDeclarationSyntax,
+            static (ctx, token) => (type: ctx.TargetSymbol.ContainingType, compilation: ctx.SemanticModel.Compilation)).Collect();
 
-        var nullableContextOptions = context.CompilationProvider.Select(static (compilation, _) => compilation.Options.NullableContextOptions);
+        var nullableContextAndConfigurationParser = context.CompilationProvider.Select(static (compilation, _) => compilation.Options.NullableContextOptions)
+            .Combine(context.AnalyzerConfigOptionsProvider.Select(static (options, _) => new ConfigurationParser(options)));
 
-        var analyzerSource = context.CompilationProvider.Combine(context.AnalyzerConfigOptionsProvider).Select((tuple, token) =>
+        var modelsSource = nullableContextAndConfigurationParser.Combine(typesSource).SelectMany((input, token) =>
         {
-            var (compilation, optionsProvider) = tuple;
-            var configurationParser = new ConfigurationParser(optionsProvider);
-            var analyzer = new Analyser(compilation, configurationParser);
-            return analyzer;
-        });
-
-        var modelsSource = analyzerSource.Combine(typesSource).SelectMany((input, token) =>
-        {
-            var (analyzer, inputTypes) = input;
-            var types = new HashSet<INamedTypeSymbol>(inputTypes, SymbolEqualityComparer.Default);
+            var (nullableContextAndConfigurationParser, inputTypesAndCompilation) = input;
+            var (nullableContext, configurationParser) = nullableContextAndConfigurationParser;
+            if (inputTypesAndCompilation.Length == 0)
+            {
+                // TODO: Cachable
+                return Enumerable.Empty<TypeAnalysis>();
+            }
+            var diagnostics = new DiagnosticReporter();
+            var compilation = inputTypesAndCompilation[0].compilation;
+            var analyzer = new Analyser(diagnostics, compilation, nullableContext, configurationParser);
+            // TODO: We should be able to remove this HashSet and just use the Dictionary in analyzer.Analyze
+            var types = new HashSet<INamedTypeSymbol>(inputTypesAndCompilation.Select(x => x.type), SymbolEqualityComparer.Default);
 
             var analyses = analyzer.Analyse(types);
             return analyses;
+        });
+
+        context.RegisterSourceOutput(modelsSource, static (ctx, typeAnalysis) =>
+        {
+            var eventArgsCache = new EventArgsCache();
+            if (typeAnalysis.CanGenerate)
+            {
+                var generator = new Generator(eventArgsCache);
+                generator.Generate(typeAnalysis);
+                ctx.AddSource(typeAnalysis.TypeSymbol.Name + ".g", generator.ToString());
+            }
         });
 
         //typesSource.Combine(compilationInfo).Select((input, token) =>
@@ -53,45 +70,45 @@ public class PropertyChangedSourceGenerator : IIncrementalGenerator
         //});
     }
 
-    private INamedTypeSymbol? SyntaxNodeToTypeHierarchy(GeneratorAttributeSyntaxContext ctx, CancellationToken token)
-    {
-        switch (ctx)
-        {
-            case FieldDeclarationSyntax fieldDeclaration:
-            {
-                foreach (var node in fieldDeclaration.Declaration.Variables)
-                {
-                    if (GetContainingTypeIfHasAttribute(node) is { } type)
-                    {
-                        return type;
-                    }
-                }
-                break;
-            }
-            case PropertyDeclarationSyntax propertyDeclaration:
-            {
-                if (GetContainingTypeIfHasAttribute(propertyDeclaration) is { } type)
-                {
-                    return type;
-                }
-                break;
-            }
-        }
+    //private INamedTypeSymbol? SyntaxNodeToTypeHierarchy(GeneratorAttributeSyntaxContext ctx, CancellationToken token)
+    //{
+    //    switch (ctx)
+    //    {
+    //        case FieldDeclarationSyntax fieldDeclaration:
+    //        {
+    //            foreach (var node in fieldDeclaration.Declaration.Variables)
+    //            {
+    //                if (GetContainingTypeIfHasAttribute(node) is { } type)
+    //                {
+    //                    return type;
+    //                }
+    //            }
+    //            break;
+    //        }
+    //        case PropertyDeclarationSyntax propertyDeclaration:
+    //        {
+    //            if (GetContainingTypeIfHasAttribute(propertyDeclaration) is { } type)
+    //            {
+    //                return type;
+    //            }
+    //            break;
+    //        }
+    //    }
 
-        return null;
+    //    return null;
 
-        INamedTypeSymbol? GetContainingTypeIfHasAttribute(SyntaxNode node)
-        {
-            if (ctx.SemanticModel.GetDeclaredSymbol(node, token) is { } symbol &&
-                    symbol.GetAttributes().Any(x =>
-                        x.AttributeClass?.ContainingNamespace.ToDisplayString() == "PropertyChanged.SourceGenerator"))
-            {
-                return symbol.ContainingType;
-            }
+    //    INamedTypeSymbol? GetContainingTypeIfHasAttribute(SyntaxNode node)
+    //    {
+    //        if (ctx.SemanticModel.GetDeclaredSymbol(node, token) is { } symbol &&
+    //                symbol.GetAttributes().Any(x =>
+    //                    x.AttributeClass?.ContainingNamespace.ToDisplayString() == "PropertyChanged.SourceGenerator"))
+    //        {
+    //            return symbol.ContainingType;
+    //        }
 
-            return null;
-        }
-    }
+    //        return null;
+    //    }
+    //}
 
     //public void Initialize(GeneratorInitializationContext context)
     //{

@@ -70,7 +70,7 @@ public abstract class TestsBase
         Assert.NotNull(type);
 
         var diagnostics = new DiagnosticReporter();
-        var analyser = new Analyser(diagnostics, compilation, new ConfigurationParser(new TestOptionsProvider(), diagnostics));
+        var analyser = new Analyser(diagnostics, compilation, compilation.Options.NullableContextOptions, new ConfigurationParser(new TestOptionsProvider()));
         var typeAnalyses = analyser.Analyse(new HashSet<INamedTypeSymbol>(SymbolEqualityComparer.Default) { type! }).ToList();
 
         DiagnosticVerifier.VerifyDiagnostics(diagnostics.Diagnostics, Array.Empty<DiagnosticResult>(), 1);

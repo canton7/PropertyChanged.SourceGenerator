@@ -10,6 +10,7 @@ public class TypeAnalysis
 {
     public bool CanGenerate { get; set; }
     public bool HadException { get; set; }
+    // TODO: Remove this
     public INamedTypeSymbol TypeSymbol { get; set; } = null!;
 
     public InterfaceAnalysis INotifyPropertyChanged { get; set; } = new();

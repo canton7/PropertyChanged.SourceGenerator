@@ -28,7 +28,7 @@ public class TypeGenerationTests : TestsBase
             }
             """;
 
-        this.AssertThat(input, It.HasFile("SomeViewModel", StandardRewriters));
+        this.AssertThat(input, It.HasFile("Test.Foo.SomeViewModel", StandardRewriters));
     }
 
     [Test]
@@ -111,7 +111,7 @@ public class TypeGenerationTests : TestsBase
             }
             """;
 
-        this.AssertThat(input, It.HasFile("C", StandardRewriters));
+        this.AssertThat(input, It.HasFile("A.B.C", StandardRewriters));
     }
 
     [Test]
@@ -155,8 +155,8 @@ public class TypeGenerationTests : TestsBase
             """;
 
         this.AssertThat(input,
-            It.HasFile("SomeViewModel", StandardRewriters)
-                .HasFile("SomeViewModel2", StandardRewriters));
+            It.HasFile("NS1.SomeViewModel", StandardRewriters)
+                .HasFile("NS2.SomeViewModel", StandardRewriters));
     }
 
     [Test]

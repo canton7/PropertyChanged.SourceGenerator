@@ -81,7 +81,7 @@ public class PropertyChangedSourceGenerator : IIncrementalGenerator
             {
                 var generator = new Generator(eventArgsCache);
                 generator.Generate(typeAnalysis);
-                ctx.AddSource(typeAnalysis.TypeSymbol.Name + ".g", generator.ToString());
+                ctx.AddSource(typeAnalysis.TypeSymbol.ToDisplayString(SymbolDisplayFormats.GeneratedFileName) + ".g", generator.ToString());
             }
         });
 
@@ -91,7 +91,7 @@ public class PropertyChangedSourceGenerator : IIncrementalGenerator
             {
                 var generator = new Generator(eventArgsCache);
                 generator.GenerateNameCache();
-                ctx.AddSource("EventArgsCache.g", generator.ToString());
+                ctx.AddSource("PropertyChanged.SourceGenerator.Internal.EventArgsCache.g", generator.ToString());
             }
         });
 

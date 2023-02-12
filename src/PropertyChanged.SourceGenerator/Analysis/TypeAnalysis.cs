@@ -10,8 +10,10 @@ public class TypeAnalysis
 {
     public bool CanGenerate { get; set; }
     public bool HadException { get; set; }
-    // TODO: Remove this
-    public INamedTypeSymbol TypeSymbol { get; set; } = null!;
+    public string TypeDeclaration { get; set; } = null!;
+    public string TypeNameForGeneratedFileName { get; set; } = null!;
+    public string? ContainingNamespace { get; set; }
+    public List<string> OuterTypes { get; } = new();
 
     public InterfaceAnalysis INotifyPropertyChanged { get; set; } = new();
     public InterfaceAnalysis INotifyPropertyChanging { get; set; } = new();

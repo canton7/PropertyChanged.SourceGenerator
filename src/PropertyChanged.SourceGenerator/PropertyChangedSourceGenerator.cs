@@ -27,10 +27,6 @@ public class PropertyChangedSourceGenerator : IIncrementalGenerator
 
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
-        //var typesSource = context.SyntaxProvider.CreateSyntaxProvider(
-        //    static (n, _) => n is FieldDeclarationSyntax or PropertyDeclarationSyntax,
-        //    this.SyntaxNodeToTypeHierarchy);
-
         context.RegisterPostInitializationOutput(ctx => ctx.AddSource("Attributes", StringConstants.Attributes));
 
         // Collect all types which contain a field/property decorated with NotifyAttribute.
@@ -96,7 +92,7 @@ public class PropertyChangedSourceGenerator : IIncrementalGenerator
             {
                 var generator = new Generator(eventArgsCache);
                 generator.Generate(typeAnalysis);
-                ctx.AddSource(typeAnalysis.TypeSymbol.ToDisplayString(SymbolDisplayFormats.GeneratedFileName) + ".g", generator.ToString());
+                ctx.AddSource(typeAnalysis.TypeNameForGeneratedFileName + ".g", generator.ToString());
             }
         });
 

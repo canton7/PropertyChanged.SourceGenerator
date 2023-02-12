@@ -125,8 +125,17 @@ public partial class Analyser
         var typeAnalysis = new TypeAnalysis()
         {
             CanGenerate = true,
-            TypeSymbol = typeSymbol,
+            TypeDeclaration = typeSymbol.ToDisplayString(SymbolDisplayFormats.TypeDeclaration),
+            TypeNameForGeneratedFileName = typeSymbol.ToDisplayString(SymbolDisplayFormats.GeneratedFileName),
         };
+        if (typeSymbol.ContainingNamespace is { IsGlobalNamespace: false } @namespace)
+        {
+            typeAnalysis.ContainingNamespace = @namespace.ToDisplayString(SymbolDisplayFormats.Namespace);
+        }
+        for (var outerType = typeSymbol.ContainingType; outerType != null; outerType = outerType.ContainingType)
+        {
+            typeAnalysis.OuterTypes.Add(outerType.ToDisplayString(SymbolDisplayFormats.TypeDeclaration));
+        }
 
         if (baseTypeAnalyses.FirstOrDefault()?.HadException == true)
         {
@@ -139,7 +148,7 @@ public partial class Analyser
         {
             try
             {
-                this.AnalyseInner(typeAnalysis, baseTypeAnalyses);
+                this.AnalyseInner(typeAnalysis, typeSymbol, baseTypeAnalyses);
             }
             catch (Exception e)
             {
@@ -152,10 +161,8 @@ public partial class Analyser
         return typeAnalysis;
     }
 
-    private void AnalyseInner(TypeAnalysis typeAnalysis, List<TypeAnalysis> baseTypeAnalyses)
+    private void AnalyseInner(TypeAnalysis typeAnalysis, INamedTypeSymbol typeSymbol, List<TypeAnalysis> baseTypeAnalyses)
     {
-        var typeSymbol = typeAnalysis.TypeSymbol;
-
         if (this.propertyChangedInterfaceAnalyser == null)
             throw new InvalidOperationException();
 
@@ -163,8 +170,8 @@ public partial class Analyser
 
         typeAnalysis.NullableContext = this.nullableContextOptions;
 
-        this.propertyChangedInterfaceAnalyser.PopulateInterfaceAnalysis(typeAnalysis.TypeSymbol, typeAnalysis.INotifyPropertyChanged, baseTypeAnalyses, config);
-        this.propertyChangingInterfaceAnalyser!.PopulateInterfaceAnalysis(typeAnalysis.TypeSymbol, typeAnalysis.INotifyPropertyChanging, baseTypeAnalyses, config);
+        this.propertyChangedInterfaceAnalyser.PopulateInterfaceAnalysis(typeSymbol, typeAnalysis.INotifyPropertyChanged, baseTypeAnalyses, config);
+        this.propertyChangingInterfaceAnalyser!.PopulateInterfaceAnalysis(typeSymbol, typeAnalysis.INotifyPropertyChanging, baseTypeAnalyses, config);
         InterfaceAnalyser.PopulateRaiseMethodNameIfEmpty(typeAnalysis.INotifyPropertyChanged, typeAnalysis.INotifyPropertyChanging, config);
         this.ResoveInheritedIsChanged(typeAnalysis, baseTypeAnalyses);
 
@@ -196,9 +203,9 @@ public partial class Analyser
 
         // Now that we've got all members, we can do inter-member analysis
 
-        this.ReportPropertyNameCollisions(typeAnalysis, baseTypeAnalyses);
-        this.ResolveAlsoNotify(typeAnalysis, baseTypeAnalyses);
-        this.ResolveDependsOn(typeAnalysis, config);
+        this.ReportPropertyNameCollisions(typeAnalysis, typeSymbol, baseTypeAnalyses);
+        this.ResolveAlsoNotify(typeAnalysis, typeSymbol, baseTypeAnalyses);
+        this.ResolveDependsOn(typeAnalysis, typeSymbol, config);
 
         if (!IsPartial(typeSymbol))
         {
@@ -363,12 +370,12 @@ public partial class Analyser
         return name;
     }
 
-    private void ReportPropertyNameCollisions(TypeAnalysis typeAnalysis, List<TypeAnalysis> baseTypeAnalyses)
+    private void ReportPropertyNameCollisions(TypeAnalysis typeAnalysis, INamedTypeSymbol typeSymbol, List<TypeAnalysis> baseTypeAnalyses)
     {
         // TODO: This could be smarter. We can ignore private members in base classes, for instance
         // We treat members we're generating on base types as already having been generated for the purposes of
         // these diagnostics
-        var allDeclaredMemberNames = new HashSet<string>(TypeAndBaseTypes(typeAnalysis.TypeSymbol)
+        var allDeclaredMemberNames = new HashSet<string>(TypeAndBaseTypes(typeSymbol)
             .SelectMany(x => x.MemberNames)
             .Concat(baseTypeAnalyses.SelectMany(x => x.Members.Select(y => y.Name))));
         for (int i = typeAnalysis.Members.Count - 1; i >= 0; i--)

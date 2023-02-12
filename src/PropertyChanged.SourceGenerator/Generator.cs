@@ -33,9 +33,9 @@ public class Generator
             this.writer.WriteLine(NullableContextToComment(typeAnalysis.NullableContext));
         }
 
-        if (typeAnalysis.TypeSymbol.ContainingNamespace is { IsGlobalNamespace: false } @namespace)
+        if (typeAnalysis.ContainingNamespace != null)
         {
-            this.writer.WriteLine($"namespace {@namespace.ToDisplayString(SymbolDisplayFormats.Namespace)}");
+            this.writer.WriteLine($"namespace {typeAnalysis.ContainingNamespace}");
             this.writer.WriteLine("{");
             this.writer.Indent++;
 
@@ -52,19 +52,14 @@ public class Generator
 
     private void GenerateType(TypeAnalysis typeAnalysis)
     {
-        var outerTypes = new List<INamedTypeSymbol>();
-        for (var outerType = typeAnalysis.TypeSymbol.ContainingType; outerType != null; outerType = outerType.ContainingType)
+        foreach (string outerType in typeAnalysis.OuterTypes.AsEnumerable().Reverse())
         {
-            outerTypes.Add(outerType);
-        }
-        foreach (var outerType in outerTypes.AsEnumerable().Reverse())
-        {
-            this.writer.WriteLine($"partial {outerType.ToDisplayString(SymbolDisplayFormats.TypeDeclaration)}");
+            this.writer.WriteLine($"partial {outerType}");
             this.writer.WriteLine("{");
             this.writer.Indent++;
         }
 
-        this.writer.Write($"partial {typeAnalysis.TypeSymbol.ToDisplayString(SymbolDisplayFormats.TypeDeclaration)}");
+        this.writer.Write($"partial {typeAnalysis.TypeDeclaration}");
         var interfaces = new List<string>();
         if (typeAnalysis.INotifyPropertyChanged.RequiresInterface)
         {
@@ -108,7 +103,7 @@ public class Generator
         this.writer.Indent--;
         this.writer.WriteLine("}");
 
-        for (int i = 0; i < outerTypes.Count; i++)
+        for (int i = 0; i < typeAnalysis.OuterTypes.Count; i++)
         {
             this.writer.Indent--;
             this.writer.WriteLine("}");

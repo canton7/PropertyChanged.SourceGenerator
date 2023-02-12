@@ -5,6 +5,7 @@ using PropertyChanged.SourceGenerator.Analysis;
 using PropertyChanged.SourceGenerator.Pipeline;
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Linq;
 using System.Text;
 using System.Threading;
@@ -15,6 +16,15 @@ namespace PropertyChanged.SourceGenerator;
 [Generator]
 public class PropertyChangedSourceGenerator : IIncrementalGenerator
 {
+    private static readonly string[] attributeNames = new[]
+    {
+        "PropertyChanged.SourceGenerator.NotifyAttribute",
+        "PropertyChanged.SourceGenerator.AlsoNotifyAttribute",
+        "PropertyChanged.SourceGenerator.DependsOnAttribute",
+        "PropertyChanged.SourceGenerator.IsChangedAttribute",
+        "PropertyChanged.SourceGenerator.PropertyAttributeAttribute",
+    };
+
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
         //var typesSource = context.SyntaxProvider.CreateSyntaxProvider(
@@ -26,11 +36,16 @@ public class PropertyChangedSourceGenerator : IIncrementalGenerator
         // Collect all types which contain a field/property decorated with NotifyAttribute.
         // These will never be cached! That's OK: we'll generate a model in the next step which can be.
         // There will probably be duplicate symbols in here.
-        var typesSource = context.SyntaxProvider.ForAttributeWithMetadataName(
-            "PropertyChanged.SourceGenerator.NotifyAttribute",
-            // TODO: More filtering on VariableDeclaratorSyntax
-            static (node, _) => node is VariableDeclaratorSyntax or PropertyDeclarationSyntax,
-            static (ctx, token) => (type: ctx.TargetSymbol.ContainingType, compilation: ctx.SemanticModel.Compilation)).Collect();
+        var attributeContainingTypeSources = attributeNames.Select(attribute =>
+        {
+            return context.SyntaxProvider.ForAttributeWithMetadataName(
+                attribute,
+                // TODO: More filtering on VariableDeclaratorSyntax
+                static (node, _) => node is VariableDeclaratorSyntax or PropertyDeclarationSyntax,
+                static (ctx, token) => (type: ctx.TargetSymbol.ContainingType, compilation: ctx.SemanticModel.Compilation));
+        }).ToList();
+
+        var typesSource = Collect(attributeContainingTypeSources);
 
         var nullableContextAndConfigurationParser = context.CompilationProvider.Select(static (compilation, _) => compilation.Options.NullableContextOptions)
             .Combine(context.AnalyzerConfigOptionsProvider.Select(static (options, _) => new ConfigurationParser(options)));
@@ -99,6 +114,16 @@ public class PropertyChangedSourceGenerator : IIncrementalGenerator
         //{
 
         //});
+    }
+
+    private static IncrementalValueProvider<ImmutableArray<T>> Collect<T>(List<IncrementalValuesProvider<T>> sources)
+    {
+        var aggregate = sources[0].Collect();
+        for (int i = 1; i < sources.Count; i++)
+        {
+            aggregate = aggregate.Combine(sources[i].Collect()).Select((pair, token) => pair.Left.AddRange(pair.Right));
+        }
+        return aggregate;
     }
 
     //private INamedTypeSymbol? SyntaxNodeToTypeHierarchy(GeneratorAttributeSyntaxContext ctx, CancellationToken token)

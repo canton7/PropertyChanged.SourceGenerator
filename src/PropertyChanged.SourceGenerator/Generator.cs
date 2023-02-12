@@ -355,7 +355,6 @@ public class Generator
         {
             this.writer.WriteLine(NullableContextToComment(type.NullableContext));
         }
-
     }
 
     private static string GetBackingMemberReference(MemberAnalysis member) =>
@@ -423,7 +422,7 @@ public class Generator
         switch (interfaceAnalysis.RaiseMethodSignature.NameType)
         {
             case RaisePropertyChangedOrChangingNameType.PropertyChangedEventArgs:
-                string cacheName = this.eventArgsCache.GetOrAdd(propertyName, interfaceAnalysis.EventArgsSymbol);
+                string cacheName = this.eventArgsCache.Get(propertyName, interfaceAnalysis.EventArgsFullyQualifiedTypeName);
                 this.writer.Write($"global::PropertyChanged.SourceGenerator.Internal.{EventArgsCacheName}.{cacheName}");
                 break;
 
@@ -487,6 +486,43 @@ public class Generator
             }
             this.writer.WriteLine(");");
         }
+    }
+
+    public static EventArgsCache CreateEventArgsCache(IEnumerable<TypeAnalysis> typeAnalyses)
+    {
+        // Annoyingly, this has to be perfectly synced with the code above which calls EventArgsCache.Get
+
+        var builder = new EventArgsCacheBuilder();
+
+        foreach (var typeAnalysis in typeAnalyses)
+        {
+            Inspect(typeAnalysis, typeAnalysis.INotifyPropertyChanged);
+            Inspect(typeAnalysis, typeAnalysis.INotifyPropertyChanging);
+        }
+
+        void Inspect(TypeAnalysis typeAnalysis, InterfaceAnalysis interfaceAnalysis)
+        {
+            if (interfaceAnalysis.CanCallRaiseMethod &&
+                interfaceAnalysis.RaiseMethodSignature.NameType == RaisePropertyChangedOrChangingNameType.PropertyChangedEventArgs)
+            {
+                foreach (var member in typeAnalysis.Members)
+                {
+                    builder.Add(member.Name, interfaceAnalysis.EventName, interfaceAnalysis.EventArgsFullyQualifiedTypeName);
+
+                    foreach (var alsoNotify in member.AlsoNotify)
+                    {
+                        builder.Add(alsoNotify.Name, interfaceAnalysis.EventName, interfaceAnalysis.EventArgsFullyQualifiedTypeName);
+                    }
+                }
+
+                foreach (var (_, notifyProperty) in typeAnalysis.BaseDependsOn)
+                {
+                    builder.Add(notifyProperty.Name, interfaceAnalysis.EventName, interfaceAnalysis.EventArgsFullyQualifiedTypeName);
+                }
+            }
+        }
+
+        return builder.ToCache();
     }
 
     private static (string property, string getter, string setter) CalculateAccessibilities(MemberAnalysis member)
@@ -553,17 +589,17 @@ public class Generator
         this.writer.WriteLine("{");
         this.writer.Indent++;
 
-        foreach (var (cacheName, eventArgsTypeSymbol, propertyName) in this.eventArgsCache.GetEntries().OrderBy(x => x.cacheName))
+        var backingFieldNames = new HashSet<string>();
+        foreach (var (cacheName, eventArgsTypeName, propertyName) in this.eventArgsCache.GetEntries().OrderBy(x => x.cacheName))
         {
             string backingFieldName = "_" + cacheName;
-            for (int i = 0; this.eventArgsCache.ContainsCacheName(backingFieldName); i++)
+            for (int i = 0; !backingFieldNames.Add(backingFieldName); i++)
             {
                 backingFieldName = $"_{cacheName}{i}";
             }
-            string eventArgsType = eventArgsTypeSymbol.ToDisplayString(SymbolDisplayFormats.FullyQualifiedTypeName);
-            this.writer.WriteLine($"private static {eventArgsType} {backingFieldName};");
-            this.writer.WriteLine($"public static {eventArgsType} {cacheName} => " +
-                $"{backingFieldName} ??= new {eventArgsType}({EscapeString(propertyName)});");
+            this.writer.WriteLine($"private static {eventArgsTypeName} {backingFieldName};");
+            this.writer.WriteLine($"public static {eventArgsTypeName} {cacheName} => " +
+                $"{backingFieldName} ??= new {eventArgsTypeName}({EscapeString(propertyName)});");
         }
 
         this.writer.Indent--;

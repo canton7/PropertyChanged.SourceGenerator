@@ -11,6 +11,8 @@ public  class ReadOnlyEquatableList<T> : IReadOnlyList<T>
     private readonly IReadOnlyList<T> inner;
     private readonly IEqualityComparer<T> comparer;
 
+    public static ReadOnlyEquatableList<T> Empty { get; } = new ReadOnlyEquatableList<T>(Array.Empty<T>());
+
     public ReadOnlyEquatableList(IReadOnlyList<T> inner, IEqualityComparer<T>? comparer = null)
     {
         this.inner = inner;

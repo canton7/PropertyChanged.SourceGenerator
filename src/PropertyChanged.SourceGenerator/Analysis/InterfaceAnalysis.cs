@@ -30,6 +30,11 @@ public class InterfaceAnalysis
     public INamedTypeSymbol EventArgsSymbol { get; set; } = null!;
 
     /// <summary>
+    /// The fully-qualified type name of the EventArgs: global::System.ComponentModel.PropertyChangedEventArgs etc
+    /// </summary>
+    public string EventArgsFullyQualifiedTypeName { get; set; } = null!;
+
+    /// <summary>
     /// The type of method we're generating, or None if we're not generating it
     /// </summary>
     public RaisePropertyChangedMethodType RaiseMethodType { get; set; }

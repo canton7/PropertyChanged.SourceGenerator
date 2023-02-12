@@ -51,7 +51,7 @@ public partial class Analyser
                             else if (TypeAndBaseTypes(typeAnalysis.TypeSymbol)
                                 .SelectMany(x => x.GetMembers(alsoNotify!))
                                 .OfType<IPropertySymbol>()
-                                .FirstOrDefault(x => typeAnalysis.TypeSymbol.ContainingNamespace.ContainingCompilation!.IsSymbolAccessibleWithin(x, typeAnalysis.TypeSymbol))
+                                .FirstOrDefault(x => this.compilation.IsSymbolAccessibleWithin(x, typeAnalysis.TypeSymbol))
                                 is { } foundProperty)
                             {
                                 foundAlsoNotify = true;

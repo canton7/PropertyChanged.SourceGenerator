@@ -58,6 +58,7 @@ public abstract class InterfaceAnalyser
 
         interfaceAnalysis.EventName = this.eventName;
         interfaceAnalysis.EventArgsSymbol = this.EventArgsSymbol;
+        interfaceAnalysis.EventArgsFullyQualifiedTypeName = this.EventArgsSymbol.ToDisplayString(SymbolDisplayFormats.FullyQualifiedTypeName);
 
         // Try and find out how we raise the PropertyChanged event
         // 1. If noone's defined the PropertyChanged event yet, we'll define it ourselves

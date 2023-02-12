@@ -14,6 +14,7 @@ namespace PropertyChanged.SourceGenerator.Analysis;
 public partial class Analyser
 {
     private readonly DiagnosticReporter diagnostics;
+    private readonly Compilation compilation;
     private readonly NullableContextOptions nullableContextOptions;
     private readonly ConfigurationParser configurationParser;
     private readonly INamedTypeSymbol notifyAttributeSymbol;
@@ -32,6 +33,7 @@ public partial class Analyser
         ConfigurationParser configurationParser)
     {
         this.diagnostics = diagnostics;
+        this.compilation = compilation;
         this.nullableContextOptions = nullableContextOptions;
         this.configurationParser = configurationParser;
 

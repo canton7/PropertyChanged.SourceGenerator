@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading;
+using System.Xml;
 
 namespace PropertyChanged.SourceGenerator;
 
@@ -34,15 +35,16 @@ public class PropertyChangedSourceGenerator : IIncrementalGenerator
         var nullableContextAndConfigurationParser = context.CompilationProvider.Select(static (compilation, _) => compilation.Options.NullableContextOptions)
             .Combine(context.AnalyzerConfigOptionsProvider.Select(static (options, _) => new ConfigurationParser(options)));
 
-        var modelsSource = nullableContextAndConfigurationParser.Combine(typesSource).SelectMany((input, token) =>
+        var modelsAndDiagnosticsSource = nullableContextAndConfigurationParser.Combine(typesSource).Select((input, token) =>
         {
             var (nullableContextAndConfigurationParser, inputTypesAndCompilation) = input;
             var (nullableContext, configurationParser) = nullableContextAndConfigurationParser;
             if (inputTypesAndCompilation.Length == 0)
             {
                 // TODO: Cachable
-                return Enumerable.Empty<TypeAnalysis>();
+                return (analyses: ReadOnlyEquatableList<TypeAnalysis>.Empty, diagnostics: ReadOnlyEquatableList<Diagnostic>.Empty);
             }
+
             var diagnostics = new DiagnosticReporter();
             var compilation = inputTypesAndCompilation[0].compilation;
             var analyzer = new Analyser(diagnostics, compilation, nullableContext, configurationParser);
@@ -50,17 +52,46 @@ public class PropertyChangedSourceGenerator : IIncrementalGenerator
             var types = new HashSet<INamedTypeSymbol>(inputTypesAndCompilation.Select(x => x.type), SymbolEqualityComparer.Default);
 
             var analyses = analyzer.Analyse(types);
-            return analyses;
+            return (analyses: new ReadOnlyEquatableList<TypeAnalysis>(analyses.ToList()), diagnostics: new ReadOnlyEquatableList<Diagnostic>(diagnostics.Diagnostics));
         });
 
-        context.RegisterSourceOutput(modelsSource, static (ctx, typeAnalysis) =>
+        // TODO: Make diagnostics cachable?
+        var diagnosticsSource = modelsAndDiagnosticsSource.SelectMany((pair, token) => pair.diagnostics);
+
+        context.RegisterSourceOutput(diagnosticsSource, (ctx, diagnostic) =>
         {
-            var eventArgsCache = new EventArgsCache();
+            ctx.ReportDiagnostic(diagnostic);
+        });
+
+        var analysesSource = modelsAndDiagnosticsSource.Select((pair, token) => pair.analyses);
+
+        var eventArgsCacheSource = analysesSource.Select((typeAnalyses, token) =>
+        {
+            return Generator.CreateEventArgsCache(typeAnalyses);
+        });
+
+        var analysisAndEventArgsCacheSource = analysesSource
+            .SelectMany((analysis, token) => analysis)
+            .Combine(eventArgsCacheSource);
+
+        context.RegisterSourceOutput(analysisAndEventArgsCacheSource, (ctx, pair) =>
+        {
+            var (typeAnalysis, eventArgsCache) = pair;
             if (typeAnalysis.CanGenerate)
             {
                 var generator = new Generator(eventArgsCache);
                 generator.Generate(typeAnalysis);
                 ctx.AddSource(typeAnalysis.TypeSymbol.Name + ".g", generator.ToString());
+            }
+        });
+
+        context.RegisterSourceOutput(eventArgsCacheSource, (ctx, eventArgsCache) =>
+        {
+            if (!eventArgsCache.IsEmpty)
+            {
+                var generator = new Generator(eventArgsCache);
+                generator.GenerateNameCache();
+                ctx.AddSource("EventArgsCache.g", generator.ToString());
             }
         });
 

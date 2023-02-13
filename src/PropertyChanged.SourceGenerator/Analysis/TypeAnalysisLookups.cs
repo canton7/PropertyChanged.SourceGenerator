@@ -9,20 +9,20 @@ namespace PropertyChanged.SourceGenerator.Analysis;
 
 public class TypeAnalysisLookups
 {
-    private readonly TypeAnalysis typeAnalysis;
+    private readonly TypeAnalysisBuilder typeAnalysis;
 
-    private Dictionary<string, MemberAnalysis>? nameLookup;
-    private Dictionary<ISymbol, MemberAnalysis>? symbolLookup;
+    private Dictionary<string, MemberAnalysisBuilder>? nameLookup;
+    private Dictionary<ISymbol, MemberAnalysisBuilder>? symbolLookup;
 
-    public TypeAnalysisLookups(TypeAnalysis typeAnalysis) => this.typeAnalysis = typeAnalysis;
+    public TypeAnalysisLookups(TypeAnalysisBuilder typeAnalysis) => this.typeAnalysis = typeAnalysis;
 
-    public bool TryGet(string name, [NotNullWhen(true)] out MemberAnalysis? memberAnalysis)
+    public bool TryGet(string name, [NotNullWhen(true)] out MemberAnalysisBuilder? memberAnalysis)
     {
         this.nameLookup ??= this.typeAnalysis.Members.ToDictionary(x => x.Name, x => x, StringComparer.Ordinal);
         return this.nameLookup.TryGetValue(name, out memberAnalysis);
     }
 
-    public bool TryGet(ISymbol symbol, [NotNullWhen(true)] out MemberAnalysis? memberAnalysis)
+    public bool TryGet(ISymbol symbol, [NotNullWhen(true)] out MemberAnalysisBuilder? memberAnalysis)
     {
         this.symbolLookup ??= this.typeAnalysis.Members.ToDictionary(x => x.BackingMember, x => x, SymbolEqualityComparer.Default);
         return this.symbolLookup.TryGetValue(symbol, out memberAnalysis);

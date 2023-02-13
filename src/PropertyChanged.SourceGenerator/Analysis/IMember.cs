@@ -8,9 +8,9 @@ namespace PropertyChanged.SourceGenerator.Analysis;
 
 public interface IMember
 {
-    [MemberNotNullWhen(true, nameof(Type))]
+    [MemberNotNullWhen(true, nameof(FullyQualifiedTypeName))]
     [MemberNotNullWhen(true, nameof(Name))]
-    ITypeSymbol? Type { get; }
+    string? FullyQualifiedTypeName { get; }
     string? Name { get; }
 
     OnPropertyNameChangedInfo? OnPropertyNameChanged { get; }

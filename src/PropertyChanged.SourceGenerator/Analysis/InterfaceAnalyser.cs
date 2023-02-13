@@ -17,7 +17,7 @@ public abstract class InterfaceAnalyser
     private readonly IEventSymbol interfaceEventSymbol;
     protected readonly DiagnosticReporter Diagnostics;
     protected readonly Compilation Compilation;
-    private readonly Func<TypeAnalysis, InterfaceAnalysis> interfaceAnalysisGetter;
+    private readonly Func<TypeAnalysisBuilder, InterfaceAnalysis> interfaceAnalysisGetter;
 
     protected InterfaceAnalyser(
         INamedTypeSymbol interfaceSymbol,
@@ -26,7 +26,7 @@ public abstract class InterfaceAnalyser
         string eventName,
         DiagnosticReporter diagnostics,
         Compilation compilation,
-        Func<TypeAnalysis, InterfaceAnalysis> interfaceAnalysisGetter)
+        Func<TypeAnalysisBuilder, InterfaceAnalysis> interfaceAnalysisGetter)
     {
         this.interfaceSymbol = interfaceSymbol;
         this.eventHandlerSymbol = eventHandlerSymbol;
@@ -40,25 +40,16 @@ public abstract class InterfaceAnalyser
 
     #region Interface Analysis
 
-    public void PopulateInterfaceAnalysis(
+    public InterfaceAnalysis CreateInterfaceAnalysis(
         INamedTypeSymbol typeSymbol,
-        InterfaceAnalysis interfaceAnalysis,
-        IReadOnlyList<TypeAnalysis> baseTypeAnalyses,
+        IReadOnlyList<TypeAnalysisBuilder> baseTypeAnalyses,
         Configuration config)
     {
         bool hasInterface = typeSymbol.AllInterfaces.Contains(this.interfaceSymbol, SymbolEqualityComparer.Default);
         if (!this.ShouldGenerateIfInterfaceNotPresent() && !hasInterface)
         {
-            return;
+            return InterfaceAnalysis.Empty;
         }
-
-        // If we've got any base types we're generating partial types for, that will have the INPC interface
-        // and event on, for sure
-        interfaceAnalysis.RequiresInterface = !hasInterface && !baseTypeAnalyses.Any(x => x.CanGenerate);
-
-        interfaceAnalysis.EventName = this.eventName;
-        interfaceAnalysis.EventArgsSymbol = this.EventArgsSymbol;
-        interfaceAnalysis.EventArgsFullyQualifiedTypeName = this.EventArgsSymbol.ToDisplayString(SymbolDisplayFormats.FullyQualifiedTypeName);
 
         // Try and find out how we raise the PropertyChanged event
         // 1. If noone's defined the PropertyChanged event yet, we'll define it ourselves
@@ -83,9 +74,6 @@ public abstract class InterfaceAnalyser
         }
 
         bool isGeneratingAnyParent = baseTypeAnalyses.Any(x => x.CanGenerate);
-
-        // If there's no event, the base type in our hierarchy is defining it
-        interfaceAnalysis.RequiresEvent = eventSymbol == null && !isGeneratingAnyParent;
 
         // Try and find a method with a name we recognise and a signature we know how to call.
         // We prioritise the method name over things like the signature or where in the type hierarchy
@@ -121,9 +109,13 @@ public abstract class InterfaceAnalyser
         }
 
         // Get this populated now -- we'll need to adjust our behaviour based on what we find
-        this.FindOnAnyPropertyChangedOrChangingMethod(typeSymbol, interfaceAnalysis, out var onAnyPropertyChangedMethod);
+        var onAnyPropertyChangedOrChangingInfo = this.FindOnAnyPropertyChangedOrChangingMethod(typeSymbol, out var onAnyPropertyChangedMethod);
 
-        interfaceAnalysis.CanCallRaiseMethod = true;
+        bool canCallRaiseMethod = true;
+        string? raiseMethodName;
+        RaisePropertyChangedOrChangingMethodSignature raiseMethodSignature;
+        var raiseMethodType = RaisePropertyChangedMethodType.None;
+
         if (signature != null)
         {
             // We found a method which we know how to call.
@@ -137,30 +129,30 @@ public abstract class InterfaceAnalyser
                 {
                     this.ReportUserDefinedRaisePropertyChangedOrChangingMethodOverride(method);
                 }
-                interfaceAnalysis.RaiseMethodType = RaisePropertyChangedMethodType.None;
+                raiseMethodType = RaisePropertyChangedMethodType.None;
             }
             else if (method.IsVirtual || method.IsOverride)
             {
-                interfaceAnalysis.RaiseMethodType = RaisePropertyChangedMethodType.Override;
+                raiseMethodType = RaisePropertyChangedMethodType.Override;
             }
             else
             {
                 this.ReportRaisePropertyChangedOrChangingMethodIsNonVirtual(method);
-                if (interfaceAnalysis.OnAnyPropertyChangedOrChangingInfo != null)
+                if (onAnyPropertyChangedOrChangingInfo != null)
                 {
                     this.ReportCannotCallOnAnyPropertyChangedOrChangingBecauseRaisePropertyChangedOrChangingIsNonVirtual(onAnyPropertyChangedMethod!, method.Name);
                 }
-                interfaceAnalysis.RaiseMethodType = RaisePropertyChangedMethodType.None;
+                raiseMethodType = RaisePropertyChangedMethodType.None;
             }
 
-            if (interfaceAnalysis.OnAnyPropertyChangedOrChangingInfo is { } info &&
+            if (onAnyPropertyChangedOrChangingInfo is { } info &&
                 ((info.HasOld && !signature.Value.HasOld) || (info.HasNew && !signature.Value.HasNew)))
             {
                 this.ReportCannotPopulateOnAnyPropertyChangedOrChangingOldAndNew(onAnyPropertyChangedMethod!, method.Name);
             }
 
-            interfaceAnalysis.RaiseMethodName = method!.Name;
-            interfaceAnalysis.RaiseMethodSignature = signature.Value;
+            raiseMethodName = method!.Name;
+            raiseMethodSignature = signature.Value;
         }
         else
         {
@@ -175,8 +167,8 @@ public abstract class InterfaceAnalyser
                 (!SymbolEqualityComparer.Default.Equals(eventSymbol.ContainingType, typeSymbol) ||
                 eventSymbol.ExplicitInterfaceImplementations.Contains(this.interfaceEventSymbol, SymbolEqualityComparer.Default)))
             {
-                interfaceAnalysis.CanCallRaiseMethod = false;
-                interfaceAnalysis.RaiseMethodType = RaisePropertyChangedMethodType.None;
+                canCallRaiseMethod = false;
+                raiseMethodType = RaisePropertyChangedMethodType.None;
 
                 // Don't raise this if we raised ReportCouldNotFindCallableRaisePropertyChangedOrChangingOverload above
                 if (methodNamesFoundButDidntKnowHowToCall.Count == 0)
@@ -186,28 +178,44 @@ public abstract class InterfaceAnalyser
             }
             else if (isGeneratingAnyParent)
             {
-                interfaceAnalysis.RaiseMethodType = interfaceAnalysis.OnAnyPropertyChangedOrChangingInfo == null
+                raiseMethodType = onAnyPropertyChangedOrChangingInfo == null
                     ? RaisePropertyChangedMethodType.None
                     : RaisePropertyChangedMethodType.Override;
             }
             else
             {
-                interfaceAnalysis.RaiseMethodType = typeSymbol.IsSealed
+                raiseMethodType = typeSymbol.IsSealed
                     ? RaisePropertyChangedMethodType.NonVirtual
                     : RaisePropertyChangedMethodType.Virtual;
             }
 
             // See if any of our base type analysis came up with a name.
             // If they didn't, we'll sort this out in PopulateRaiseMethodNameIfEmpty
-            interfaceAnalysis.RaiseMethodName =
+            raiseMethodName =
                 baseTypeAnalyses.Select(x => this.interfaceAnalysisGetter(x).RaiseMethodName).FirstOrDefault(x => x != null);
 
-            interfaceAnalysis.RaiseMethodSignature = new RaisePropertyChangedOrChangingMethodSignature(
+            raiseMethodSignature = new RaisePropertyChangedOrChangingMethodSignature(
                 RaisePropertyChangedOrChangingNameType.PropertyChangedEventArgs,
-                hasOld: interfaceAnalysis.OnAnyPropertyChangedOrChangingInfo?.HasOld ?? false,
-                hasNew: interfaceAnalysis.OnAnyPropertyChangedOrChangingInfo?.HasNew ?? false,
+                HasOld: onAnyPropertyChangedOrChangingInfo?.HasOld ?? false,
+                HasNew: onAnyPropertyChangedOrChangingInfo?.HasNew ?? false,
                 typeSymbol.IsSealed ? Accessibility.Private : Accessibility.Protected);
         }
+
+        return new InterfaceAnalysis()
+        {
+            // If we've got any base types we're generating partial types for, that will have the INPC interface
+            // and event on, for sure
+            RequiresInterface = !hasInterface && !baseTypeAnalyses.Any(x => x.CanGenerate),
+            // If there's no event, the base type in our hierarchy is defining it
+            RequiresEvent = eventSymbol == null && !isGeneratingAnyParent,
+            CanCallRaiseMethod = canCallRaiseMethod,
+            EventName = this.eventName,
+            EventArgsFullyQualifiedTypeName = this.EventArgsSymbol.ToDisplayString(SymbolDisplayFormats.FullyQualifiedTypeName),
+            RaiseMethodType = raiseMethodType,
+            RaiseMethodName = raiseMethodName,
+            RaiseMethodSignature = raiseMethodSignature,
+            OnAnyPropertyChangedOrChangingInfo = onAnyPropertyChangedOrChangingInfo,
+        };
     }
 
     public static void PopulateRaiseMethodNameIfEmpty(
@@ -254,7 +262,7 @@ public abstract class InterfaceAnalyser
 
     protected abstract bool TryFindCallableRaisePropertyChangedOrChangingOverload(List<IMethodSymbol> methods, out IMethodSymbol method, out RaisePropertyChangedOrChangingMethodSignature? signature, INamedTypeSymbol typeSymbol);
 
-    protected abstract void FindOnAnyPropertyChangedOrChangingMethod(INamedTypeSymbol typeSymbol, InterfaceAnalysis interfaceAnalysis, out IMethodSymbol? method);
+    protected abstract OnPropertyNameChangedInfo? FindOnAnyPropertyChangedOrChangingMethod(INamedTypeSymbol typeSymbol, out IMethodSymbol? method);
 
     protected abstract void ReportCouldNotFindRaisePropertyChangingOrChangedMethod(INamedTypeSymbol typeSymbol, string eventName);
 

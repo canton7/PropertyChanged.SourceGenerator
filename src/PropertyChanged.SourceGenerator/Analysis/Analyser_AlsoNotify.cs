@@ -9,7 +9,7 @@ namespace PropertyChanged.SourceGenerator.Analysis;
 
 public partial class Analyser
 {
-    private void ResolveAlsoNotify(TypeAnalysis typeAnalysis, INamedTypeSymbol typeSymbol, List<TypeAnalysis> baseTypeAnalyses)
+    private void ResolveAlsoNotify(TypeAnalysisBuilder typeAnalysis, List<TypeAnalysisBuilder> baseTypeAnalyses)
     {
         // We've already warned if there are AlsoNotify attributes on members that we haven't analysed
         foreach (var member in typeAnalysis.Members)
@@ -48,21 +48,21 @@ public partial class Analyser
                                 foundAlsoNotify = true;
                                 alsoNotifyMember = AlsoNotifyMember.FromMemberAnalysis(foundMemberAnalysis);
                             }
-                            else if (TypeAndBaseTypes(typeSymbol)
+                            else if (TypeAndBaseTypes(typeAnalysis.TypeSymbol)
                                 .SelectMany(x => x.GetMembers(alsoNotify!))
                                 .OfType<IPropertySymbol>()
-                                .FirstOrDefault(x => this.compilation.IsSymbolAccessibleWithin(x, typeSymbol))
+                                .FirstOrDefault(x => this.compilation.IsSymbolAccessibleWithin(x, typeAnalysis.TypeSymbol))
                                 is { } foundProperty)
                             {
                                 foundAlsoNotify = true;
                                 alsoNotifyMember = AlsoNotifyMember.FromProperty(
                                     foundProperty,
-                                    this.FindOnPropertyNameChangedMethod(typeSymbol, foundProperty));
+                                    this.FindOnPropertyNameChangedMethod(typeAnalysis.TypeSymbol, foundProperty));
                             }
                             else if (alsoNotify!.EndsWith("[]"))
                             {
                                 string indexerName = alsoNotify.Substring(0, alsoNotify.Length - "[]".Length);
-                                foundAlsoNotify = TypeAndBaseTypes(typeSymbol)
+                                foundAlsoNotify = TypeAndBaseTypes(typeAnalysis.TypeSymbol)
                                     .SelectMany(x => x.GetMembers("this[]"))
                                     .OfType<IPropertySymbol>()
                                     .Any(x => x.IsIndexer && x.MetadataName == indexerName);

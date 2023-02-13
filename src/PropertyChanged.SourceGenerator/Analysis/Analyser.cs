@@ -70,14 +70,14 @@ public partial class Analyser
 
     public IEnumerable<TypeAnalysis> Analyse(HashSet<INamedTypeSymbol> typeSymbols)
     {
-        var results = new Dictionary<INamedTypeSymbol, TypeAnalysis>(SymbolEqualityComparer.Default);
+        var results = new Dictionary<INamedTypeSymbol, TypeAnalysisBuilder>(SymbolEqualityComparer.Default);
 
         foreach (var typeSymbol in typeSymbols)
         {
             Analyse(typeSymbol);
         }
 
-        return results.Values;
+        return results.Values.Select(x => x.Build());
 
         void Analyse(INamedTypeSymbol typeSymbol)
         {
@@ -106,7 +106,7 @@ public partial class Analyser
                 return;
 
             // Right, we know we've analysed all of the base types by now. Fetch them
-            var baseTypes = new List<TypeAnalysis>();
+            var baseTypes = new List<TypeAnalysisBuilder>();
             for (var t = typeSymbol.BaseType?.OriginalDefinition; t != null && t.SpecialType != SpecialType.System_Object; t = t.BaseType?.OriginalDefinition)
             {
                 if (results.TryGetValue(t, out var baseTypeAnalysis))
@@ -120,22 +120,13 @@ public partial class Analyser
         }
     }
 
-    private TypeAnalysis Analyse(INamedTypeSymbol typeSymbol, List<TypeAnalysis> baseTypeAnalyses)
+    private TypeAnalysisBuilder Analyse(INamedTypeSymbol typeSymbol, List<TypeAnalysisBuilder> baseTypeAnalyses)
     {
-        var typeAnalysis = new TypeAnalysis()
+        var typeAnalysis = new TypeAnalysisBuilder()
         {
             CanGenerate = true,
-            TypeDeclaration = typeSymbol.ToDisplayString(SymbolDisplayFormats.TypeDeclaration),
-            TypeNameForGeneratedFileName = typeSymbol.ToDisplayString(SymbolDisplayFormats.GeneratedFileName),
+            TypeSymbol = typeSymbol,
         };
-        if (typeSymbol.ContainingNamespace is { IsGlobalNamespace: false } @namespace)
-        {
-            typeAnalysis.ContainingNamespace = @namespace.ToDisplayString(SymbolDisplayFormats.Namespace);
-        }
-        for (var outerType = typeSymbol.ContainingType; outerType != null; outerType = outerType.ContainingType)
-        {
-            typeAnalysis.OuterTypes.Add(outerType.ToDisplayString(SymbolDisplayFormats.TypeDeclaration));
-        }
 
         if (baseTypeAnalyses.FirstOrDefault()?.HadException == true)
         {
@@ -148,7 +139,7 @@ public partial class Analyser
         {
             try
             {
-                this.AnalyseInner(typeAnalysis, typeSymbol, baseTypeAnalyses);
+                this.AnalyseInner(typeAnalysis, baseTypeAnalyses);
             }
             catch (Exception e)
             {
@@ -161,23 +152,23 @@ public partial class Analyser
         return typeAnalysis;
     }
 
-    private void AnalyseInner(TypeAnalysis typeAnalysis, INamedTypeSymbol typeSymbol, List<TypeAnalysis> baseTypeAnalyses)
+    private void AnalyseInner(TypeAnalysisBuilder typeAnalysis, List<TypeAnalysisBuilder> baseTypeAnalyses)
     {
         if (this.propertyChangedInterfaceAnalyser == null)
             throw new InvalidOperationException();
 
-        var config = this.configurationParser.Parse(typeSymbol.DeclaringSyntaxReferences.FirstOrDefault()?.SyntaxTree, this.diagnostics);
+        var config = this.configurationParser.Parse(typeAnalysis.TypeSymbol.DeclaringSyntaxReferences.FirstOrDefault()?.SyntaxTree, this.diagnostics);
 
         typeAnalysis.NullableContext = this.nullableContextOptions;
 
-        this.propertyChangedInterfaceAnalyser.PopulateInterfaceAnalysis(typeSymbol, typeAnalysis.INotifyPropertyChanged, baseTypeAnalyses, config);
-        this.propertyChangingInterfaceAnalyser!.PopulateInterfaceAnalysis(typeSymbol, typeAnalysis.INotifyPropertyChanging, baseTypeAnalyses, config);
+        typeAnalysis.INotifyPropertyChanged = this.propertyChangedInterfaceAnalyser.CreateInterfaceAnalysis(typeAnalysis.TypeSymbol, baseTypeAnalyses, config);
+        typeAnalysis.INotifyPropertyChanging = this.propertyChangingInterfaceAnalyser!.CreateInterfaceAnalysis(typeAnalysis.TypeSymbol, baseTypeAnalyses, config);
         InterfaceAnalyser.PopulateRaiseMethodNameIfEmpty(typeAnalysis.INotifyPropertyChanged, typeAnalysis.INotifyPropertyChanging, config);
         this.ResoveInheritedIsChanged(typeAnalysis, baseTypeAnalyses);
 
-        foreach (var member in typeSymbol.GetMembers().Where(x => !x.IsImplicitlyDeclared))
+        foreach (var member in typeAnalysis.TypeSymbol.GetMembers().Where(x => !x.IsImplicitlyDeclared))
         {
-            MemberAnalysis? memberAnalysis = null;
+            MemberAnalysisBuilder? memberAnalysis = null;
             switch (member)
             {
                 case IFieldSymbol field when this.GetNotifyAttribute(field) is { } attribute:
@@ -203,27 +194,27 @@ public partial class Analyser
 
         // Now that we've got all members, we can do inter-member analysis
 
-        this.ReportPropertyNameCollisions(typeAnalysis, typeSymbol, baseTypeAnalyses);
-        this.ResolveAlsoNotify(typeAnalysis, typeSymbol, baseTypeAnalyses);
-        this.ResolveDependsOn(typeAnalysis, typeSymbol, config);
+        this.ReportPropertyNameCollisions(typeAnalysis, baseTypeAnalyses);
+        this.ResolveAlsoNotify(typeAnalysis, baseTypeAnalyses);
+        this.ResolveDependsOn(typeAnalysis, config);
 
-        if (!IsPartial(typeSymbol))
+        if (!IsPartial(typeAnalysis.TypeSymbol))
         {
             typeAnalysis.CanGenerate = false;
             if (typeAnalysis.Members.Count > 0)
             {
-                this.diagnostics.ReportTypeIsNotPartial(typeSymbol);
+                this.diagnostics.ReportTypeIsNotPartial(typeAnalysis.TypeSymbol);
             }
         }
 
-        for (var outerType = typeSymbol.ContainingType; outerType != null; outerType = outerType.ContainingType)
+        for (var outerType = typeAnalysis.TypeSymbol.ContainingType; outerType != null; outerType = outerType.ContainingType)
         {
             if (!IsPartial(outerType))
             {
                 typeAnalysis.CanGenerate = false;
                 if (typeAnalysis.Members.Count > 0)
                 {
-                    this.diagnostics.ReportOuterTypeIsNotPartial(outerType, typeSymbol);
+                    this.diagnostics.ReportOuterTypeIsNotPartial(outerType, typeAnalysis.TypeSymbol);
                 }
             }
         }
@@ -234,7 +225,7 @@ public partial class Analyser
                 syntax.Modifiers.Any(SyntaxKind.PartialKeyword));
     }
 
-    private MemberAnalysis? AnalyseField(IFieldSymbol field, AttributeData notifyAttribute, Configuration config)
+    private MemberAnalysisBuilder? AnalyseField(IFieldSymbol field, AttributeData notifyAttribute, Configuration config)
     {
         if (field.IsReadOnly)
         {
@@ -245,7 +236,7 @@ public partial class Analyser
         return result;
     }
 
-    private MemberAnalysis? AnalyseProperty(IPropertySymbol property, AttributeData notifyAttribute, Configuration config)
+    private MemberAnalysisBuilder? AnalyseProperty(IPropertySymbol property, AttributeData notifyAttribute, Configuration config)
     {
         if (property.GetMethod == null || property.SetMethod == null)
         {
@@ -256,7 +247,7 @@ public partial class Analyser
         return result;
     }
 
-    private MemberAnalysis? AnalyseMember(
+    private MemberAnalysisBuilder? AnalyseMember(
         ISymbol backingMember,
         ITypeSymbol type,
         AttributeData notifyAttribute,
@@ -301,7 +292,7 @@ public partial class Analyser
         }
 
         string name = explicitName ?? this.TransformName(backingMember, config);
-        var result = new MemberAnalysis()
+        var result = new MemberAnalysisBuilder()
         {
             BackingMember = backingMember,
             Name = name,
@@ -370,12 +361,12 @@ public partial class Analyser
         return name;
     }
 
-    private void ReportPropertyNameCollisions(TypeAnalysis typeAnalysis, INamedTypeSymbol typeSymbol, List<TypeAnalysis> baseTypeAnalyses)
+    private void ReportPropertyNameCollisions(TypeAnalysisBuilder typeAnalysis, List<TypeAnalysisBuilder> baseTypeAnalyses)
     {
         // TODO: This could be smarter. We can ignore private members in base classes, for instance
         // We treat members we're generating on base types as already having been generated for the purposes of
         // these diagnostics
-        var allDeclaredMemberNames = new HashSet<string>(TypeAndBaseTypes(typeSymbol)
+        var allDeclaredMemberNames = new HashSet<string>(TypeAndBaseTypes(typeAnalysis.TypeSymbol)
             .SelectMany(x => x.MemberNames)
             .Concat(baseTypeAnalyses.SelectMany(x => x.Members.Select(y => y.Name))));
         for (int i = typeAnalysis.Members.Count - 1; i >= 0; i--)

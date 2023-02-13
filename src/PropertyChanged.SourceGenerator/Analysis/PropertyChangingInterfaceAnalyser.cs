@@ -15,7 +15,7 @@ public class PropertyChangingInterfaceAnalyser : InterfaceAnalyser
         INamedTypeSymbol eventArgsSymbol,
         DiagnosticReporter diagnostics,
         Compilation compilation)
-        : base(interfaceSymbol, eventHandlerSymbol, eventArgsSymbol, "PropertyChanging", diagnostics, compilation, x => x.INotifyPropertyChanging)
+        : base(interfaceSymbol, eventHandlerSymbol, eventArgsSymbol, "PropertyChanging", diagnostics, compilation, x => x.INotifyPropertyChanging!)
     {
     }
 
@@ -35,8 +35,8 @@ public class PropertyChangingInterfaceAnalyser : InterfaceAnalyser
         {
             signature = new RaisePropertyChangedOrChangingMethodSignature(
                 RaisePropertyChangedOrChangingNameType.PropertyChangedEventArgs,
-                hasOld: false,
-                hasNew: false,
+                HasOld: false,
+                HasNew: false,
                 method.DeclaredAccessibility);
             return true;
         }
@@ -47,8 +47,8 @@ public class PropertyChangingInterfaceAnalyser : InterfaceAnalyser
         {
             signature = new RaisePropertyChangedOrChangingMethodSignature(
                 RaisePropertyChangedOrChangingNameType.String,
-                hasOld: false,
-                hasNew: false,
+                HasOld: false,
+                HasNew: false,
                 method.DeclaredAccessibility);
             return true;
         }
@@ -61,8 +61,8 @@ public class PropertyChangingInterfaceAnalyser : InterfaceAnalyser
         {
             signature = new RaisePropertyChangedOrChangingMethodSignature(
                 RaisePropertyChangedOrChangingNameType.PropertyChangedEventArgs,
-                hasOld: true,
-                hasNew: false,
+                HasOld: true,
+                HasNew: false,
                 method.DeclaredAccessibility);
             return true;
         }
@@ -75,8 +75,8 @@ public class PropertyChangingInterfaceAnalyser : InterfaceAnalyser
         {
             signature = new RaisePropertyChangedOrChangingMethodSignature(
                 RaisePropertyChangedOrChangingNameType.String,
-                hasOld: true,
-                hasNew: false,
+                HasOld: true,
+                HasNew: false,
                 method.DeclaredAccessibility);
             return true;
         }
@@ -85,7 +85,7 @@ public class PropertyChangingInterfaceAnalyser : InterfaceAnalyser
         return false;
     }
 
-    protected override void FindOnAnyPropertyChangedOrChangingMethod(INamedTypeSymbol typeSymbol, InterfaceAnalysis interfaceAnalysis, out IMethodSymbol? method)
+    protected override OnPropertyNameChangedInfo? FindOnAnyPropertyChangedOrChangingMethod(INamedTypeSymbol typeSymbol, out IMethodSymbol? method)
     {
         method = null;
 
@@ -94,19 +94,22 @@ public class PropertyChangingInterfaceAnalyser : InterfaceAnalyser
             .Where(x => !x.IsOverride && !x.IsStatic)
             .ToList();
 
+        OnPropertyNameChangedInfo? result = null;
         if (methods.Count > 0)
         {
             // FindCallableOverload might remove some...
             var firstMethod = methods[0];
-            if (FindCallableOverload(methods, out method) is { } result)
+            if (FindCallableOverload(methods, out method) is { } found)
             {
-                interfaceAnalysis.OnAnyPropertyChangedOrChangingInfo = result;
+                result = found;
             }
             else
             {
                 this.Diagnostics.ReportInvalidOnAnyPropertyChangedChangedSignature(firstMethod);
             }
         }
+
+        return result;
 
         OnPropertyNameChangedInfo? FindCallableOverload(List<IMethodSymbol> methods, out IMethodSymbol method)
         {
@@ -118,14 +121,14 @@ public class PropertyChangingInterfaceAnalyser : InterfaceAnalyser
                 IsNormalParameter(x.Parameters[1]) &&
                 x.Parameters[1].Type.SpecialType == SpecialType.System_Object)) != null)
             {
-                return new OnPropertyNameChangedInfo(OnAnyPropertyChangingMethodName, hasOld: true, hasNew: false);
+                return new OnPropertyNameChangedInfo(OnAnyPropertyChangingMethodName, HasOld: true, HasNew: false);
             }
 
             if ((method = methods.FirstOrDefault(x => x.Parameters.Length == 1 &&
                 IsNormalParameter(x.Parameters[0]) &&
                 x.Parameters[0].Type.SpecialType == SpecialType.System_String)) != null)
             {
-                return new OnPropertyNameChangedInfo(OnAnyPropertyChangingMethodName, hasOld: false, hasNew: false);
+                return new OnPropertyNameChangedInfo(OnAnyPropertyChangingMethodName, HasOld: false, HasNew: false);
             }
 
             return null;
@@ -164,12 +167,12 @@ public class PropertyChangingInterfaceAnalyser : InterfaceAnalyser
             IsNormalParameter(x.Parameters[0]) &&
             this.Compilation.HasImplicitConversion(memberType, x.Parameters[0].Type)))
         {
-            return new OnPropertyNameChangedInfo(onChangedMethodName, hasOld: true, hasNew: false);
+            return new OnPropertyNameChangedInfo(onChangedMethodName, HasOld: true, HasNew: false);
         }
 
         if (methods.Any(x => x.Parameters.Length == 0))
         {
-            return new OnPropertyNameChangedInfo(onChangedMethodName, hasOld: false, hasNew: false);
+            return new OnPropertyNameChangedInfo(onChangedMethodName, HasOld: false, HasNew: false);
         }
 
         return null;

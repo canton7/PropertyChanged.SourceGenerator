@@ -6,7 +6,7 @@ using System.Text;
 
 namespace PropertyChanged.SourceGenerator.Pipeline;
 
-public  class ReadOnlyEquatableList<T> : IReadOnlyList<T>
+public struct ReadOnlyEquatableList<T> : IEquatable<ReadOnlyEquatableList<T>>, IReadOnlyList<T>
 {
     private readonly IReadOnlyList<T> inner;
     private readonly IEqualityComparer<T> comparer;
@@ -19,15 +19,12 @@ public  class ReadOnlyEquatableList<T> : IReadOnlyList<T>
         this.comparer = comparer ?? EqualityComparer<T>.Default;
     }
 
-    public override bool Equals(object obj)
+    public bool Equals(ReadOnlyEquatableList<T> other)
     {
-        var other = obj as ReadOnlyEquatableList<T>;
-        if (this == other)
-            return true;
-        if (other == null)
-            return false;
         return this.inner.SequenceEqual(other.inner, this.comparer);
     }
+
+    public override bool Equals(object obj) => obj is ReadOnlyEquatableList<T> other && this.Equals(other);
 
     public override int GetHashCode()
     {

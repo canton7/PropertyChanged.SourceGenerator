@@ -14,26 +14,26 @@ public partial class Analyser
 {
     private static readonly ImmutableHashSet<IPropertySymbol> emptyPropertyHashSet = ImmutableHashSet<IPropertySymbol>.Empty.WithComparer(SymbolEqualityComparer.Default);
 
-    private void ResolveDependsOn(TypeAnalysis typeAnalysis, INamedTypeSymbol typeSymbol, Configuration config)
+    private void ResolveDependsOn(TypeAnalysisBuilder typeAnalysis, Configuration config)
     {
         var lookups = new TypeAnalysisLookups(typeAnalysis);
-        foreach (var member in typeSymbol.GetMembers().Where(x => !x.IsImplicitlyDeclared && x is IFieldSymbol or IPropertySymbol))
+        foreach (var member in typeAnalysis.TypeSymbol.GetMembers().Where(x => !x.IsImplicitlyDeclared && x is IFieldSymbol or IPropertySymbol))
         {
             var dependsOnAttributes = member.GetAttributes()
                 .Where(x => SymbolEqualityComparer.Default.Equals(x.AttributeClass, this.dependsOnAttributeSymbol))
                 .ToList();
             if (dependsOnAttributes.Count > 0)
             {
-                this.ResolveManualDependsOn(typeAnalysis, typeSymbol, lookups, member, dependsOnAttributes);
+                this.ResolveManualDependsOn(typeAnalysis, lookups, member, dependsOnAttributes);
             }
             else if (config.EnableAutoNotify && member is IPropertySymbol propertySymbol)
             {
-                this.ResolveAutoDependsOn(typeAnalysis, typeSymbol, propertySymbol, propertySymbol, lookups, emptyPropertyHashSet);
+                this.ResolveAutoDependsOn(typeAnalysis, propertySymbol, propertySymbol, lookups, emptyPropertyHashSet);
             }
         }
     }
 
-    private void ResolveManualDependsOn(TypeAnalysis typeAnalysis, INamedTypeSymbol typeSymbol, TypeAnalysisLookups lookups, ISymbol member, List<AttributeData> dependsOnAttributes)
+    private void ResolveManualDependsOn(TypeAnalysisBuilder typeAnalysis, TypeAnalysisLookups lookups, ISymbol member, List<AttributeData> dependsOnAttributes)
     {
         foreach (var attribute in dependsOnAttributes)
         {
@@ -52,7 +52,7 @@ public partial class Analyser
                 else if (member is IPropertySymbol property)
                 {
                     alsoNotifyMember = AlsoNotifyMember.FromProperty(property,
-                        this.FindOnPropertyNameChangedMethod(typeSymbol, property));
+                        this.FindOnPropertyNameChangedMethod(typeAnalysis.TypeSymbol, property));
                 }
                 else
                 {
@@ -70,12 +70,12 @@ public partial class Analyser
                     else
                     {
                         // We'll assume it'll pass through RaisePropertyChanged
-                        if (typeAnalysis.INotifyPropertyChanged.CanCallRaiseMethod &&
+                        if (typeAnalysis.INotifyPropertyChanged!.CanCallRaiseMethod &&
                             typeAnalysis.INotifyPropertyChanged.RaiseMethodType == RaisePropertyChangedMethodType.None)
                         {
                             this.diagnostics.ReportDependsOnSpecifiedButRaisePropertyChangedMethodCannotBeOverridden(attribute, member, dependsOn!, typeAnalysis.INotifyPropertyChanged.RaiseMethodName!);
                         }
-                        if (typeAnalysis.INotifyPropertyChanging.CanCallRaiseMethod &&
+                        if (typeAnalysis.INotifyPropertyChanging!.CanCallRaiseMethod &&
                             typeAnalysis.INotifyPropertyChanging.RaiseMethodType == RaisePropertyChangedMethodType.None)
                         {
                             this.diagnostics.ReportDependsOnSpecifiedButRaisePropertyChangingMethodCannotBeOverridden(attribute, member, dependsOn!, typeAnalysis.INotifyPropertyChanged.RaiseMethodName!);
@@ -90,8 +90,7 @@ public partial class Analyser
     /// <param name="notifyProperty">The property to raise an event for</param>
     /// <param name="analyseProperty">The property whose body should be analysed</param>
     private void ResolveAutoDependsOn(
-        TypeAnalysis typeAnalysis,
-        INamedTypeSymbol typeSymbol,
+        TypeAnalysisBuilder typeAnalysis,
         IPropertySymbol notifyProperty,
         IPropertySymbol analyseProperty,
         TypeAnalysisLookups lookups,
@@ -137,9 +136,9 @@ public partial class Analyser
                     // It's probably a property access. Is it something we've analysed already?
                     memberAnalysis.AddAlsoNotify(AlsoNotifyMember.FromProperty(
                         notifyProperty,
-                        this.FindOnPropertyNameChangedMethod(typeSymbol, notifyProperty)));
+                        this.FindOnPropertyNameChangedMethod(typeAnalysis.TypeSymbol, notifyProperty)));
                 }
-                else if (typeSymbol.GetMembers().OfType<IPropertySymbol>()
+                else if (typeAnalysis.TypeSymbol.GetMembers().OfType<IPropertySymbol>()
                     .FirstOrDefault(x => !x.IsImplicitlyDeclared && x.Name == node.Identifier.ValueText) is { } dependsOn)
                 {
                     // Is it another property defined on the same type, which might itself have a body
@@ -147,17 +146,17 @@ public partial class Analyser
                     // Avoid infinite recursion if a property refers to itself, or two properties refer to each other.
                     if (!visitedProperties.Contains(dependsOn))
                     {
-                        this.ResolveAutoDependsOn(typeAnalysis, typeSymbol, notifyProperty, dependsOn, lookups, visitedProperties.Add(dependsOn));
+                        this.ResolveAutoDependsOn(typeAnalysis, notifyProperty, dependsOn, lookups, visitedProperties.Add(dependsOn));
                     }
                 }
-                else if (TypeAndBaseTypes(typeSymbol.BaseType!).SelectMany(x => x.GetMembers().OfType<IPropertySymbol>())
+                else if (TypeAndBaseTypes(typeAnalysis.TypeSymbol.BaseType!).SelectMany(x => x.GetMembers().OfType<IPropertySymbol>())
                     .FirstOrDefault(x => !x.IsImplicitlyDeclared && x.Name == node.Identifier.ValueText) is { } baseProperty)
                 {
                     // Is it another property defined on a base type? We'll need to stick it in
                     // the RaisePropertyChanged method
                     typeAnalysis.AddDependsOn(baseProperty.Name, AlsoNotifyMember.FromProperty(
                         notifyProperty,
-                        this.FindOnPropertyNameChangedMethod(typeSymbol, notifyProperty)));
+                        this.FindOnPropertyNameChangedMethod(typeAnalysis.TypeSymbol, notifyProperty)));
                 }
             }
         }

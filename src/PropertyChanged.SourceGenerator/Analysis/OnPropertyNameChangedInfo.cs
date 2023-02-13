@@ -4,16 +4,9 @@ using System.Text;
 
 namespace PropertyChanged.SourceGenerator.Analysis;
 
-public struct OnPropertyNameChangedInfo
+public record struct OnPropertyNameChangedInfo(
+    string Name,
+    bool HasOld,
+    bool HasNew)
 {
-    public string Name { get; }
-    public bool HasOld { get; }
-    public bool HasNew { get; }
-
-    public OnPropertyNameChangedInfo(string name, bool hasOld, bool hasNew)
-    {
-        this.Name = name;
-        this.HasOld = hasOld;
-        this.HasNew = hasNew;
-    }
 }

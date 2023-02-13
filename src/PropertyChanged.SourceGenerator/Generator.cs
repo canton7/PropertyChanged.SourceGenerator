@@ -178,7 +178,7 @@ public class Generator
                 propertyNameAccessor = propertyNameParamName;
                 break;
             case RaisePropertyChangedOrChangingNameType.PropertyChangedEventArgs:
-                this.writer.Write(interfaceAnalysis.EventArgsSymbol.ToDisplayString(SymbolDisplayFormats.FullyQualifiedTypeName));
+                this.writer.Write(interfaceAnalysis.EventArgsFullyQualifiedTypeName);
                 this.writer.Write($" {eventArgsParamName}");
                 propertyNameOrEventArgsName = eventArgsParamName;
                 propertyNameAccessor = $"{eventArgsParamName}.PropertyName";
@@ -281,23 +281,17 @@ public class Generator
 
         var (propertyAccessibility, getterAccessibility, setterAccessibility) = CalculateAccessibilities(member);
 
-        if (member.DocComment != null)
+        foreach (string line in member.DocComment)
         {
-            foreach (string line in member.DocComment)
-            {
-                this.writer.WriteLine($"/// {line}");
-            }
+            this.writer.WriteLine($"/// {line}");
         }
 
-        if (member.AttributesForGeneratedProperty != null)
+        foreach (string attr in member.AttributesForGeneratedProperty)
         {
-            foreach (string attr in member.AttributesForGeneratedProperty)
-            {
-                this.writer.WriteLine(attr);
-            }
+            this.writer.WriteLine(attr);
         }
 
-        this.writer.WriteLine($"{propertyAccessibility}{(member.IsVirtual ? "virtual " : "")}{member.Type.ToDisplayString(SymbolDisplayFormats.FullyQualifiedTypeName)} {member.Name}");
+        this.writer.WriteLine($"{propertyAccessibility}{(member.IsVirtual ? "virtual " : "")}{member.FullyQualifiedTypeName} {member.Name}");
         this.writer.WriteLine("{");
         this.writer.Indent++;
 
@@ -307,7 +301,7 @@ public class Generator
         this.writer.Indent++;
 
         this.writer.WriteLine("if (!global::System.Collections.Generic.EqualityComparer<" +
-            member.Type.ToDisplayString(SymbolDisplayFormats.FullyQualifiedTypeName) +
+            member.FullyQualifiedTypeName +
             $">.Default.Equals(value, {backingMemberReference}))");
         this.writer.WriteLine("{");
         this.writer.Indent++;
@@ -353,7 +347,7 @@ public class Generator
     }
 
     private static string GetBackingMemberReference(MemberAnalysis member) =>
-        "this." + member.BackingMember.ToDisplayString(SymbolDisplayFormats.SymbolName);
+        "this." + member.BackingMemberSymbolName;
 
     private void GenerateOldVariablesIfNecessary(TypeAnalysis type, MemberAnalysis member)
     {
@@ -372,7 +366,7 @@ public class Generator
             if (type.INotifyPropertyChanged.RaiseMethodSignature.HasOld || member.OnPropertyNameChanged?.HasOld == true ||
                 type.INotifyPropertyChanging.RaiseMethodSignature.HasOld || member.OnPropertyNameChanging?.HasOld == true)
             {
-                this.writer.WriteLine($"{member.Type!.ToDisplayString(SymbolDisplayFormats.FullyQualifiedTypeName)} old_{member.Name} = {backingMemberReference};");
+                this.writer.WriteLine($"{member.FullyQualifiedTypeName} old_{member.Name} = {backingMemberReference};");
             }
         }
     }
@@ -402,7 +396,7 @@ public class Generator
     private void GenerateNewVariable<T>(T member, string? backingMemberReferenceOverride = null) where T : IMember
     {
         string backingMemberReference = backingMemberReferenceOverride ?? $"this.{member.Name}";
-        this.writer.WriteLine($"{member.Type!.ToDisplayString(SymbolDisplayFormats.FullyQualifiedTypeName)} new_{member.Name} = {backingMemberReference};");
+        this.writer.WriteLine($"{member.FullyQualifiedTypeName} new_{member.Name} = {backingMemberReference};");
     }
 
     private void GenerateRaiseEvent(InterfaceAnalysis interfaceAnalysis, string? propertyName, bool isCallable, bool hasOldVariable)
@@ -468,7 +462,7 @@ public class Generator
                 }
                 else
                 {
-                    this.writer.Write($"default({member.Type!.ToDisplayString(SymbolDisplayFormats.FullyQualifiedTypeName)})");
+                    this.writer.Write($"default({member.FullyQualifiedTypeName})");
                 }
             }
             if (onPropertyNameChangedInfo.Value.HasNew)

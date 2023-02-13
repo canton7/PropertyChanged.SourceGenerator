@@ -6,12 +6,12 @@ using Microsoft.CodeAnalysis;
 
 namespace PropertyChanged.SourceGenerator.Analysis;
 
-public struct AlsoNotifyMember : IMember, IEquatable<AlsoNotifyMember>
+public record struct AlsoNotifyMember : IMember, IEquatable<AlsoNotifyMember>
 {
     public string? Name { get; }
-    public ITypeSymbol? Type { get; }
-    [MemberNotNullWhen(true, nameof(Type))]
-    public bool IsCallable => this.Type != null;
+    public string? FullyQualifiedTypeName { get; }
+    [MemberNotNullWhen(true, nameof(FullyQualifiedTypeName))]
+    public bool IsCallable => this.FullyQualifiedTypeName != null;
 
     public OnPropertyNameChangedInfo? OnPropertyNameChanged { get; }
     public OnPropertyNameChangedInfo? OnPropertyNameChanging { get; }
@@ -23,7 +23,7 @@ public struct AlsoNotifyMember : IMember, IEquatable<AlsoNotifyMember>
         OnPropertyNameChangedInfo? onPropertyNameChanging)
     {
         this.Name = name;
-        this.Type = type;
+        this.FullyQualifiedTypeName = type?.ToDisplayString(SymbolDisplayFormats.FullyQualifiedTypeName);
         this.OnPropertyNameChanged = onPropertyNameChanged;
         this.OnPropertyNameChanging = onPropertyNameChanging;
     }
@@ -31,7 +31,7 @@ public struct AlsoNotifyMember : IMember, IEquatable<AlsoNotifyMember>
     public static AlsoNotifyMember NonCallable(string? name) =>
         new(name, null, null, null);
 
-    public static AlsoNotifyMember FromMemberAnalysis(MemberAnalysis memberAnalysis) =>
+    public static AlsoNotifyMember FromMemberAnalysis(MemberAnalysisBuilder memberAnalysis) =>
         new(memberAnalysis.Name, memberAnalysis.Type, memberAnalysis.OnPropertyNameChanged, memberAnalysis.OnPropertyNameChanging);
     
     public static AlsoNotifyMember FromProperty(
@@ -45,11 +45,12 @@ public struct AlsoNotifyMember : IMember, IEquatable<AlsoNotifyMember>
             namedChangedInfo.onPropertyNameChanged,
             namedChangedInfo.onPropertyNameChanging);
     }
+}
 
-    public override bool Equals(object obj) => obj is AlsoNotifyMember other && this.Equals(other);
-    public bool Equals(AlsoNotifyMember other) => string.Equals(this.Name, other.Name, StringComparison.Ordinal);
-    public override int GetHashCode() => this.Name == null ? 0 : StringComparer.Ordinal.GetHashCode(this.Name);
+public class AlsoNotifyMemberNameOnlyComparer : IEqualityComparer<AlsoNotifyMember>
+{
+    public static AlsoNotifyMemberNameOnlyComparer Instance { get; } = new();
 
-    public static bool operator ==(AlsoNotifyMember left, AlsoNotifyMember right) => left.Equals(right);
-    public static bool operator !=(AlsoNotifyMember left, AlsoNotifyMember right) => !left.Equals(right);
+    public bool Equals(AlsoNotifyMember x, AlsoNotifyMember y) => string.Equals(x.Name, y.Name, StringComparison.Ordinal);
+    public int GetHashCode(AlsoNotifyMember obj) => obj.Name == null ? 0 : StringComparer.Ordinal.GetHashCode(obj.Name);
 }

@@ -12,18 +12,10 @@ public enum RaisePropertyChangedOrChangingNameType
     String,
 }
 
-public struct RaisePropertyChangedOrChangingMethodSignature
+public record struct RaisePropertyChangedOrChangingMethodSignature(
+    RaisePropertyChangedOrChangingNameType NameType,
+    bool HasOld,
+    bool HasNew,
+    Accessibility Accessibility)
 {
-    public RaisePropertyChangedOrChangingNameType NameType { get; }
-    public bool HasOld { get; }
-    public bool HasNew { get; }
-    public Accessibility Accessibility { get; }
-
-    public RaisePropertyChangedOrChangingMethodSignature(RaisePropertyChangedOrChangingNameType nameType, bool hasOld, bool hasNew, Accessibility accessibility)
-    {
-        this.NameType = nameType;
-        this.HasOld = hasOld;
-        this.HasNew = hasNew;
-        this.Accessibility = accessibility;
-    }
 }

@@ -8,7 +8,7 @@ namespace PropertyChanged.SourceGenerator.Analysis;
 
 public partial class Analyser
 {
-    public void ResoveInheritedIsChanged(TypeAnalysis typeAnalysis, List<TypeAnalysis> baseTypeAnalyses)
+    public void ResoveInheritedIsChanged(TypeAnalysisBuilder typeAnalysis, List<TypeAnalysisBuilder> baseTypeAnalyses)
     {
         // Copy the parent's, if it's accessible
         if (baseTypeAnalyses.FirstOrDefault() is { IsChangedSetterIsPrivate: false } directParent)
@@ -19,9 +19,9 @@ public partial class Analyser
     }
 
     public void ResolveIsChangedMember(
-        TypeAnalysis typeAnalysis,
+        TypeAnalysisBuilder typeAnalysis,
         ISymbol member,
-        MemberAnalysis? memberAnalysis)
+        MemberAnalysisBuilder? memberAnalysis)
     {
         if (member.GetAttributes().FirstOrDefault(x => SymbolEqualityComparer.Default.Equals(x.AttributeClass, this.isChangedAttributeSymbol)) is { } attribute &&
             GetMemberType(member) is { } memberType)

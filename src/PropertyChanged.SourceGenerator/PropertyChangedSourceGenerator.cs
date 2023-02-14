@@ -59,14 +59,13 @@ public class PropertyChangedSourceGenerator : IIncrementalGenerator
             var diagnostics = new DiagnosticReporter();
             var compilation = inputTypesAndCompilation[0].compilation;
             var analyzer = new Analyser(diagnostics, compilation, nullableContext, configurationParser);
-            // TODO: We should be able to remove this HashSet and just use the Dictionary in analyzer.Analyze
-            var types = new HashSet<INamedTypeSymbol>(inputTypesAndCompilation.Select(x => x.type), SymbolEqualityComparer.Default);
 
-            var analyses = analyzer.Analyse(types);
+            var analyses = analyzer.Analyse(inputTypesAndCompilation.Select(x => x.type));
             return (analyses: new ReadOnlyEquatableList<TypeAnalysis>(analyses.ToList()), diagnostics: new ReadOnlyEquatableList<Diagnostic>(diagnostics.Diagnostics));
         });
 
         // TODO: Make diagnostics cachable?
+        // TODO: pair.diagnostics is boxed currently
         var diagnosticsSource = modelsAndDiagnosticsSource.SelectMany((pair, token) => pair.diagnostics);
 
         context.RegisterSourceOutput(diagnosticsSource, (ctx, diagnostic) =>
@@ -105,11 +104,6 @@ public class PropertyChangedSourceGenerator : IIncrementalGenerator
                 ctx.AddSource("PropertyChanged.SourceGenerator.Internal.EventArgsCache.g", generator.ToString());
             }
         });
-
-        //typesSource.Combine(compilationInfo).Select((input, token) =>
-        //{
-
-        //});
     }
 
     private static IncrementalValueProvider<ImmutableArray<T>> Collect<T>(List<IncrementalValuesProvider<T>> sources)

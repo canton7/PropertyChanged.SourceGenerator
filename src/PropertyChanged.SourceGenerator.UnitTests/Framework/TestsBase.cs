@@ -71,7 +71,7 @@ public abstract class TestsBase
 
         var diagnostics = new DiagnosticReporter();
         var analyser = new Analyser(diagnostics, compilation, compilation.Options.NullableContextOptions, new ConfigurationParser(new TestOptionsProvider()));
-        var typeAnalyses = analyser.Analyse(new HashSet<INamedTypeSymbol>(SymbolEqualityComparer.Default) { type! }).ToList();
+        var typeAnalyses = analyser.Analyse(new[] { type! }).ToList();
 
         DiagnosticVerifier.VerifyDiagnostics(diagnostics.Diagnostics, Array.Empty<DiagnosticResult>(), 1);
 

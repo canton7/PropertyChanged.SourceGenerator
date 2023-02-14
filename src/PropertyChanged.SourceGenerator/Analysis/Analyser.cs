@@ -68,16 +68,23 @@ public partial class Analyser
            ?? throw new InvalidOperationException("PropertyAttributeAttribute must have been added to the assembly");
     }
 
-    public IEnumerable<TypeAnalysis> Analyse(HashSet<INamedTypeSymbol> typeSymbols)
+    public IEnumerable<TypeAnalysis> Analyse(IEnumerable<INamedTypeSymbol> typeSymbols)
     {
-        var results = new Dictionary<INamedTypeSymbol, TypeAnalysisBuilder>(SymbolEqualityComparer.Default);
-
+        // This starts off with a null entry for each type symbol, indicating that we're supposed to analyse
+        // this type but havent't yet done so. So we analyse types, we'll populate the values.
+        // We expect duplicates in typeSymbols, so we can't use ToDictionary
+        var results = new Dictionary<INamedTypeSymbol, TypeAnalysisBuilder?>(SymbolEqualityComparer.Default);
         foreach (var typeSymbol in typeSymbols)
+        {
+            results[typeSymbol.OriginalDefinition] = null;
+        }
+
+        foreach (var typeSymbol in results.Keys)
         {
             Analyse(typeSymbol);
         }
 
-        return results.Values.Select(x => x.Build());
+        return results.Values.Select(x => x!.Build());
 
         void Analyse(INamedTypeSymbol typeSymbol)
         {
@@ -85,16 +92,17 @@ public partial class Analyser
             Debug.Assert(SymbolEqualityComparer.Default.Equals(typeSymbol, typeSymbol.OriginalDefinition));
 
             // If we've already analysed this one, return
-            if (results.ContainsKey(typeSymbol))
+            if (results.TryGetValue(typeSymbol, out var analysis) && analysis != null)
                 return;
 
             // If we haven't analysed its base type yet, do that now. This will then happen recursively
-            // Special System.Object, as we'll hit it a lot
+            // Special-case System.Object, as we'll hit it a lot
             // Use OriginalDefinition here, in case the child inerits from e.g. Base<Foo>: we want to analyse
             // Base<T>
             if (typeSymbol.BaseType != null
                 && typeSymbol.BaseType.SpecialType != SpecialType.System_Object
-                && !results.ContainsKey(typeSymbol.BaseType.OriginalDefinition))
+                && results.TryGetValue(typeSymbol.BaseType.OriginalDefinition, out var existingAnalysis)
+                && existingAnalysis == null)
             {
                 Analyse(typeSymbol.BaseType.OriginalDefinition);
             }
@@ -102,7 +110,7 @@ public partial class Analyser
             // If we're not actually supposed to analyse this type, bail. We have to do this after the base
             // type analysis check above, as we can have TypeWeAnalyse depends on TypeWeDontAnalyse depends
             // on TypeWeAnalyse.
-            if (!typeSymbols.Contains(typeSymbol))
+            if (!results.ContainsKey(typeSymbol))
                 return;
 
             // Right, we know we've analysed all of the base types by now. Fetch them
@@ -111,12 +119,13 @@ public partial class Analyser
             {
                 if (results.TryGetValue(t, out var baseTypeAnalysis))
                 {
-                    baseTypes.Add(baseTypeAnalysis);
+                    Debug.Assert(baseTypeAnalysis != null);
+                    baseTypes.Add(baseTypeAnalysis!);
                 }
             }
 
             // We're set! Analyse it
-            results.Add(typeSymbol, this.Analyse(typeSymbol, baseTypes));
+            results[typeSymbol] = this.Analyse(typeSymbol, baseTypes);
         }
     }
 

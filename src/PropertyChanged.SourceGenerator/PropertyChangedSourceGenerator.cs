@@ -36,9 +36,20 @@ public class PropertyChangedSourceGenerator : IIncrementalGenerator
         {
             return context.SyntaxProvider.ForAttributeWithMetadataName(
                 attribute,
-                // TODO: More filtering on VariableDeclaratorSyntax
-                static (node, _) => node is VariableDeclaratorSyntax or PropertyDeclarationSyntax,
-                static (ctx, token) => (type: ctx.TargetSymbol.ContainingType, compilation: ctx.SemanticModel.Compilation));
+                (node, _) => node is VariableDeclaratorSyntax
+                { 
+                    Parent: VariableDeclarationSyntax
+                    {
+                        Parent: FieldDeclarationSyntax
+                        {
+                            AttributeLists.Count: > 0
+                        } 
+                   }
+                } || node is PropertyDeclarationSyntax
+                {
+                    AttributeLists.Count: > 0,
+                },
+                (ctx, token) => (type: ctx.TargetSymbol.ContainingType, compilation: ctx.SemanticModel.Compilation));
         }).ToList();
 
         var typesSource = Collect(attributeContainingTypeSources);

@@ -17,14 +17,34 @@ public partial class Analyser
     private readonly Compilation compilation;
     private readonly NullableContextOptions nullableContextOptions;
     private readonly ConfigurationParser configurationParser;
-    private readonly INamedTypeSymbol notifyAttributeSymbol;
-    private readonly INamedTypeSymbol alsoNotifyAttributeSymbol;
-    private readonly INamedTypeSymbol dependsOnAttributeSymbol;
-    private readonly INamedTypeSymbol isChangedAttributeSymbol;
-    private readonly INamedTypeSymbol propertyAttributeSymbol;
 
     private readonly PropertyChangedInterfaceAnalyser? propertyChangedInterfaceAnalyser;
     private readonly PropertyChangingInterfaceAnalyser? propertyChangingInterfaceAnalyser;
+
+    private INamedTypeSymbol? notifyAttributeSymbolCache;
+    private INamedTypeSymbol notifyAttributeSymbol =>
+        this.notifyAttributeSymbolCache ??= this.compilation.GetTypeByMetadataName("PropertyChanged.SourceGenerator.NotifyAttribute")
+            ?? throw new InvalidOperationException("NotifyAttribute must have been added to assembly");
+
+    private INamedTypeSymbol? alsoNotifyAttributeSymbolCache;
+    private INamedTypeSymbol alsoNotifyAttributeSymbol => this.alsoNotifyAttributeSymbolCache ??= 
+        this.compilation.GetTypeByMetadataName("PropertyChanged.SourceGenerator.AlsoNotifyAttribute")
+            ?? throw new InvalidOperationException("AlsoNotifyAttribute must have been added to the assembly");
+
+    private INamedTypeSymbol? dependsOnAttributeSymbolCache;
+    private INamedTypeSymbol dependsOnAttributeSymbol => this.dependsOnAttributeSymbolCache ??=
+        this.compilation.GetTypeByMetadataName("PropertyChanged.SourceGenerator.DependsOnAttribute")
+           ?? throw new InvalidOperationException("DependsOnAttribute must have been added to the assembly");
+
+    private INamedTypeSymbol? isChangedAttributeSymbolCache;
+    private INamedTypeSymbol isChangedAttributeSymbol => this.isChangedAttributeSymbolCache ??= 
+        this.compilation.GetTypeByMetadataName("PropertyChanged.SourceGenerator.IsChangedAttribute")
+           ?? throw new InvalidOperationException("IsChangedAttribute must have been added to the assembly");
+
+    private INamedTypeSymbol? propertyAttributeSymbolCache;
+    private INamedTypeSymbol propertyAttributeSymbol => this.propertyAttributeSymbolCache ??=
+        this.compilation.GetTypeByMetadataName("PropertyChanged.SourceGenerator.PropertyAttributeAttribute")
+           ?? throw new InvalidOperationException("PropertyAttributeAttribute must have been added to the assembly");
 
     public Analyser(
         DiagnosticReporter diagnostics,
@@ -44,28 +64,16 @@ public partial class Analyser
         }
         else
         {
-            var propertyChangedEventHandlerSymbol = compilation.GetTypeByMetadataName("System.ComponentModel.PropertyChangedEventHandler");
+            // Fetching these symbols once for all types is probably cheaper than calculating the fully-qualified metadata name for each
+            // symbol we want to test
             var propertyChangedEventArgsSymbol = compilation.GetTypeByMetadataName("System.ComponentModel.PropertyChangedEventArgs");
 
-            // TODO: Get rid of as many of these as we can
             var inpchangingSymbol = compilation.GetTypeByMetadataName("System.ComponentModel.INotifyPropertyChanging"); ;
-            var propertyChangingEventHandlerSymbol = compilation.GetTypeByMetadataName("System.ComponentModel.PropertyChangingEventHandler");
             var propertyChangingEventArgsSymbol = compilation.GetTypeByMetadataName("System.ComponentModel.PropertyChangingEventArgs");
         
-            this.propertyChangedInterfaceAnalyser = new(inpchangedSymbol, propertyChangedEventHandlerSymbol!, propertyChangedEventArgsSymbol!, this.diagnostics, compilation);
-            this.propertyChangingInterfaceAnalyser = new(inpchangingSymbol!, propertyChangingEventHandlerSymbol!, propertyChangingEventArgsSymbol!, this.diagnostics, compilation);
+            this.propertyChangedInterfaceAnalyser = new(inpchangedSymbol, "System.ComponentModel.PropertyChangedEventHandler", propertyChangedEventArgsSymbol!, this.diagnostics, compilation);
+            this.propertyChangingInterfaceAnalyser = new(inpchangingSymbol!, "System.ComponentModel.PropertyChangingEventHandler", propertyChangingEventArgsSymbol!, this.diagnostics, compilation);
         }
-
-        this.notifyAttributeSymbol = compilation.GetTypeByMetadataName("PropertyChanged.SourceGenerator.NotifyAttribute")
-            ?? throw new InvalidOperationException("NotifyAttribute must have been added to assembly");
-        this.alsoNotifyAttributeSymbol = compilation.GetTypeByMetadataName("PropertyChanged.SourceGenerator.AlsoNotifyAttribute")
-            ?? throw new InvalidOperationException("AlsoNotifyAttribute must have been added to the assembly");
-        this.dependsOnAttributeSymbol = compilation.GetTypeByMetadataName("PropertyChanged.SourceGenerator.DependsOnAttribute")
-           ?? throw new InvalidOperationException("DependsOnAttribute must have been added to the assembly");
-        this.isChangedAttributeSymbol = compilation.GetTypeByMetadataName("PropertyChanged.SourceGenerator.IsChangedAttribute")
-           ?? throw new InvalidOperationException("IsChangedAttribute must have been added to the assembly");
-        this.propertyAttributeSymbol = compilation.GetTypeByMetadataName("PropertyChanged.SourceGenerator.PropertyAttributeAttribute")
-           ?? throw new InvalidOperationException("PropertyAttributeAttribute must have been added to the assembly");
     }
 
     public IEnumerable<TypeAnalysis> Analyse(IEnumerable<INamedTypeSymbol> typeSymbols)
@@ -429,11 +437,11 @@ public partial class Analyser
     {
         foreach (var attribute in member.GetAttributes())
         {
-            if (SymbolEqualityComparer.Default.Equals(attribute.AttributeClass, this.alsoNotifyAttributeSymbol))
+            if (attribute.AttributeClass?.Name == "AlsoNotifyAttribute" && SymbolEqualityComparer.Default.Equals(attribute.AttributeClass, this.alsoNotifyAttributeSymbol))
             {
                 this.diagnostics.ReportAlsoNotifyAttributeNotValidOnMember(attribute, member);
             }
-            else if (SymbolEqualityComparer.Default.Equals(attribute.AttributeClass, this.propertyAttributeSymbol))
+            else if (attribute.AttributeClass?.Name == "PropertyAttributeAttribute" && SymbolEqualityComparer.Default.Equals(attribute.AttributeClass, this.propertyAttributeSymbol))
             {
                 this.diagnostics.ReportAlsoNotifyAttributeNotValidOnMember(attribute, member);
             }
@@ -458,12 +466,12 @@ public partial class Analyser
     private List<string>? GetAttributesForGeneratedProperty(ISymbol member)
     {
         List<string>? result = null;
-        var attributes = member.GetAttributes().Where(x => SymbolEqualityComparer.Default.Equals(x.AttributeClass, this.propertyAttributeSymbol));
+        var attributes = member.GetAttributes().Where(x => x.AttributeClass?.Name == "PropertyAttributeAttribute" && SymbolEqualityComparer.Default.Equals(x.AttributeClass, this.propertyAttributeSymbol));
         foreach (var attribute in attributes)
         {
             if (attribute.ConstructorArguments.ElementAtOrDefault(0).Value is string str)
             {
-                // If they haven't put [ nad ] around it, be nice
+                // If they haven't put [ and ] around it, be nice
                 if (!str.StartsWith("[") && !str.EndsWith("]"))
                 {
                     str = "[" + str + "]";

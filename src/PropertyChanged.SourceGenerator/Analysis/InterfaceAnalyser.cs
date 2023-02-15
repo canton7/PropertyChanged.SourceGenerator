@@ -11,7 +11,11 @@ namespace PropertyChanged.SourceGenerator.Analysis;
 public abstract class InterfaceAnalyser
 {
     private readonly INamedTypeSymbol interfaceSymbol;
-    private readonly INamedTypeSymbol eventHandlerSymbol;
+
+    private readonly string eventHandlerMetadataName;
+    private INamedTypeSymbol? eventHandlerSymbolCache;
+    private INamedTypeSymbol eventHandlerSymbol => this.eventHandlerSymbolCache ??= this.Compilation.GetTypeByMetadataName(this.eventHandlerMetadataName)!;
+
     protected readonly INamedTypeSymbol EventArgsSymbol;
     private readonly string eventName;
     private readonly IEventSymbol interfaceEventSymbol;
@@ -21,7 +25,7 @@ public abstract class InterfaceAnalyser
 
     protected InterfaceAnalyser(
         INamedTypeSymbol interfaceSymbol,
-        INamedTypeSymbol eventHandlerSymbol,
+        string eventHandlerMetadataName,
         INamedTypeSymbol eventArgsSymbol,
         string eventName,
         DiagnosticReporter diagnostics,
@@ -29,7 +33,7 @@ public abstract class InterfaceAnalyser
         Func<TypeAnalysisBuilder, InterfaceAnalysis> interfaceAnalysisGetter)
     {
         this.interfaceSymbol = interfaceSymbol;
-        this.eventHandlerSymbol = eventHandlerSymbol;
+        this.eventHandlerMetadataName = eventHandlerMetadataName;
         this.EventArgsSymbol = eventArgsSymbol;
         this.eventName = eventName;
         this.interfaceEventSymbol = this.interfaceSymbol.GetMembers(this.eventName).OfType<IEventSymbol>().First();

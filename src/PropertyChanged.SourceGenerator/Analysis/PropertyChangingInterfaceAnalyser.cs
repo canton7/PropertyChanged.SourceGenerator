@@ -11,11 +11,11 @@ public class PropertyChangingInterfaceAnalyser : InterfaceAnalyser
 
     public PropertyChangingInterfaceAnalyser(
         INamedTypeSymbol interfaceSymbol,
-        INamedTypeSymbol eventHandlerSymbol,
+        string eventHandlerMetadataName,
         INamedTypeSymbol eventArgsSymbol,
         DiagnosticReporter diagnostics,
         Compilation compilation)
-        : base(interfaceSymbol, eventHandlerSymbol, eventArgsSymbol, "PropertyChanging", diagnostics, compilation, x => x.INotifyPropertyChanging!)
+        : base(interfaceSymbol, eventHandlerMetadataName, eventArgsSymbol, "PropertyChanging", diagnostics, compilation, x => x.INotifyPropertyChanging!)
     {
     }
 

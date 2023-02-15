@@ -20,7 +20,7 @@ public partial class Analyser
         foreach (var member in typeAnalysis.TypeSymbol.GetMembers().Where(x => !x.IsImplicitlyDeclared && x is IFieldSymbol or IPropertySymbol))
         {
             var dependsOnAttributes = member.GetAttributes()
-                .Where(x => SymbolEqualityComparer.Default.Equals(x.AttributeClass, this.dependsOnAttributeSymbol))
+                .Where(x => x.AttributeClass?.Name == "DependsOnAttribute" && SymbolEqualityComparer.Default.Equals(x.AttributeClass, this.dependsOnAttributeSymbol))
                 .ToList();
             if (dependsOnAttributes.Count > 0)
             {

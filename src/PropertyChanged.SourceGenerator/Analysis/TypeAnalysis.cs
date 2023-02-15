@@ -55,7 +55,6 @@ public class TypeAnalysisBuilder
             IsChangedSetterIsPrivate = this.IsChangedSetterIsPrivate,
             Members = new ReadOnlyEquatableList<MemberAnalysis>(this.Members.Select(x => x.Build()).ToList()),
             NullableContext = this.NullableContext,
-            // TODO: Generator turns this into a lookup straight away -- can we just store as that?
             BaseDependsOn = this.baseDependsOn == null
                 ? ReadOnlyEquatableList<(string, AlsoNotifyMember)>.Empty
                 : new ReadOnlyEquatableList<(string, AlsoNotifyMember)>(this.baseDependsOn.OrderBy(x => x.baseProperty).ThenBy(x => x.notifyProperty.Name).ToList()),

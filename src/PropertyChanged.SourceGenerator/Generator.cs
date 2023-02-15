@@ -115,10 +115,9 @@ public class Generator
         InterfaceAnalysis interfaceAnalysis,
         Func<IMember, OnPropertyNameChangedInfo?> onPropertyNameChangedOrChangingGetter)
     {
-        var baseDependsOn = typeAnalysis.BaseDependsOn.ToLookup(x => x.baseProperty);
         if (interfaceAnalysis.RaiseMethodType == RaisePropertyChangedMethodType.None ||
             (interfaceAnalysis.RaiseMethodType == RaisePropertyChangedMethodType.Override &&
-            baseDependsOn.Count == 0 &&
+            typeAnalysis.BaseDependsOn.Count == 0 &&
             interfaceAnalysis.OnAnyPropertyChangedOrChangingInfo == null))
         {
             return;
@@ -235,12 +234,13 @@ public class Generator
                 break;
         }
 
-        if (baseDependsOn.Count > 0)
+        if (typeAnalysis.BaseDependsOn.Count > 0)
         {
             this.writer.WriteLine($"switch ({propertyNameAccessor})");
             this.writer.WriteLine("{");
             this.writer.Indent++;
 
+            var baseDependsOn = typeAnalysis.BaseDependsOn.ToLookup(x => x.baseProperty);
             foreach (var group in baseDependsOn)
             {
                 this.writer.WriteLine($"case {EscapeString(group.Key)}:");

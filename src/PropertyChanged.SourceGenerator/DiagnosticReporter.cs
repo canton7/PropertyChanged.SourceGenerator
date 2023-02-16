@@ -55,7 +55,7 @@ public class DiagnosticReporter
         "INPC005",
         "Incompatible property accessibilities",
         "C# propertes may not have an internal getter and protected setter, or protected setter and internal getter. Defaulting both to protected internal");
-    public void ReportIncomapatiblePropertyAccessibilities(ISymbol member, AttributeData notifyAttribute)
+    public void ReportIncompatiblePropertyAccessibilities(ISymbol member, AttributeData notifyAttribute)
     {
         this.AddDiagnostic(incompatiblePropertyAccessibilities, AttributeLocations(notifyAttribute, member));
     }

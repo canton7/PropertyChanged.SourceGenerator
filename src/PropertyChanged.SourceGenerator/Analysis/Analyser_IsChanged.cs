@@ -21,9 +21,10 @@ public partial class Analyser
     public void ResolveIsChangedMember(
         TypeAnalysisBuilder typeAnalysis,
         ISymbol member,
+        IReadOnlyList<AttributeData> attributes,
         MemberAnalysisBuilder? memberAnalysis)
     {
-        if (member.GetAttributes().FirstOrDefault(x => x.AttributeClass?.Name == "IsChangedAttribute" && SymbolEqualityComparer.Default.Equals(x.AttributeClass, this.isChangedAttributeSymbol)) is { } attribute &&
+        if (attributes.FirstOrDefault(x => x.AttributeClass?.Name == "IsChangedAttribute" && SymbolEqualityComparer.Default.Equals(x.AttributeClass, this.isChangedAttributeSymbol)) is { } attribute &&
             GetMemberType(member) is { } memberType)
         {
             // TODO: Think about if a derived class has an IsChanged property which shadows a base class?

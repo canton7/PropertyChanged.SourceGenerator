@@ -14,12 +14,14 @@ public partial class Analyser
 {
     private static readonly ImmutableHashSet<IPropertySymbol> emptyPropertyHashSet = ImmutableHashSet<IPropertySymbol>.Empty.WithComparer(SymbolEqualityComparer.Default);
 
-    private void ResolveDependsOn(TypeAnalysisBuilder typeAnalysis, Configuration config)
+    private void ResolveDependsOn(TypeAnalysisBuilder typeAnalysis, IReadOnlyDictionary<ISymbol, List<AttributeData>> members, Configuration config)
     {
         var lookups = new TypeAnalysisLookups(typeAnalysis);
         foreach (var member in typeAnalysis.TypeSymbol.GetMembers().Where(x => !x.IsImplicitlyDeclared && x is IFieldSymbol or IPropertySymbol))
         {
-            var dependsOnAttributes = member.GetAttributes()
+            // Does it have a DependsOn attribute?
+            IEnumerable<AttributeData> attributes = members.TryGetValue(member, out var attributesOut) ? attributesOut : Array.Empty<AttributeData>();
+            var dependsOnAttributes = attributes
                 .Where(x => x.AttributeClass?.Name == "DependsOnAttribute" && SymbolEqualityComparer.Default.Equals(x.AttributeClass, this.dependsOnAttributeSymbol))
                 .ToList();
             if (dependsOnAttributes.Count > 0)

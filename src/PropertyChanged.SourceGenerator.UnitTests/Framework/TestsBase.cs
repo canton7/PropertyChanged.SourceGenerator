@@ -49,16 +49,17 @@ public abstract class TestsBase
         return inputCompilation;
     }
 
-    private (GeneratorDriver driver, Compilation compilation, ImmutableArray<Diagnostic> diagnostics) RunDriver(
+    protected (GeneratorDriver driver, Compilation compilation, ImmutableArray<Diagnostic> diagnostics) RunDriver(
         string input,
-        NullableContextOptions nullableContextOptions)
+        NullableContextOptions nullableContextOptions = NullableContextOptions.Disable)
     {
         var inputCompilation = this.CreateCompilation(input, nullableContextOptions);
 
         var generator = new PropertyChangedSourceGenerator();
 
-        GeneratorDriver driver = CSharpGeneratorDriver.Create(new[] { generator });
+        GeneratorDriver driver = CSharpGeneratorDriver.Create(new[] { generator.AsSourceGenerator() }, driverOptions: new GeneratorDriverOptions(IncrementalGeneratorOutputKind.None, true));
         driver = driver.RunGeneratorsAndUpdateCompilation(inputCompilation, out var outputCompilation, out var diagnostics);
+        var runResult = driver.GetRunResult();
 
         return (driver, outputCompilation, diagnostics);
     }
@@ -71,7 +72,21 @@ public abstract class TestsBase
 
         var diagnostics = new DiagnosticReporter();
         var analyser = new Analyser(diagnostics, compilation, compilation.Options.NullableContextOptions, new ConfigurationParser(new TestOptionsProvider()));
-        var typeAnalyses = analyser.Analyse(new[] { type! }).ToList();
+        
+        var analyserInput = new AnalyserInput(type!);
+        foreach (var member in type!.GetMembers().Where(x => !x.IsImplicitlyDeclared))
+        {
+            var attributes = member.GetAttributes().Where(x => x.ToString()!.StartsWith("PropertyChanged.SourceGenerator")).ToList();
+            if (attributes.Count > 0)
+            {
+                analyserInput.Update(member, attributes.ToImmutableArray());
+            }
+        }
+        var inputs = new Dictionary<INamedTypeSymbol, AnalyserInput>(SymbolEqualityComparer.Default)
+        {
+            {  type!, analyserInput },
+        };
+        var typeAnalyses = analyser.Analyse(inputs).ToList();
 
         DiagnosticVerifier.VerifyDiagnostics(diagnostics.Diagnostics, Array.Empty<DiagnosticResult>(), 1);
 

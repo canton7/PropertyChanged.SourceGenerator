@@ -49,13 +49,16 @@ public class PropertyChangedSourceGenerator : IIncrementalGenerator
                 {
                     AttributeLists.Count: > 0,
                 },
-                (ctx, token) => (type: ctx.TargetSymbol.ContainingType, compilation: ctx.SemanticModel.Compilation));
+                (ctx, token) => (member: ctx.TargetSymbol, attributes: ctx.Attributes, compilation: ctx.SemanticModel.Compilation))
+            .WithTrackingName($"attributeContainingTypeSources_{attribute}");
         }).ToList();
 
-        var typesSource = Collect(attributeContainingTypeSources);
+        var typesSource = Collect(attributeContainingTypeSources)
+            .WithTrackingName("typesSource");
 
         var nullableContextAndConfigurationParser = context.CompilationProvider.Select(static (compilation, _) => compilation.Options.NullableContextOptions)
-            .Combine(context.AnalyzerConfigOptionsProvider.Select(static (options, _) => new ConfigurationParser(options)));
+            .Combine(context.AnalyzerConfigOptionsProvider.Select(static (options, _) => new ConfigurationParser(options)))
+            .WithTrackingName("nullableContextAndConfigurationParser");
 
         var modelsAndDiagnosticsSource = nullableContextAndConfigurationParser.Combine(typesSource).Select((input, token) =>
         {
@@ -67,33 +70,48 @@ public class PropertyChangedSourceGenerator : IIncrementalGenerator
                 return (analyses: ReadOnlyEquatableList<TypeAnalysis>.Empty, diagnostics: ReadOnlyEquatableList<Diagnostic>.Empty);
             }
 
+            var analyserInputs = new Dictionary<INamedTypeSymbol, AnalyserInput>(SymbolEqualityComparer.Default);
+            foreach (var (member, attributes, _) in inputTypesAndCompilation)
+            {
+                if (!analyserInputs.TryGetValue(member.ContainingType, out var existingInputs))
+                {
+                    existingInputs = new(member.ContainingType);
+                    analyserInputs.Add(member.ContainingType, existingInputs);
+                }
+                existingInputs.Update(member, attributes);
+            }
+
             var diagnostics = new DiagnosticReporter();
+
             var compilation = inputTypesAndCompilation[0].compilation;
             var analyzer = new Analyser(diagnostics, compilation, nullableContext, configurationParser);
 
-            var analyses = analyzer.Analyse(inputTypesAndCompilation.Select(x => x.type));
+            var analyses = analyzer.Analyse(analyserInputs);
             return (analyses: new ReadOnlyEquatableList<TypeAnalysis>(analyses.ToList()), diagnostics: new ReadOnlyEquatableList<Diagnostic>(diagnostics.Diagnostics));
-        });
+        }).WithTrackingName("modelsAndDiagnosticsSource");
 
         // TODO: Make diagnostics cachable?
         // TODO: pair.diagnostics is boxed currently
-        var diagnosticsSource = modelsAndDiagnosticsSource.SelectMany((pair, token) => pair.diagnostics);
+        var diagnosticsSource = modelsAndDiagnosticsSource.SelectMany((pair, token) => pair.diagnostics)
+            .WithTrackingName("diagnosticsSource");
 
         context.RegisterSourceOutput(diagnosticsSource, (ctx, diagnostic) =>
         {
             ctx.ReportDiagnostic(diagnostic);
         });
 
-        var analysesSource = modelsAndDiagnosticsSource.Select((pair, token) => pair.analyses);
+        var analysesSource = modelsAndDiagnosticsSource.Select((pair, token) => pair.analyses)
+            .WithTrackingName("analysesSource");
 
         var eventArgsCacheSource = analysesSource.Select((typeAnalyses, token) =>
         {
             return Generator.CreateEventArgsCache(typeAnalyses);
-        });
+        }).WithTrackingName("eventArgsCacheSource");
 
         var analysisAndEventArgsCacheSource = analysesSource
             .SelectMany((analysis, token) => analysis)
-            .Combine(eventArgsCacheSource);
+            .Combine(eventArgsCacheSource)
+            .WithTrackingName("analysisAndEventArgsCacheSource");
 
         context.RegisterSourceOutput(analysisAndEventArgsCacheSource, (ctx, pair) =>
         {

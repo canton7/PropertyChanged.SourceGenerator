@@ -76,31 +76,26 @@ public partial class Analyser
         }
     }
 
-    public IEnumerable<TypeAnalysis> Analyse(IEnumerable<INamedTypeSymbol> typeSymbols)
+    public IEnumerable<TypeAnalysis> Analyse(IReadOnlyDictionary<INamedTypeSymbol, AnalyserInput> inputsLookup)
     {
-        // This starts off with a null entry for each type symbol, indicating that we're supposed to analyse
-        // this type but havent't yet done so. So we analyse types, we'll populate the values.
-        // We expect duplicates in typeSymbols, so we can't use ToDictionary
         var results = new Dictionary<INamedTypeSymbol, TypeAnalysisBuilder?>(SymbolEqualityComparer.Default);
-        foreach (var typeSymbol in typeSymbols)
-        {
-            results[typeSymbol.OriginalDefinition] = null;
-        }
 
-        foreach (var typeSymbol in results.Keys)
+        foreach (var input in inputsLookup)
         {
-            Analyse(typeSymbol);
+            Analyse(input.Key, input.Value);
         }
 
         return results.Values.Select(x => x!.Build());
 
-        void Analyse(INamedTypeSymbol typeSymbol)
+        // If we've been given a base type which we shouldn't analyse directly, but we do need to discover *its* base types,
+        // typeSymbol will be set but input will be null
+        void Analyse(INamedTypeSymbol typeSymbol, AnalyserInput? input)
         {
-            // Make sure it's not e.g. C<Foo>, rather C<T>
+            // Make sure it's not e.g. C<Foo>, rather C<T>. This should have been done be AnalyserInput ctor
             Debug.Assert(SymbolEqualityComparer.Default.Equals(typeSymbol, typeSymbol.OriginalDefinition));
 
             // If we've already analysed this one, return
-            if (results.TryGetValue(typeSymbol, out var analysis) && analysis != null)
+            if (results.ContainsKey(typeSymbol))
                 return;
 
             // If we haven't analysed its base type yet, do that now. This will then happen recursively
@@ -109,16 +104,17 @@ public partial class Analyser
             // Base<T>
             if (typeSymbol.BaseType != null
                 && typeSymbol.BaseType.SpecialType != SpecialType.System_Object
-                && results.TryGetValue(typeSymbol.BaseType.OriginalDefinition, out var existingAnalysis)
-                && existingAnalysis == null)
+                && !results.ContainsKey(typeSymbol.BaseType.OriginalDefinition))
             {
-                Analyse(typeSymbol.BaseType.OriginalDefinition);
+                var baseType = typeSymbol.BaseType.OriginalDefinition;
+                AnalyserInput? baseTypeInput = inputsLookup.TryGetValue(baseType, out var baseTypeInputOpt) ? baseTypeInputOpt : null;
+                Analyse(baseType, baseTypeInput);
             }
 
             // If we're not actually supposed to analyse this type, bail. We have to do this after the base
             // type analysis check above, as we can have TypeWeAnalyse depends on TypeWeDontAnalyse depends
             // on TypeWeAnalyse.
-            if (!results.ContainsKey(typeSymbol))
+            if (!inputsLookup.ContainsKey(typeSymbol))
                 return;
 
             // Right, we know we've analysed all of the base types by now. Fetch them
@@ -133,22 +129,22 @@ public partial class Analyser
             }
 
             // We're set! Analyse it
-            results[typeSymbol] = this.Analyse(typeSymbol, baseTypes);
+            results.Add(typeSymbol, this.Analyse(input!.Value, baseTypes));
         }
     }
 
-    private TypeAnalysisBuilder Analyse(INamedTypeSymbol typeSymbol, List<TypeAnalysisBuilder> baseTypeAnalyses)
+    private TypeAnalysisBuilder Analyse(AnalyserInput input, List<TypeAnalysisBuilder> baseTypeAnalyses)
     {
         var typeAnalysis = new TypeAnalysisBuilder()
         {
             CanGenerate = true,
-            TypeSymbol = typeSymbol,
+            TypeSymbol = input.TypeSymbol,
         };
 
         if (baseTypeAnalyses.FirstOrDefault()?.HadException == true)
         {
             // If we failed to analyse the base type because of an exception, we don't stand a chance. Bail now.
-            this.diagnostics.ReportUnhandledExceptionOnParent(typeSymbol);
+            this.diagnostics.ReportUnhandledExceptionOnParent(input.TypeSymbol);
             typeAnalysis.HadException = true;
             typeAnalysis.CanGenerate = false;
         }
@@ -156,20 +152,21 @@ public partial class Analyser
         {
             try
             {
-                this.AnalyseInner(typeAnalysis, baseTypeAnalyses);
+                this.AnalyseInner(typeAnalysis, input.Attributes, baseTypeAnalyses);
             }
             catch (Exception e)
             {
-                this.diagnostics.ReportUnhandledException(typeSymbol, e);
+                this.diagnostics.ReportUnhandledException(input.TypeSymbol, e);
                 typeAnalysis.HadException = true;
                 typeAnalysis.CanGenerate = false;
             }
         }
 
         return typeAnalysis;
+
     }
 
-    private void AnalyseInner(TypeAnalysisBuilder typeAnalysis, List<TypeAnalysisBuilder> baseTypeAnalyses)
+    private void AnalyseInner(TypeAnalysisBuilder typeAnalysis, IReadOnlyDictionary<ISymbol, List<AttributeData>> members, List<TypeAnalysisBuilder> baseTypeAnalyses)
     {
         if (this.propertyChangedInterfaceAnalyser == null)
             throw new InvalidOperationException();
@@ -183,21 +180,22 @@ public partial class Analyser
         InterfaceAnalyser.PopulateRaiseMethodNameIfEmpty(typeAnalysis.INotifyPropertyChanged, typeAnalysis.INotifyPropertyChanging, config);
         this.ResoveInheritedIsChanged(typeAnalysis, baseTypeAnalyses);
 
-        foreach (var member in typeAnalysis.TypeSymbol.GetMembers().Where(x => !x.IsImplicitlyDeclared))
+        foreach (var kvp in members)
         {
+            var (member, attributes) = (kvp.Key, kvp.Value);
             MemberAnalysisBuilder? memberAnalysis = null;
             switch (member)
             {
-                case IFieldSymbol field when this.GetNotifyAttribute(field) is { } attribute:
-                    memberAnalysis = this.AnalyseField(field, attribute, config);
+                case IFieldSymbol field when this.GetNotifyAttribute(attributes) is { } attribute:
+                    memberAnalysis = this.AnalyseField(field, attribute, attributes, config);
                     break;
 
-                case IPropertySymbol property when this.GetNotifyAttribute(property) is { } attribute:
-                    memberAnalysis = this.AnalyseProperty(property, attribute, config);
+                case IPropertySymbol property when this.GetNotifyAttribute(attributes) is { } attribute:
+                    memberAnalysis = this.AnalyseProperty(property, attribute, attributes, config);
                     break;
 
                 case var _ when member is IFieldSymbol or IPropertySymbol:
-                    this.EnsureNoUnexpectedAttributes(member);
+                    this.EnsureNoUnexpectedAttributes(member, attributes);
                     break;
             }
 
@@ -206,14 +204,14 @@ public partial class Analyser
                 typeAnalysis.Members.Add(memberAnalysis);
             }
 
-            this.ResolveIsChangedMember(typeAnalysis, member, memberAnalysis);
+            this.ResolveIsChangedMember(typeAnalysis, member, attributes, memberAnalysis);
         }
 
         // Now that we've got all members, we can do inter-member analysis
 
         this.ReportPropertyNameCollisions(typeAnalysis, baseTypeAnalyses);
         this.ResolveAlsoNotify(typeAnalysis, baseTypeAnalyses);
-        this.ResolveDependsOn(typeAnalysis, config);
+        this.ResolveDependsOn(typeAnalysis, members, config);
 
         if (!IsPartial(typeAnalysis.TypeSymbol))
         {
@@ -242,25 +240,25 @@ public partial class Analyser
                 syntax.Modifiers.Any(SyntaxKind.PartialKeyword));
     }
 
-    private MemberAnalysisBuilder? AnalyseField(IFieldSymbol field, AttributeData notifyAttribute, Configuration config)
+    private MemberAnalysisBuilder? AnalyseField(IFieldSymbol field, AttributeData notifyAttribute, List<AttributeData> attributes, Configuration config)
     {
         if (field.IsReadOnly)
         {
             this.diagnostics.RaiseReadonlyBackingMember(field);
             return null;
         }
-        var result = this.AnalyseMember(field, field.Type, notifyAttribute, config);
+        var result = this.AnalyseMember(field, field.Type, notifyAttribute, attributes, config);
         return result;
     }
 
-    private MemberAnalysisBuilder? AnalyseProperty(IPropertySymbol property, AttributeData notifyAttribute, Configuration config)
+    private MemberAnalysisBuilder? AnalyseProperty(IPropertySymbol property, AttributeData notifyAttribute, List<AttributeData> attributes, Configuration config)
     {
         if (property.GetMethod == null || property.SetMethod == null)
         {
             this.diagnostics.RaiseBackingPropertyMustHaveGetterAndSetter(property);
             return null;
         }
-        var result = this.AnalyseMember(property, property.Type, notifyAttribute, config);
+        var result = this.AnalyseMember(property, property.Type, notifyAttribute, attributes, config);
         return result;
     }
 
@@ -268,6 +266,7 @@ public partial class Analyser
         ISymbol backingMember,
         ITypeSymbol type,
         AttributeData notifyAttribute,
+        List<AttributeData> attributes,
         Configuration config)
     {
         string? explicitName = null;
@@ -303,7 +302,7 @@ public partial class Analyser
         if ((getterAccessibility == Accessibility.Internal && setterAccessibility == Accessibility.Protected) ||
             (getterAccessibility == Accessibility.Protected && setterAccessibility == Accessibility.Internal))
         {
-            this.diagnostics.ReportIncomapatiblePropertyAccessibilities(type, notifyAttribute);
+            this.diagnostics.ReportIncompatiblePropertyAccessibilities(type, notifyAttribute);
             getterAccessibility = Accessibility.ProtectedOrInternal;
             setterAccessibility = Accessibility.ProtectedOrInternal;
         }
@@ -315,11 +314,12 @@ public partial class Analyser
             Name = name,
             Type = type,
             IsVirtual = isVirtual,
+            Attributes = attributes,
             GetterAccessibility = getterAccessibility,
             SetterAccessibility = setterAccessibility,
             OnPropertyNameChanged = this.propertyChangedInterfaceAnalyser!.FindOnPropertyNameChangedMethod(backingMember.ContainingType, name, type, backingMember.ContainingType),
             OnPropertyNameChanging = this.propertyChangingInterfaceAnalyser!.FindOnPropertyNameChangedMethod(backingMember.ContainingType, name, type, backingMember.ContainingType),
-            AttributesForGeneratedProperty = this.GetAttributesForGeneratedProperty(backingMember),
+            AttributesForGeneratedProperty = this.GetAttributesForGeneratedProperty(backingMember, attributes),
             DocComment = ParseDocComment(backingMember.GetDocumentationCommentXml()),
         };
 
@@ -433,9 +433,9 @@ public partial class Analyser
     }
 
 
-    private void EnsureNoUnexpectedAttributes(ISymbol member)
+    private void EnsureNoUnexpectedAttributes(ISymbol member, IEnumerable<AttributeData> attributes)
     {
-        foreach (var attribute in member.GetAttributes())
+        foreach (var attribute in attributes)
         {
             if (attribute.AttributeClass?.Name == "AlsoNotifyAttribute" && SymbolEqualityComparer.Default.Equals(attribute.AttributeClass, this.alsoNotifyAttributeSymbol))
             {
@@ -458,16 +458,16 @@ public partial class Analyser
         };
     }
 
-    private AttributeData? GetNotifyAttribute(ISymbol member)
+    private AttributeData? GetNotifyAttribute(IEnumerable<AttributeData> attributes)
     {
-        return member.GetAttributes().SingleOrDefault(x => SymbolEqualityComparer.Default.Equals(x.AttributeClass, this.notifyAttributeSymbol));
+        return attributes.SingleOrDefault(x => SymbolEqualityComparer.Default.Equals(x.AttributeClass, this.notifyAttributeSymbol));
     }
 
-    private List<string>? GetAttributesForGeneratedProperty(ISymbol member)
+    private List<string>? GetAttributesForGeneratedProperty(ISymbol member, IEnumerable<AttributeData> attributes)
     {
         List<string>? result = null;
-        var attributes = member.GetAttributes().Where(x => x.AttributeClass?.Name == "PropertyAttributeAttribute" && SymbolEqualityComparer.Default.Equals(x.AttributeClass, this.propertyAttributeSymbol));
-        foreach (var attribute in attributes)
+        var filteredAttributes = attributes.Where(x => x.AttributeClass?.Name == "PropertyAttributeAttribute" && SymbolEqualityComparer.Default.Equals(x.AttributeClass, this.propertyAttributeSymbol));
+        foreach (var attribute in filteredAttributes)
         {
             if (attribute.ConstructorArguments.ElementAtOrDefault(0).Value is string str)
             {

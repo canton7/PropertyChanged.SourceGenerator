@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Linq;
 using Microsoft.CodeAnalysis;
 using PropertyChanged.SourceGenerator.Analysis;
@@ -8,7 +9,7 @@ namespace PropertyChanged.SourceGenerator;
 
 public class DiagnosticReporter
 {
-    public List<Diagnostic> Diagnostics { get; } = new();
+    private readonly ImmutableArray<Diagnostic>.Builder diagnostics = ImmutableArray.CreateBuilder<Diagnostic>();
 
     public bool HasDiagnostics { get; private set; }
     public bool HasErrors { get; private set; }
@@ -376,8 +377,10 @@ public class DiagnosticReporter
         {
             this.HasErrors = true;
         }
-        this.Diagnostics.Add(diagnostic);
+        this.diagnostics.Add(diagnostic);
     }
+
+    public EquatableArray<Diagnostic> GetDiagnostics() => this.diagnostics.ToImmutable().AsEquatableArray();
 
     private static IEnumerable<Location> AttributeLocations(AttributeData? attributeData, ISymbol fallback)
     {

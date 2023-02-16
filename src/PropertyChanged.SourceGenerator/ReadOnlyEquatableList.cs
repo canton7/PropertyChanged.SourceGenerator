@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-namespace PropertyChanged.SourceGenerator.Pipeline;
+namespace PropertyChanged.SourceGenerator;
 
 public readonly struct ReadOnlyEquatableList<T> : IEquatable<ReadOnlyEquatableList<T>>, IReadOnlyList<T>
 {
@@ -34,7 +34,7 @@ public readonly struct ReadOnlyEquatableList<T> : IEquatable<ReadOnlyEquatableLi
         {
             hashCode = hashCode * -1521134295 + this.comparer.GetHashCode(item);
         }
-        
+
         return hashCode;
     }
 

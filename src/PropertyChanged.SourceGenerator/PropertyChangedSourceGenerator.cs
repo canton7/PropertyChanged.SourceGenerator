@@ -2,7 +2,6 @@
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Text;
 using PropertyChanged.SourceGenerator.Analysis;
-using PropertyChanged.SourceGenerator.Pipeline;
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
@@ -66,8 +65,7 @@ public class PropertyChangedSourceGenerator : IIncrementalGenerator
             var (nullableContext, configurationParser) = nullableContextAndConfigurationParser;
             if (inputTypesAndCompilation.Length == 0)
             {
-                // TODO: Cachable
-                return (analyses: ReadOnlyEquatableList<TypeAnalysis>.Empty, diagnostics: ReadOnlyEquatableList<Diagnostic>.Empty);
+                return (analyses: EquatableArray<TypeAnalysis>.Empty, diagnostics: EquatableArray<Diagnostic>.Empty);
             }
 
             var analyserInputs = new Dictionary<INamedTypeSymbol, AnalyserInput>(SymbolEqualityComparer.Default);
@@ -87,12 +85,11 @@ public class PropertyChangedSourceGenerator : IIncrementalGenerator
             var analyzer = new Analyser(diagnostics, compilation, nullableContext, configurationParser);
 
             var analyses = analyzer.Analyse(analyserInputs);
-            return (analyses: new ReadOnlyEquatableList<TypeAnalysis>(analyses.ToList()), diagnostics: new ReadOnlyEquatableList<Diagnostic>(diagnostics.Diagnostics));
+            // These are going to be inputs to SelectMany, which will convert them to ImmutableArrays anyway
+            return (analyses: analyses.ToImmutableArray().AsEquatableArray(), diagnostics: diagnostics.GetDiagnostics());
         }).WithTrackingName("modelsAndDiagnosticsSource");
 
-        // TODO: Make diagnostics cachable?
-        // TODO: pair.diagnostics is boxed currently
-        var diagnosticsSource = modelsAndDiagnosticsSource.SelectMany((pair, token) => pair.diagnostics)
+        var diagnosticsSource = modelsAndDiagnosticsSource.SelectMany((pair, token) => pair.diagnostics.AsImmutableArray())
             .WithTrackingName("diagnosticsSource");
 
         context.RegisterSourceOutput(diagnosticsSource, (ctx, diagnostic) =>
@@ -109,7 +106,7 @@ public class PropertyChangedSourceGenerator : IIncrementalGenerator
         }).WithTrackingName("eventArgsCacheSource");
 
         var analysisAndEventArgsCacheSource = analysesSource
-            .SelectMany((analysis, token) => analysis)
+            .SelectMany((analysis, token) => analysis.AsImmutableArray())
             .Combine(eventArgsCacheSource)
             .WithTrackingName("analysisAndEventArgsCacheSource");
 
@@ -144,115 +141,4 @@ public class PropertyChangedSourceGenerator : IIncrementalGenerator
         }
         return aggregate;
     }
-
-    //private INamedTypeSymbol? SyntaxNodeToTypeHierarchy(GeneratorAttributeSyntaxContext ctx, CancellationToken token)
-    //{
-    //    switch (ctx)
-    //    {
-    //        case FieldDeclarationSyntax fieldDeclaration:
-    //        {
-    //            foreach (var node in fieldDeclaration.Declaration.Variables)
-    //            {
-    //                if (GetContainingTypeIfHasAttribute(node) is { } type)
-    //                {
-    //                    return type;
-    //                }
-    //            }
-    //            break;
-    //        }
-    //        case PropertyDeclarationSyntax propertyDeclaration:
-    //        {
-    //            if (GetContainingTypeIfHasAttribute(propertyDeclaration) is { } type)
-    //            {
-    //                return type;
-    //            }
-    //            break;
-    //        }
-    //    }
-
-    //    return null;
-
-    //    INamedTypeSymbol? GetContainingTypeIfHasAttribute(SyntaxNode node)
-    //    {
-    //        if (ctx.SemanticModel.GetDeclaredSymbol(node, token) is { } symbol &&
-    //                symbol.GetAttributes().Any(x =>
-    //                    x.AttributeClass?.ContainingNamespace.ToDisplayString() == "PropertyChanged.SourceGenerator"))
-    //        {
-    //            return symbol.ContainingType;
-    //        }
-
-    //        return null;
-    //    }
-    //}
-
-    //public void Initialize(GeneratorInitializationContext context)
-    //{
-    //    context.RegisterForSyntaxNotifications(() => new SyntaxContextReceiver());
-
-    //    context.RegisterForPostInitialization(ctx => ctx.AddSource("Attributes", StringConstants.Attributes));
-    //}
-
-    //public void Execute(GeneratorExecutionContext context)
-    //{
-    //    if (context.SyntaxContextReceiver is not SyntaxContextReceiver receiver)
-    //        return;
-
-    //    var diagnostics = new DiagnosticReporter();
-    //    var configurationParser = new ConfigurationParser(context.AnalyzerConfigOptions, diagnostics);
-    //    var fileNames = new HashSet<string>();
-
-    //    try
-    //    {
-    //        var analyser = new Analyser(diagnostics, context.Compilation, configurationParser);
-
-    //        // If we've got diagnostics here, bail
-    //        if (diagnostics.HasDiagnostics)
-    //            return;
-
-    //        var analyses = analyser.Analyse(receiver.Types);
-
-    //        var eventArgsCache = new EventArgsCache();
-    //        foreach (var analysis in analyses)
-    //        {
-    //            if (analysis.CanGenerate)
-    //            {
-    //                var generator = new Generator(eventArgsCache);
-    //                generator.Generate(analysis!);
-    //                AddSource(analysis!.TypeSymbol.Name, generator.ToString());
-    //            }
-    //        }
-
-    //        if (!eventArgsCache.IsEmpty)
-    //        {
-    //            var nameCacheGenerator = new Generator(eventArgsCache);
-    //            nameCacheGenerator.GenerateNameCache();
-    //            AddSource(Generator.EventArgsCacheName, nameCacheGenerator.ToString());
-    //        }
-    //    }
-    //    finally
-    //    {
-    //        foreach (var diagnostic in diagnostics.Diagnostics)
-    //        {
-    //            context.ReportDiagnostic(diagnostic);
-    //        }
-    //    }
-
-    //    void AddSource(string hintName, string sourceText)
-    //    {
-    //        string fileName = hintName;
-    //        if (!fileNames.Add(fileName))
-    //        {
-    //            for (int i = 2; ; i++)
-    //            {
-    //                fileName = hintName + i;
-    //                if (fileNames.Add(fileName))
-    //                {
-    //                    break;
-    //                }
-    //            }
-    //        }
-
-    //        context.AddSource(fileName + ".g", SourceText.From(sourceText, Encoding.UTF8));
-    //    }
-    //}
 }

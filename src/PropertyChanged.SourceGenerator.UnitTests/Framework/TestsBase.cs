@@ -88,7 +88,7 @@ public abstract class TestsBase
         };
         var typeAnalyses = analyser.Analyse(inputs).ToList();
 
-        DiagnosticVerifier.VerifyDiagnostics(diagnostics.Diagnostics, Array.Empty<DiagnosticResult>(), 1);
+        DiagnosticVerifier.VerifyDiagnostics(diagnostics.GetDiagnostics(), Array.Empty<DiagnosticResult>(), 1);
 
         Assert.AreEqual(1, typeAnalyses.Count);
         return typeAnalyses[0];

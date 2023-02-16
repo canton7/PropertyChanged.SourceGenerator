@@ -284,7 +284,7 @@ public class Expectation
     }
 }
 
-public struct FileExpectation
+public readonly struct FileExpectation
 {
     public string Name { get; }
     public string? Source { get; }

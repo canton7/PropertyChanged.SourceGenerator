@@ -8,7 +8,7 @@ using Microsoft.CodeAnalysis;
 
 namespace PropertyChanged.SourceGenerator;
 
-internal struct EventArgsCacheKey : IEquatable<EventArgsCacheKey>, IComparable<EventArgsCacheKey>
+internal readonly struct EventArgsCacheKey : IEquatable<EventArgsCacheKey>, IComparable<EventArgsCacheKey>
 {
     public string? PropertyName { get; }
     public string EventArgsTypeName { get; }
@@ -94,7 +94,7 @@ public class EventArgsCacheBuilder
         this.cacheNames.Add(cacheName);
     }
 
-    public EventArgsCache ToCache() => new EventArgsCache(this.propertyNameToCacheName);
+    public EventArgsCache ToCache() => new(this.propertyNameToCacheName);
 }
 
 public class EventArgsCache

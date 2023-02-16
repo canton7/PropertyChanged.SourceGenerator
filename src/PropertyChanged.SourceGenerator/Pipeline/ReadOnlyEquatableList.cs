@@ -6,7 +6,7 @@ using System.Text;
 
 namespace PropertyChanged.SourceGenerator.Pipeline;
 
-public struct ReadOnlyEquatableList<T> : IEquatable<ReadOnlyEquatableList<T>>, IReadOnlyList<T>
+public readonly struct ReadOnlyEquatableList<T> : IEquatable<ReadOnlyEquatableList<T>>, IReadOnlyList<T>
 {
     private readonly IReadOnlyList<T> inner;
     private readonly IEqualityComparer<T> comparer;

@@ -38,12 +38,14 @@ public partial class Analyser
         }
         else
         {
+            // Assume that all of these are in the same assembly which speeds up GetTypeByMetadataName slightly
+            var inpcAssembly = inpchangedSymbol.ContainingAssembly;
+            var inpchangingSymbol = inpcAssembly.GetTypeByMetadataName("System.ComponentModel.INotifyPropertyChanging");
+
             // Fetching these symbols once for all types is probably cheaper than calculating the fully-qualified metadata name for each
             // symbol we want to test
-            var propertyChangedEventArgsSymbol = compilation.GetTypeByMetadataName("System.ComponentModel.PropertyChangedEventArgs");
-
-            var inpchangingSymbol = compilation.GetTypeByMetadataName("System.ComponentModel.INotifyPropertyChanging"); ;
-            var propertyChangingEventArgsSymbol = compilation.GetTypeByMetadataName("System.ComponentModel.PropertyChangingEventArgs");
+            var propertyChangedEventArgsSymbol = inpcAssembly.GetTypeByMetadataName("System.ComponentModel.PropertyChangedEventArgs");
+            var propertyChangingEventArgsSymbol = inpcAssembly.GetTypeByMetadataName("System.ComponentModel.PropertyChangingEventArgs");
         
             this.propertyChangedInterfaceAnalyser = new(inpchangedSymbol, "System.ComponentModel.PropertyChangedEventHandler", propertyChangedEventArgsSymbol!, this.diagnostics, compilation);
             this.propertyChangingInterfaceAnalyser = new(inpchangingSymbol!, "System.ComponentModel.PropertyChangingEventHandler", propertyChangingEventArgsSymbol!, this.diagnostics, compilation);

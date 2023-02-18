@@ -22,7 +22,7 @@ public partial class Analyser
             // Does it have a DependsOn attribute?
             IEnumerable<AttributeData> attributes = members.TryGetValue(member, out var attributesOut) ? attributesOut : Array.Empty<AttributeData>();
             var dependsOnAttributes = attributes
-                .Where(x => x.AttributeClass?.Name == "DependsOnAttribute" && SymbolEqualityComparer.Default.Equals(x.AttributeClass, this.dependsOnAttributeSymbol))
+                .Where(x => x.AttributeClass?.Name == "DependsOnAttribute")
                 .ToList();
             if (dependsOnAttributes.Count > 0)
             {

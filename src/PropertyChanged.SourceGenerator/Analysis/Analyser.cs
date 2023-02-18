@@ -20,32 +20,6 @@ public partial class Analyser
 
     private readonly PropertyChangedInterfaceAnalyser? propertyChangedInterfaceAnalyser;
     private readonly PropertyChangingInterfaceAnalyser? propertyChangingInterfaceAnalyser;
-
-    private INamedTypeSymbol? notifyAttributeSymbolCache;
-    private INamedTypeSymbol notifyAttributeSymbol =>
-        this.notifyAttributeSymbolCache ??= this.compilation.GetTypeByMetadataName("PropertyChanged.SourceGenerator.NotifyAttribute")
-            ?? throw new InvalidOperationException("NotifyAttribute must have been added to assembly");
-
-    private INamedTypeSymbol? alsoNotifyAttributeSymbolCache;
-    private INamedTypeSymbol alsoNotifyAttributeSymbol => this.alsoNotifyAttributeSymbolCache ??= 
-        this.compilation.GetTypeByMetadataName("PropertyChanged.SourceGenerator.AlsoNotifyAttribute")
-            ?? throw new InvalidOperationException("AlsoNotifyAttribute must have been added to the assembly");
-
-    private INamedTypeSymbol? dependsOnAttributeSymbolCache;
-    private INamedTypeSymbol dependsOnAttributeSymbol => this.dependsOnAttributeSymbolCache ??=
-        this.compilation.GetTypeByMetadataName("PropertyChanged.SourceGenerator.DependsOnAttribute")
-           ?? throw new InvalidOperationException("DependsOnAttribute must have been added to the assembly");
-
-    private INamedTypeSymbol? isChangedAttributeSymbolCache;
-    private INamedTypeSymbol isChangedAttributeSymbol => this.isChangedAttributeSymbolCache ??= 
-        this.compilation.GetTypeByMetadataName("PropertyChanged.SourceGenerator.IsChangedAttribute")
-           ?? throw new InvalidOperationException("IsChangedAttribute must have been added to the assembly");
-
-    private INamedTypeSymbol? propertyAttributeSymbolCache;
-    private INamedTypeSymbol propertyAttributeSymbol => this.propertyAttributeSymbolCache ??=
-        this.compilation.GetTypeByMetadataName("PropertyChanged.SourceGenerator.PropertyAttributeAttribute")
-           ?? throw new InvalidOperationException("PropertyAttributeAttribute must have been added to the assembly");
-
     public Analyser(
         DiagnosticReporter diagnostics,
         Compilation compilation,
@@ -437,11 +411,11 @@ public partial class Analyser
     {
         foreach (var attribute in attributes)
         {
-            if (attribute.AttributeClass?.Name == "AlsoNotifyAttribute" && SymbolEqualityComparer.Default.Equals(attribute.AttributeClass, this.alsoNotifyAttributeSymbol))
+            if (attribute.AttributeClass?.Name == "AlsoNotifyAttribute")
             {
                 this.diagnostics.ReportAlsoNotifyAttributeNotValidOnMember(attribute, member);
             }
-            else if (attribute.AttributeClass?.Name == "PropertyAttributeAttribute" && SymbolEqualityComparer.Default.Equals(attribute.AttributeClass, this.propertyAttributeSymbol))
+            else if (attribute.AttributeClass?.Name == "PropertyAttributeAttribute")
             {
                 this.diagnostics.ReportAlsoNotifyAttributeNotValidOnMember(attribute, member);
             }
@@ -460,13 +434,13 @@ public partial class Analyser
 
     private AttributeData? GetNotifyAttribute(IEnumerable<AttributeData> attributes)
     {
-        return attributes.SingleOrDefault(x => SymbolEqualityComparer.Default.Equals(x.AttributeClass, this.notifyAttributeSymbol));
+        return attributes.SingleOrDefault(x => x.AttributeClass?.Name == "NotifyAttribute");
     }
 
     private List<string>? GetAttributesForGeneratedProperty(ISymbol member, IEnumerable<AttributeData> attributes)
     {
         List<string>? result = null;
-        var filteredAttributes = attributes.Where(x => x.AttributeClass?.Name == "PropertyAttributeAttribute" && SymbolEqualityComparer.Default.Equals(x.AttributeClass, this.propertyAttributeSymbol));
+        var filteredAttributes = attributes.Where(x => x.AttributeClass?.Name == "PropertyAttributeAttribute");
         foreach (var attribute in filteredAttributes)
         {
             if (attribute.ConstructorArguments.ElementAtOrDefault(0).Value is string str)

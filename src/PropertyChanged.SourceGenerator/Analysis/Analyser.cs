@@ -295,7 +295,7 @@ public partial class Analyser
             SetterAccessibility = setterAccessibility,
             OnPropertyNameChanged = this.propertyChangedInterfaceAnalyser!.FindOnPropertyNameChangedMethod(backingMember.ContainingType, name, type, backingMember.ContainingType),
             OnPropertyNameChanging = this.propertyChangingInterfaceAnalyser!.FindOnPropertyNameChangedMethod(backingMember.ContainingType, name, type, backingMember.ContainingType),
-            AttributesForGeneratedProperty = this.GetAttributesForGeneratedProperty(backingMember, attributes),
+            AttributesForGeneratedProperty = this.GetAttributesForGeneratedProperty(attributes),
             DocComment = ParseDocComment(backingMember.GetDocumentationCommentXml()),
         };
 
@@ -439,7 +439,7 @@ public partial class Analyser
         return attributes.SingleOrDefault(x => x.AttributeClass?.Name == "NotifyAttribute");
     }
 
-    private List<string>? GetAttributesForGeneratedProperty(ISymbol member, IEnumerable<AttributeData> attributes)
+    private List<string>? GetAttributesForGeneratedProperty(IEnumerable<AttributeData> attributes)
     {
         List<string>? result = null;
         var filteredAttributes = attributes.Where(x => x.AttributeClass?.Name == "PropertyAttributeAttribute");

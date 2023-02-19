@@ -5,7 +5,7 @@ using Microsoft.CodeAnalysis;
 
 namespace PropertyChanged.SourceGenerator.Analysis;
 
-public struct AnalyserInput : IEquatable<AnalyserInput>
+public readonly struct AnalyserInput : IEquatable<AnalyserInput>
 {
     public INamedTypeSymbol TypeSymbol { get; }
     // Member -> Attributes

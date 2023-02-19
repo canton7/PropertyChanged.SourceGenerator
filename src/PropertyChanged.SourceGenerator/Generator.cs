@@ -8,19 +8,18 @@ using System.Linq;
 using System.Text;
 using Microsoft.CodeAnalysis;
 using PropertyChanged.SourceGenerator.Analysis;
+using PropertyChanged.SourceGenerator.EventArgs;
 
 namespace PropertyChanged.SourceGenerator;
 
 public class Generator
 {
-    public const string EventArgsCacheName = "EventArgsCache";
-
     private readonly IndentedTextWriter writer = new(new StringWriter());
-    private readonly EventArgsCache eventArgsCache;
+    private readonly EventArgsCacheLookup eventArgsCacheLookup;
 
-    public Generator(EventArgsCache eventArgsCache)
+    public Generator(EventArgsCacheLookup eventArgsCacheLookup)
     {
-        this.eventArgsCache = eventArgsCache;
+        this.eventArgsCacheLookup = eventArgsCacheLookup;
      
         this.writer.WriteLine(StringConstants.FileHeader);
     }
@@ -411,8 +410,8 @@ public class Generator
         switch (interfaceAnalysis.RaiseMethodSignature.NameType)
         {
             case RaisePropertyChangedOrChangingNameType.PropertyChangedEventArgs:
-                string cacheName = this.eventArgsCache.Get(propertyName, interfaceAnalysis.EventArgsFullyQualifiedTypeName);
-                this.writer.Write($"global::PropertyChanged.SourceGenerator.Internal.{EventArgsCacheName}.{cacheName}");
+                string cacheName = this.eventArgsCacheLookup.Get(propertyName, interfaceAnalysis.EventName, interfaceAnalysis.EventArgsFullyQualifiedTypeName);
+                this.writer.Write($"global::PropertyChanged.SourceGenerator.Internal.{EventArgsCacheGenerator.EventArgsCacheName}.{cacheName}");
                 break;
 
             case RaisePropertyChangedOrChangingNameType.String:
@@ -477,7 +476,7 @@ public class Generator
         }
     }
 
-    public static EventArgsCache CreateEventArgsCache(IEnumerable<TypeAnalysis> typeAnalyses)
+    public static (EventArgsCache cache, EventArgsCacheLookup lookup) CreateEventArgsCacheAndLookup(IEnumerable<TypeAnalysis> typeAnalyses)
     {
         // Annoyingly, this has to be perfectly synced with the code above which calls EventArgsCache.Get
 
@@ -511,7 +510,7 @@ public class Generator
             }
         }
 
-        return builder.ToCache();
+        return builder.ToCacheAndLookup();
     }
 
     private static (string property, string getter, string setter) CalculateAccessibilities(MemberAnalysis member)
@@ -566,36 +565,6 @@ public class Generator
         return str == null
             ? "null"
             : "@\"" + str.Replace("\"", "\"\"") + "\"";
-    }
-
-    public void GenerateNameCache()
-    {
-        this.writer.WriteLine("namespace PropertyChanged.SourceGenerator.Internal");
-        this.writer.WriteLine("{");
-        this.writer.Indent++;
-
-        this.writer.WriteLine($"internal static class {EventArgsCacheName}");
-        this.writer.WriteLine("{");
-        this.writer.Indent++;
-
-        var backingFieldNames = new HashSet<string>();
-        foreach (var (cacheName, eventArgsTypeName, propertyName) in this.eventArgsCache.GetEntries().OrderBy(x => x.cacheName))
-        {
-            string backingFieldName = "_" + cacheName;
-            for (int i = 0; !backingFieldNames.Add(backingFieldName); i++)
-            {
-                backingFieldName = $"_{cacheName}{i}";
-            }
-            this.writer.WriteLine($"private static {eventArgsTypeName} {backingFieldName};");
-            this.writer.WriteLine($"public static {eventArgsTypeName} {cacheName} => " +
-                $"{backingFieldName} ??= new {eventArgsTypeName}({EscapeString(propertyName)});");
-        }
-
-        this.writer.Indent--;
-        this.writer.WriteLine("}");
-
-        this.writer.Indent--;
-        this.writer.WriteLine("}");
     }
 
     public override string ToString() => this.writer.InnerWriter.ToString();

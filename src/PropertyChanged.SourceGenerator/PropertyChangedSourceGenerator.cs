@@ -100,22 +100,28 @@ public class PropertyChangedSourceGenerator : IIncrementalGenerator
         var analysesSource = modelsAndDiagnosticsSource.Select((pair, token) => pair.analyses)
             .WithTrackingName("analysesSource");
 
-        var eventArgsCacheSource = analysesSource.Select((typeAnalyses, token) =>
+        var eventArgsCacheAndLookupSource = analysesSource.Select((typeAnalyses, token) =>
         {
-            return Generator.CreateEventArgsCache(typeAnalyses);
-        }).WithTrackingName("eventArgsCacheSource");
+            return Generator.CreateEventArgsCacheAndLookup(typeAnalyses);
+        }).WithTrackingName("eventArgsCacheAndLookupSource");
 
-        var analysisAndEventArgsCacheSource = analysesSource
+        var eventArgsCacheSource = eventArgsCacheAndLookupSource.Select((x, token) => x.cache)
+            .WithTrackingName("eventArgsCacheSource");
+
+        var eventArgsCacheLookupSource = eventArgsCacheAndLookupSource.Select((x, token) => x.lookup)
+            .WithTrackingName("eventArgsCacheLookupSource");
+
+        var analysisAndEventArgsCacheLookupSource = analysesSource
             .SelectMany((analysis, token) => analysis.AsImmutableArray())
-            .Combine(eventArgsCacheSource)
-            .WithTrackingName("analysisAndEventArgsCacheSource");
+            .Combine(eventArgsCacheLookupSource)
+            .WithTrackingName("analysisAndEventArgsCacheLookupSource");
 
-        context.RegisterSourceOutput(analysisAndEventArgsCacheSource, (ctx, pair) =>
+        context.RegisterSourceOutput(analysisAndEventArgsCacheLookupSource, (ctx, pair) =>
         {
-            var (typeAnalysis, eventArgsCache) = pair;
+            var (typeAnalysis, eventArgsCacheLookup) = pair;
             if (typeAnalysis.CanGenerate)
             {
-                var generator = new Generator(eventArgsCache);
+                var generator = new Generator(eventArgsCacheLookup);
                 generator.Generate(typeAnalysis);
                 ctx.AddSource(typeAnalysis.TypeNameForGeneratedFileName + ".g", generator.ToString());
             }
@@ -125,7 +131,7 @@ public class PropertyChangedSourceGenerator : IIncrementalGenerator
         {
             if (!eventArgsCache.IsEmpty)
             {
-                var generator = new Generator(eventArgsCache);
+                var generator = new EventArgsCacheGenerator(eventArgsCache);
                 generator.GenerateNameCache();
                 ctx.AddSource("PropertyChanged.SourceGenerator.Internal.EventArgsCache.g", generator.ToString());
             }

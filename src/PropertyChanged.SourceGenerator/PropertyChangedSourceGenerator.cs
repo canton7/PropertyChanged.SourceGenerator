@@ -30,7 +30,7 @@ public class PropertyChangedSourceGenerator : IIncrementalGenerator
         {
             return context.SyntaxProvider.ForAttributeWithMetadataName(
                 attribute,
-                (node, _) => node is VariableDeclaratorSyntax
+                (node, token) => node is VariableDeclaratorSyntax
                 { 
                     Parent: VariableDeclarationSyntax
                     {
@@ -79,7 +79,7 @@ public class PropertyChangedSourceGenerator : IIncrementalGenerator
             var compilation = inputTypesAndCompilation[0].compilation;
             var analyzer = new Analyser(diagnostics, compilation, nullableContext, configurationParser);
 
-            var analyses = analyzer.Analyse(analyserInputs);
+            var analyses = analyzer.Analyse(analyserInputs, token);
             // These are going to be inputs to SelectMany, which will convert them to ImmutableArrays anyway
             return (analyses: analyses.ToImmutableArray().AsEquatableArray(), diagnostics: diagnostics.GetDiagnostics());
         }).WithTrackingName("modelsAndDiagnosticsSource");

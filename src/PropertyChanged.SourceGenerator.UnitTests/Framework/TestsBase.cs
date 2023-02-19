@@ -86,7 +86,7 @@ public abstract class TestsBase
         {
             {  type!, analyserInput },
         };
-        var typeAnalyses = analyser.Analyse(inputs).ToList();
+        var typeAnalyses = analyser.Analyse(inputs, CancellationToken.None).ToList();
 
         DiagnosticVerifier.VerifyDiagnostics(diagnostics.GetDiagnostics(), Array.Empty<DiagnosticResult>(), 1);
 

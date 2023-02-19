@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using System.Xml;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
@@ -52,7 +53,7 @@ public partial class Analyser
         }
     }
 
-    public IEnumerable<TypeAnalysis> Analyse(IReadOnlyDictionary<INamedTypeSymbol, AnalyserInput> inputsLookup)
+    public IEnumerable<TypeAnalysis> Analyse(IReadOnlyDictionary<INamedTypeSymbol, AnalyserInput> inputsLookup, CancellationToken token)
     {
         var results = new Dictionary<INamedTypeSymbol, TypeAnalysisBuilder?>(SymbolEqualityComparer.Default);
 
@@ -67,6 +68,8 @@ public partial class Analyser
         // typeSymbol will be set but input will be null
         void Analyse(INamedTypeSymbol typeSymbol, AnalyserInput? input)
         {
+            token.ThrowIfCancellationRequested();
+
             // Make sure it's not e.g. C<Foo>, rather C<T>. This should have been done be AnalyserInput ctor
             Debug.Assert(SymbolEqualityComparer.Default.Equals(typeSymbol, typeSymbol.OriginalDefinition));
 
@@ -105,11 +108,11 @@ public partial class Analyser
             }
 
             // We're set! Analyse it
-            results.Add(typeSymbol, this.Analyse(input!.Value, baseTypes));
+            results.Add(typeSymbol, this.Analyse(input!.Value, baseTypes, token));
         }
     }
 
-    private TypeAnalysisBuilder Analyse(AnalyserInput input, List<TypeAnalysisBuilder> baseTypeAnalyses)
+    private TypeAnalysisBuilder Analyse(AnalyserInput input, List<TypeAnalysisBuilder> baseTypeAnalyses, CancellationToken token)
     {
         var typeAnalysis = new TypeAnalysisBuilder()
         {
@@ -128,9 +131,9 @@ public partial class Analyser
         {
             try
             {
-                this.AnalyseInner(typeAnalysis, input.Attributes, baseTypeAnalyses);
+                this.AnalyseInner(typeAnalysis, input.Attributes, baseTypeAnalyses, token);
             }
-            catch (Exception e)
+            catch (Exception e) when (e is not OperationCanceledException)
             {
                 this.diagnostics.ReportUnhandledException(input.TypeSymbol, e);
                 typeAnalysis.HadException = true;
@@ -139,10 +142,13 @@ public partial class Analyser
         }
 
         return typeAnalysis;
-
     }
 
-    private void AnalyseInner(TypeAnalysisBuilder typeAnalysis, IReadOnlyDictionary<ISymbol, List<AttributeData>> members, List<TypeAnalysisBuilder> baseTypeAnalyses)
+    private void AnalyseInner(
+        TypeAnalysisBuilder typeAnalysis,
+        IReadOnlyDictionary<ISymbol, List<AttributeData>> members,
+        List<TypeAnalysisBuilder> baseTypeAnalyses,
+        CancellationToken token)
     {
         if (this.propertyChangedInterfaceAnalyser == null)
             throw new InvalidOperationException();
@@ -158,6 +164,8 @@ public partial class Analyser
 
         foreach (var kvp in members)
         {
+            token.ThrowIfCancellationRequested();
+
             var (member, attributes) = (kvp.Key, kvp.Value);
             MemberAnalysisBuilder? memberAnalysis = null;
             switch (member)
@@ -183,6 +191,8 @@ public partial class Analyser
             this.ResolveIsChangedMember(typeAnalysis, member, attributes, memberAnalysis);
         }
 
+        token.ThrowIfCancellationRequested();
+
         // Now that we've got all members, we can do inter-member analysis
 
         this.ReportPropertyNameCollisions(typeAnalysis, baseTypeAnalyses);
@@ -197,6 +207,8 @@ public partial class Analyser
                 this.diagnostics.ReportTypeIsNotPartial(typeAnalysis.TypeSymbol);
             }
         }
+
+        token.ThrowIfCancellationRequested();
 
         for (var outerType = typeAnalysis.TypeSymbol.ContainingType; outerType != null; outerType = outerType.ContainingType)
         {

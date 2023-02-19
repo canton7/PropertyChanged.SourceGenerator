@@ -1,18 +1,13 @@
 ﻿using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
-using Microsoft.CodeAnalysis.Text;
 using PropertyChanged.SourceGenerator.Analysis;
-using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
-using System.Text;
-using System.Threading;
-using System.Xml;
 
 namespace PropertyChanged.SourceGenerator;
 
-[Generator]
+[Generator(LanguageNames.CSharp)]
 public class PropertyChangedSourceGenerator : IIncrementalGenerator
 {
     private static readonly string[] attributeNames = new[]

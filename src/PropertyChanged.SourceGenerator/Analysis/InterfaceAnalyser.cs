@@ -17,6 +17,7 @@ public abstract class InterfaceAnalyser
     private INamedTypeSymbol eventHandlerSymbol => this.eventHandlerSymbolCache ??= this.Compilation.GetTypeByMetadataName(this.eventHandlerMetadataName)!;
 
     protected readonly INamedTypeSymbol EventArgsSymbol;
+    private readonly string eventArgsFullyQualifiedTypeName;
     private readonly string eventName;
     private readonly IEventSymbol interfaceEventSymbol;
     protected readonly DiagnosticReporter Diagnostics;
@@ -35,6 +36,7 @@ public abstract class InterfaceAnalyser
         this.interfaceSymbol = interfaceSymbol;
         this.eventHandlerMetadataName = eventHandlerMetadataName;
         this.EventArgsSymbol = eventArgsSymbol;
+        this.eventArgsFullyQualifiedTypeName = eventArgsSymbol.ToDisplayString(SymbolDisplayFormats.FullyQualifiedTypeName);
         this.eventName = eventName;
         this.interfaceEventSymbol = this.interfaceSymbol.GetMembers(this.eventName).OfType<IEventSymbol>().First();
         this.Diagnostics = diagnostics;
@@ -214,7 +216,7 @@ public abstract class InterfaceAnalyser
             RequiresEvent = eventSymbol == null && !isGeneratingAnyParent,
             CanCallRaiseMethod = canCallRaiseMethod,
             EventName = this.eventName,
-            EventArgsFullyQualifiedTypeName = this.EventArgsSymbol.ToDisplayString(SymbolDisplayFormats.FullyQualifiedTypeName),
+            EventArgsFullyQualifiedTypeName = this.eventArgsFullyQualifiedTypeName,
             RaiseMethodType = raiseMethodType,
             RaiseMethodName = raiseMethodName,
             RaiseMethodSignature = raiseMethodSignature,

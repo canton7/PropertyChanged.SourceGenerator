@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Xml.Linq;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using static PropertyChanged.SourceGenerator.Analysis.Utils;
@@ -81,23 +82,27 @@ public abstract class InterfaceAnalyser
 
         bool isGeneratingAnyParent = baseTypeAnalyses.Any(x => x.CanGenerate);
 
+        // TODO: This bit is massively inefficient. We could cache a lot between types in the hierarchy here.
+
         // Try and find a method with a name we recognise and a signature we know how to call.
         // We prioritise the method name over things like the signature or where in the type hierarchy
         // it is.
         // We'll look for methods all the way down the class hierarchy, but we'll only complain if we find one
         // with an unknown signature on a class which implements INPC.
+        // We start at
         RaisePropertyChangedOrChangingMethodSignature? signature = null;
         IMethodSymbol? method = null;
         var methodNamesFoundButDidntKnowHowToCall = new List<string>();
-        foreach (string name in this.GetRaisePropertyChangedOrChangingEventNames(config))
+        var methodNames = this.GetRaisePropertyChangedOrChangingEventNames(config);
+        var allMethods = TypeAndBaseTypes(typeSymbol)
+                .OfType<IMethodSymbol>()
+                .Where(x => !x.IsStatic && methodNames.Contains(x.Name))
+                .ToLookup(x => x.Name);
+        foreach (string name in methodNames)
         {
             // We don't filter on IsOverride. That means if there is an override, we'll pick it up before the
             // base type. This matters, because we check whether we found an override further down.
-            var methods = TypeAndBaseTypes(typeSymbol)
-                .SelectMany(x => x.GetMembers(name))
-                .OfType<IMethodSymbol>()
-                .Where(x => !x.IsStatic)
-                .ToList();
+            var methods = allMethods[name].ToList();
             if (methods.Count > 0)
             {
                 // TryFindCallableRaisePropertyChangedOrChangingOverload mutates methods, so we need to check this now
@@ -162,12 +167,15 @@ public abstract class InterfaceAnalyser
         }
         else
         {
+            // We didn't find a method we recognise and know how to call, so we're generating our own
+
+            // If we found one with the right name but which we didn't know how to call, raise a warning
             if (methodNamesFoundButDidntKnowHowToCall.Count > 0)
             {
                 this.ReportCouldNotFindCallableRaisePropertyChangedOrChangingOverload(typeSymbol, methodNamesFoundButDidntKnowHowToCall[0]);
             }
 
-            // The base type in our hierarchy is defining its own
+            // Test whether the base type in our hierarchy is defining its own
             // Make sure that that type can actually access the event, if it's pre-existing. If it's explicitly implemented, we can't raise it
             if (eventSymbol != null && !isGeneratingAnyParent &&
                 (!SymbolEqualityComparer.Default.Equals(eventSymbol.ContainingType, typeSymbol) ||

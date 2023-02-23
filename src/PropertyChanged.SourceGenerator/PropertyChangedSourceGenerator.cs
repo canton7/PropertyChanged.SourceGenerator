@@ -114,12 +114,9 @@ public class PropertyChangedSourceGenerator : IIncrementalGenerator
         context.RegisterSourceOutput(analysisAndEventArgsCacheLookupSource, (ctx, pair) =>
         {
             var (typeAnalysis, eventArgsCacheLookup) = pair;
-            if (typeAnalysis.CanGenerate)
-            {
-                var generator = new Generator(eventArgsCacheLookup);
-                generator.Generate(typeAnalysis);
-                ctx.AddSource(typeAnalysis.TypeNameForGeneratedFileName + ".g", generator.ToString());
-            }
+            var generator = new Generator(eventArgsCacheLookup);
+            generator.Generate(typeAnalysis);
+            ctx.AddSource(typeAnalysis.TypeNameForGeneratedFileName + ".g", generator.ToString());
         });
 
         context.RegisterSourceOutput(eventArgsCacheSource, (ctx, eventArgsCache) =>

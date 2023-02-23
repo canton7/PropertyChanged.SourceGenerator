@@ -51,6 +51,7 @@ public class Generator
 
     private void GenerateType(TypeAnalysis typeAnalysis)
     {
+        // TODO: This boxes
         foreach (string outerType in typeAnalysis.OuterTypes.AsEnumerable().Reverse())
         {
             this.writer.WriteLine($"partial {outerType}");

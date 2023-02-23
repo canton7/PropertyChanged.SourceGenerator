@@ -62,7 +62,7 @@ public partial class Analyser
             Analyse(input.Key, input.Value);
         }
 
-        return results.Values.Select(x => x!.Build());
+        return results.Values.Where(x => x!.CanGenerate).Select(x => x!.Build());
 
         // If we've been given a base type which we shouldn't analyse directly, but we do need to discover *its* base types,
         // typeSymbol will be set but input will be null
@@ -96,7 +96,8 @@ public partial class Analyser
             if (!inputsLookup.ContainsKey(typeSymbol))
                 return;
 
-            // Right, we know we've analysed all of the base types by now. Fetch them
+            // Right, we know we've analysed all of the base types by now. Fetch them.
+            // This is ordered with types lower in the hierarchy last.
             var baseTypes = new List<TypeAnalysisBuilder>();
             for (var t = typeSymbol.BaseType?.OriginalDefinition; t != null && t.SpecialType != SpecialType.System_Object; t = t.BaseType?.OriginalDefinition)
             {

@@ -43,7 +43,6 @@ public class TypeAnalysisBuilder
 
         return new()
         {
-            CanGenerate = this.CanGenerate,
             TypeDeclaration = this.TypeSymbol.ToDisplayString(SymbolDisplayFormats.TypeDeclaration),
             TypeNameForGeneratedFileName = this.TypeSymbol.ToDisplayString(SymbolDisplayFormats.GeneratedFileName),
             ContainingNamespace = containingNamespace,
@@ -63,7 +62,6 @@ public class TypeAnalysisBuilder
 
 public record TypeAnalysis
 {
-    public required bool CanGenerate { get; init; }
     public required string TypeDeclaration { get; init; }
     public required string TypeNameForGeneratedFileName { get; init; }
     public required string? ContainingNamespace { get; init; }

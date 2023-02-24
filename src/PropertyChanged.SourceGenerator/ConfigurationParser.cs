@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Net;
 using System.Reflection.Metadata.Ecma335;
 using System.Text;
@@ -27,19 +28,19 @@ public class ConfigurationParser
 
         if (options.TryGetValue("propertychanged.onpropertychanged_method_name", out string? changedMethodName))
         {
-            config.RaisePropertyChangedMethodNames = changedMethodName.Split(';');
+            config.RaisePropertyChangedMethodNames = changedMethodName.Split(';').ToImmutableArray();
         }
         if (options.TryGetValue("propertychanged.onpropertychanging_method_name", out string? changingMethodName))
         {
-            config.RaisePropertyChangingMethodNames = changingMethodName.Split(';');
+            config.RaisePropertyChangingMethodNames = changingMethodName.Split(';').ToImmutableArray();
         }
         if (options.TryGetValue("propertychanged.remove_prefixes", out string? removePrefixes))
         {
-            config.RemovePrefixes = removePrefixes.Split(';');
+            config.RemovePrefixes = removePrefixes.Split(';').ToImmutableArray();
         }
         if (options.TryGetValue("propertychanged.remove_suffixes", out string? removeSuffixes))
         {
-            config.RemoveSuffixes = removeSuffixes.Split(';');
+            config.RemoveSuffixes = removeSuffixes.Split(';').ToImmutableArray();
         }
         if (options.TryGetValue("propertychanged.add_prefix", out string? addPrefix))
         {

@@ -1,6 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
+using System.Diagnostics;
 using System.Linq;
+using System.Linq.Expressions;
+using System.Reflection;
 using System.Text;
 using System.Xml.Linq;
 using Microsoft.CodeAnalysis;
@@ -24,6 +28,8 @@ public abstract class InterfaceAnalyser
     protected readonly DiagnosticReporter Diagnostics;
     protected readonly Compilation Compilation;
     private readonly Func<TypeAnalysisBuilder, InterfaceAnalysis> interfaceAnalysisGetter;
+
+    private readonly Dictionary<DiscoveredMethodInfoKey, DiscoveredMethodInfo?> discoveredMethodInfoCache = new();
 
     protected InterfaceAnalyser(
         INamedTypeSymbol interfaceSymbol,
@@ -52,6 +58,11 @@ public abstract class InterfaceAnalyser
         IReadOnlyList<TypeAnalysisBuilder> baseTypeAnalyses,
         Configuration config)
     {
+        if (this.cachedAnalyses.TryGetValue(typeSymbol, out var cachedAnalysis))
+        {
+            return cachedAnalysis;
+        }
+
         bool hasInterface = typeSymbol.AllInterfaces.Contains(this.interfaceSymbol, SymbolEqualityComparer.Default);
         if (!this.ShouldGenerateIfInterfaceNotPresent() && !hasInterface)
         {
@@ -248,7 +259,7 @@ public abstract class InterfaceAnalyser
             propertyChangingAnalysis.RaiseMethodName = GetMatchingName(propertyChangedAnalysis, config.RaisePropertyChangedMethodNames, config.RaisePropertyChangingMethodNames);
         }
 
-        string GetMatchingName(InterfaceAnalysis theirAnalysis, string[] theirNames, string[] ourNames)
+        string GetMatchingName(InterfaceAnalysis theirAnalysis, ImmutableArray<string> theirNames, ImmutableArray<string> ourNames)
         {
             string? ourName = null;
             if (theirAnalysis.CanCallRaiseMethod && theirAnalysis.RaiseMethodName != null)
@@ -269,10 +280,215 @@ public abstract class InterfaceAnalyser
         }
     }
 
+    private DiscoveredMethodInfo DiscoverMethods(INamedTypeSymbol typeSymbol, Configuration config)
+    {
+        // Walk down the type hierarchy until we find a method we recognise and know how to call, or we find cached info for a base type
+        // we've already looked at.
+
+        // Note that different types might have different configs, which might affect what names we look for in what order, so we need to
+        // make sure that we key the cache on the config used.
+
+        // We prefer the first name listed in methodNames, regardless of whether it appears earlier or later in the type hierarchy. This means
+        // that we need to effectively walk the entire type hierarchy for each value in methodNames.
+        // We could have a situation where our base type defines methodNames[0], and we define methodNames[1]. In this case, we need to use
+        // the info for methodNames[0]
+        // There isn't much point in caching every level of every type hierarchy, firstly because most types will inherit from a common base INPC class,
+        // and secondly because as we analyse a derived type we'll stop probing once we discover one parent that we've cached, without looking further
+        // up the type hierarchy.
+
+
+        var methodNames = this.GetRaisePropertyChangedOrChangingEventNames(config);
+        // TODO: Cache this?
+        var methodNamesLookup = new HashSet<string>(methodNames);
+
+        // The most common case is that the type inherits from one that we already know about and which has the same config as us, and doesn't
+        // add any new members that we care about, so optimise for this case.
+        var key = new DiscoveredMethodInfoKey(typeSymbol.BaseType, methodNames.AsEquatableArray());
+        if (this.discoveredMethodInfoCache.TryGetValue(key, out var discoveredMethodInfo) &&
+            !typeSymbol.GetMembers().Any(x => x is IMethodSymbol { IsStatic: false } && methodNamesLookup.Contains(x.Name)))
+        {
+            return discoveredMethodInfo;
+        }
+
+        // Fetching GetMembers(name) a lot is expensive, as internally it fetches all and then filters.
+        // Build up all a lookup of all members that we care about, to avoid calling .GetMembers() a lot.
+        // Method name -> methods on any type with that name
+        var membersLookup = new Dictionary<string, List<IMethodSymbol>>();
+
+        // We'll keep an eye open for cached results on the way down the hierarchy. Stop when we find one, as that means we've previously examined
+        // that part of the type hierarchy
+        DiscoveredMethodInfo? discoveredBaseMethodInfo = null;
+        foreach (var thisOrBaseTypeSymbol in TypeAndBaseTypes(typeSymbol))
+        {
+            if (this.discoveredMethodInfoCache.TryGetValue(key, out discoveredBaseMethodInfo))
+            {
+                break;
+            }
+
+            foreach (var member in thisOrBaseTypeSymbol.GetMembers())
+            {
+                if (member is IMethodSymbol method && !method.IsStatic && methodNamesLookup.Contains(member.Name))
+                {
+                    if (!membersLookup.TryGetValue(method.Name, out var methodSymbolsForThisMethod))
+                    {
+                        methodSymbolsForThisMethod = new();
+                        membersLookup[method.Name] = methodSymbolsForThisMethod;
+                    }
+                    methodSymbolsForThisMethod.Add(member.Name);
+                }
+            }
+        }
+
+        // Try and find a method with a name we recognise and a signature we know how to call.
+        // We prioritise the method name over things like the signature or where in the type hierarchy it is.
+        // We'll look for methods all the way down the class hierarchy, but we'll only complain if we find one
+        // with an unknown signature on a class which implements INPC.
+        DiscoveredMethodInfo? discoveredMethodInfo = null;
+        ImmutableArray<string>.Builder? methodNamesFoundButDidntKnowHowToCall = null;
+        foreach (string methodName in methodNames)
+        {
+            // We don't filter on IsOverride. That means if there is an override, we'll pick it up before the
+            // base type. This matters, because we check whether we found an override further down.
+            if (membersLookup.TryGetValue(methodName, out var methods))
+            {
+                // TODO: Get rid of the clone
+                methods = methods.ToList();
+                // TryFindCallableRaisePropertyChangedOrChangingOverload mutates methods, so we need to check this now
+                bool anyImplementsInpc = methods.Any(x => x.ContainingType.AllInterfaces.Contains(this.interfaceSymbol, SymbolEqualityComparer.Default));
+                if (this.TryFindCallableRaisePropertyChangedOrChangingOverload(methods, out method, out signature, typeSymbol))
+                {
+                    discoveredMethodInfo = new(method, signature, ImmutableArray<string>.Empty)y;
+                    break;
+                }
+                else if (anyImplementsInpc)
+                {
+                    methodNamesFoundButDidntKnowHowToCall ??= ImmutableArray.CreateBuilder<string>();
+                    methodNamesFoundButDidntKnowHowToCall.Add(name);
+                    // Also pull in any from the discoveredBaseMethodInfo
+                    if (discoveredBaseMethodInfo != null)
+                    {
+                        methodNamesFoundButDidntKnowHowToCall.AddRange(discoveredBaseMethodInfo.Value.MethodNamesFoundButDidntKnowHowToCall);
+                    }
+                    break;
+                }
+            }
+
+            // If we didn't find anything, check the discoveredBaseMethodInfo
+            if (discoveredBaseMethodInfo != null && discoveredBaseMethodInfo.Value.Method?.Name == methodName)
+            {
+                discoveredMethodInfo = discoveredMethodInfo;
+                break;
+            }
+        }
+
+        // Cache this against the current type. If the method 
+
+
+        for (int i = 0; i < methodNames.Length; i++)
+        {
+            string methodName = methodNames[i];
+            foreach (var thisOrBaseTypeSymbol in TypeAndBaseTypes(typeSymbol))
+            {
+                // Have we already cached the info for this type? 
+                //var key = new DiscoveredMethodInfoKey(thisOrBaseTypeSymbol, methodNames.AsEquatableArray());
+                //if (this.discoveredMethodInfoCache.TryGetValue(key, out var discoveredMethodInfo))
+                //{
+                //    return discoveredMethodInfo;
+                //}
+
+                List<IMethodSymbol>? methodSymbols;
+                if (i == 0)
+                {
+                    // We haven't visited this type yet. Cache all matching method names. The assumption is that we'll only
+                    // find one from methodNames max (but we need to support more)
+                    foreach (var member in thisOrBaseTypeSymbol.GetMembers())
+                    {
+                        if (member is IMethodSymbol method && !method.IsStatic && methodNamesLookup.Contains(member.Name))
+                        {
+                            if (!membersLookup.TryGetValue(method.Name, out var methodSymbolsForThisMethod))
+                            {
+                                methodSymbolsForThisMethod = new();
+                                membersLookup[method.Name] = methodSymbolsForThisMethod;
+                            }
+                            methodSymbolsForThisMethod.Add(member.Name);
+                            if (method.Name == methodName)
+                            {
+                                methodSymbols = methodSymbolsForThisMethod;
+                            }
+                        }
+                    }
+                }
+                else
+                {
+                    membersLookup.TryGetValue(methodName, methodSymbols);
+                }
+
+                // Keep looking for a match at every step down the hierarchy. This means we can stop as soon as we find our preferred name.
+                if (methodSymbols != null)
+                {
+                    Debug.Assert(methodSymbols.Count > 0);
+
+                    // TODO: Avoid clone
+                    var methods = methodSymbols.ToList();
+                    // TryFindCallableRaisePropertyChangedOrChangingOverload mutates methods, so we need to check this now
+                    bool anyImplementsInpc = methods.Any(x => x.ContainingType.AllInterfaces.Contains(this.interfaceSymbol, SymbolEqualityComparer.Default));
+                    if (this.TryFindCallableRaisePropertyChangedOrChangingOverload(methods, out method, out signature, typeSymbol))
+                    {
+                        break;
+                    }
+                    else if (anyImplementsInpc)
+                    {
+                        methodNamesFoundButDidntKnowHowToCall.Add(name);
+                        break;
+                    }
+                }
+                
+            }
+
+
+        }
+
+        
+        
+
+        // Try and find a method with a name we recognise and a signature we know how to call.
+        // We prioritise the method name over things like the signature or where in the type hierarchy
+        // it is.
+        // We'll look for methods all the way down the class hierarchy, but we'll only complain if we find one
+        // with an unknown signature on a class which implements INPC.
+        // We start at
+        RaisePropertyChangedOrChangingMethodSignature? signature = null;
+        IMethodSymbol? method = null;
+        var methodNamesFoundButDidntKnowHowToCall = new List<string>();
+        var allMethods = TypeAndBaseTypes(typeSymbol)
+                .OfType<IMethodSymbol>()
+                .Where(x => !x.IsStatic && methodNames.Contains(x.Name))
+                .ToLookup(x => x.Name);
+        foreach (string name in methodNames)
+        {
+            // We don't filter on IsOverride. That means if there is an override, we'll pick it up before the
+            // base type. This matters, because we check whether we found an override further down.
+            var methods = allMethods[name].ToList();
+            if (methods.Count > 0)
+            {
+                // TryFindCallableRaisePropertyChangedOrChangingOverload mutates methods, so we need to check this now
+                bool anyImplementsInpc = methods.Any(x => x.ContainingType.AllInterfaces.Contains(this.interfaceSymbol, SymbolEqualityComparer.Default));
+                if (this.TryFindCallableRaisePropertyChangedOrChangingOverload(methods, out method, out signature, typeSymbol))
+                {
+                    break;
+                }
+                else if (anyImplementsInpc)
+                {
+                    methodNamesFoundButDidntKnowHowToCall.Add(name);
+                    break;
+                }
+            }
+        }
+    }
 
     protected abstract bool ShouldGenerateIfInterfaceNotPresent();
 
-    protected abstract string[] GetRaisePropertyChangedOrChangingEventNames(Configuration config);
+    protected abstract ImmutableArray<string> GetRaisePropertyChangedOrChangingEventNames(Configuration config);
 
     protected abstract bool TryFindCallableRaisePropertyChangedOrChangingOverload(List<IMethodSymbol> methods, out IMethodSymbol method, out RaisePropertyChangedOrChangingMethodSignature? signature, INamedTypeSymbol typeSymbol);
 
@@ -289,6 +505,28 @@ public abstract class InterfaceAnalyser
     protected abstract void ReportCannotPopulateOnAnyPropertyChangedOrChangingOldAndNew(IMethodSymbol method, string raisePropertyChangedMethodName);
 
     protected abstract void ReportRaisePropertyChangedOrChangingMethodIsNonVirtual(IMethodSymbol method);
+
+    private readonly record struct DiscoveredMethodInfoKey(INamedTypeSymbol TypeSymbol, EquatableArray<string> RaisePropertyChangedOrChangingEventNames)
+    {
+        public bool Equals(DiscoveredMethodInfoKey other)
+        {
+            return SymbolEqualityComparer.Default.Equals(this.TypeSymbol, other.TypeSymbol) &&
+                this.RaisePropertyChangedOrChangingEventNames.Equals(other.RaisePropertyChangedOrChangingEventNames);
+        }
+
+        public override int GetHashCode()
+        {
+            int hash = 17;
+            unchecked
+            {
+                hash = hash * 23 + SymbolEqualityComparer.Default.GetHashCode(this.TypeSymbol);
+                hash = hash * 23 + this.RaisePropertyChangedOrChangingEventNames.GetHashCode();
+            }
+            return hash;
+        }
+    }
+
+    private readonly record struct DiscoveredMethodInfo(IMethodSymbol? Method, RaisePropertyChangedOrChangingMethodSignature? Signature, ImmutableArray<string> MethodNamesFoundButDidntKnowHowToCall);
 
     #endregion
 

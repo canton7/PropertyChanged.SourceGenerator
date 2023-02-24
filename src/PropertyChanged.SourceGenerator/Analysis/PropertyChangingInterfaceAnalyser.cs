@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Linq;
 using Microsoft.CodeAnalysis;
 using static PropertyChanged.SourceGenerator.Analysis.Utils;
@@ -21,7 +22,7 @@ public class PropertyChangingInterfaceAnalyser : InterfaceAnalyser
 
     protected override bool ShouldGenerateIfInterfaceNotPresent() => false;
 
-    protected override string[] GetRaisePropertyChangedOrChangingEventNames(Configuration config) =>
+    protected override ImmutableArray<string> GetRaisePropertyChangedOrChangingEventNames(Configuration config) =>
         config.RaisePropertyChangingMethodNames;
 
     protected override bool TryFindCallableRaisePropertyChangedOrChangingOverload(List<IMethodSymbol> methods, out IMethodSymbol method, out RaisePropertyChangedOrChangingMethodSignature? signature, INamedTypeSymbol typeSymbol)

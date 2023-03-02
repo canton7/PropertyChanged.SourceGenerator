@@ -25,65 +25,63 @@ public class PropertyChangingInterfaceAnalyser : InterfaceAnalyser
     protected override ImmutableArray<string> GetRaisePropertyChangedOrChangingEventNames(Configuration config) =>
         config.RaisePropertyChangingMethodNames;
 
-    protected override bool TryFindCallableRaisePropertyChangedOrChangingOverload(List<IMethodSymbol> methods, out IMethodSymbol method, out RaisePropertyChangedOrChangingMethodSignature? signature, INamedTypeSymbol typeSymbol)
+    protected override RaisePropertyChangedOrChangingMethodSignature? TryClassifyRaisePropertyChangedOrChangingMethod(IMethodSymbol method, INamedTypeSymbol typeSymbol)
     {
-        methods.RemoveAll(x => !IsAccessibleNormalMethod(x, typeSymbol, this.Compilation));
+        if (!IsAccessibleNormalMethod(method, typeSymbol, this.Compilation))
+        {
+            return null;
+        }
 
         // We care about the order in which we choose an overload, which unfortunately means we're quadratic
-        if ((method = methods.FirstOrDefault(x => x.Parameters.Length == 1 &&
-            SymbolEqualityComparer.Default.Equals(x.Parameters[0].Type, this.EventArgsSymbol) &&
-            IsNormalParameter(x.Parameters[0]))) != null)
+        if (method.Parameters.Length == 1 &&
+            SymbolEqualityComparer.Default.Equals(method.Parameters[0].Type, this.EventArgsSymbol) &&
+            IsNormalParameter(method.Parameters[0]))
         {
-            signature = new RaisePropertyChangedOrChangingMethodSignature(
+            return new RaisePropertyChangedOrChangingMethodSignature(
                 RaisePropertyChangedOrChangingNameType.PropertyChangedEventArgs,
                 HasOld: false,
                 HasNew: false,
                 method.DeclaredAccessibility);
-            return true;
         }
 
-        if ((method = methods.FirstOrDefault(x => x.Parameters.Length == 1 &&
-            x.Parameters[0].Type.SpecialType == SpecialType.System_String &&
-            IsNormalParameter(x.Parameters[0]))) != null)
+        if (method.Parameters.Length == 1 &&
+            method.Parameters[0].Type.SpecialType == SpecialType.System_String &&
+            IsNormalParameter(method.Parameters[0]))
         {
-            signature = new RaisePropertyChangedOrChangingMethodSignature(
+            return new RaisePropertyChangedOrChangingMethodSignature(
                 RaisePropertyChangedOrChangingNameType.String,
                 HasOld: false,
                 HasNew: false,
                 method.DeclaredAccessibility);
-            return true;
         }
 
-        if ((method = methods.FirstOrDefault(x => x.Parameters.Length == 2 &&
-            SymbolEqualityComparer.Default.Equals(x.Parameters[0].Type, this.EventArgsSymbol) &&
-            IsNormalParameter(x.Parameters[0]) &&
-            x.Parameters[1].Type.SpecialType == SpecialType.System_Object &&
-            IsNormalParameter(x.Parameters[1]))) != null)
+        if (method.Parameters.Length == 2 &&
+            SymbolEqualityComparer.Default.Equals(method.Parameters[0].Type, this.EventArgsSymbol) &&
+            IsNormalParameter(method.Parameters[0]) &&
+            method.Parameters[1].Type.SpecialType == SpecialType.System_Object &&
+            IsNormalParameter(method.Parameters[1]))
         {
-            signature = new RaisePropertyChangedOrChangingMethodSignature(
+            return new RaisePropertyChangedOrChangingMethodSignature(
                 RaisePropertyChangedOrChangingNameType.PropertyChangedEventArgs,
                 HasOld: true,
                 HasNew: false,
                 method.DeclaredAccessibility);
-            return true;
         }
 
-        if ((method = methods.FirstOrDefault(x => x.Parameters.Length == 2 &&
-            x.Parameters[0].Type.SpecialType == SpecialType.System_String &&
-            IsNormalParameter(x.Parameters[0]) &&
-            x.Parameters[1].Type.SpecialType == SpecialType.System_Object &&
-            IsNormalParameter(x.Parameters[1]))) != null)
+        if (method.Parameters.Length == 2 &&
+            method.Parameters[0].Type.SpecialType == SpecialType.System_String &&
+            IsNormalParameter(method.Parameters[0]) &&
+            method.Parameters[1].Type.SpecialType == SpecialType.System_Object &&
+            IsNormalParameter(method.Parameters[1]))
         {
-            signature = new RaisePropertyChangedOrChangingMethodSignature(
+            return new RaisePropertyChangedOrChangingMethodSignature(
                 RaisePropertyChangedOrChangingNameType.String,
                 HasOld: true,
                 HasNew: false,
                 method.DeclaredAccessibility);
-            return true;
         }
 
-        signature = default;
-        return false;
+        return null;
     }
 
     protected override OnPropertyNameChangedInfo? FindOnAnyPropertyChangedOrChangingMethod(INamedTypeSymbol typeSymbol, out IMethodSymbol? method)

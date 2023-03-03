@@ -7,6 +7,9 @@
     <IncludeBuildOutput>false</IncludeBuildOutput>
     <SuppressDependenciesWhenPacking>true</SuppressDependenciesWhenPacking>
     <EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules>
+	  
+	  <DebugType>pdbonly</DebugType>
+<DebugSymbols>true</DebugSymbols>
 
     <VersionPrefix>0.0.0</VersionPrefix>
     <PackageId>PropertyChanged.SourceGenerator</PackageId>

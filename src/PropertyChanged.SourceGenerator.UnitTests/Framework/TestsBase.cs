@@ -31,7 +31,7 @@ public abstract class TestsBase
         this.verifySettings.UseDirectory("../");
     }
 
-    private Compilation CreateCompilation(string input, NullableContextOptions nullableContextOptions, bool addAttributes = false)
+    protected Compilation CreateCompilation(string input, NullableContextOptions nullableContextOptions = NullableContextOptions.Disable, bool addAttributes = false)
     {
         input = @"using PropertyChanged.SourceGenerator;
 " + input;

@@ -1,3 +1,9 @@
+v1.1.0
+------
+
+ - Restructure as an incremental source generator
+
+
 v1.0.8
 ------
 

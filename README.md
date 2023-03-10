@@ -109,6 +109,7 @@ If/when PropertyChanged.SourceGenerator is updated to depend on a new version Vi
 | Version Number | Min Visual Studio Version | Min .NET SDK Version |
 |----------------|---------------------------|----------------------|
 | 1.0.x | 2019 16.9 | 5.0.200 |
+| 1.1.x | 2022 17.3 | 6.0.304 |
 
 
 Defining your ViewModel

@@ -1,23 +1,23 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using Microsoft.CodeAnalysis;
 
 namespace PropertyChanged.SourceGenerator.Analysis;
 
-public class TypeAnalysis
+public class TypeAnalysisBuilder
 {
+    public required INamedTypeSymbol TypeSymbol { get; init; }
+
     public bool CanGenerate { get; set; }
     public bool HadException { get; set; }
-    public INamedTypeSymbol TypeSymbol { get; set; } = null!;
 
-    public InterfaceAnalysis INotifyPropertyChanged { get; set; } = new();
-    public InterfaceAnalysis INotifyPropertyChanging { get; set; } = new();
+    public InterfaceAnalysis? INotifyPropertyChanged { get; set; }
+    public InterfaceAnalysis? INotifyPropertyChanging { get; set; }
 
     public string? IsChangedPropertyName { get; set; }
     public bool IsChangedSetterIsPrivate { get; set; }
-    public List<MemberAnalysis> Members { get; } = new();
+    public List<MemberAnalysisBuilder> Members { get; } = new();
     public NullableContextOptions NullableContext { get; set; }
 
     private HashSet<(string baseProperty, AlsoNotifyMember notifyProperty)>? baseDependsOn;
@@ -26,6 +26,54 @@ public class TypeAnalysis
         this.baseDependsOn ??= new();
         this.baseDependsOn.Add((baseProperty, notifyProperty));
     }
-    public IEnumerable<(string baseProperty, AlsoNotifyMember notifyProperty)> BaseDependsOn =>
-        this.baseDependsOn ?? Enumerable.Empty<(string, AlsoNotifyMember)>();
+
+    public TypeAnalysis Build()
+    {
+        string? containingNamespace = null;
+        if (this.TypeSymbol.ContainingNamespace is { IsGlobalNamespace: false } @namespace)
+        {
+            containingNamespace = @namespace.ToDisplayString(SymbolDisplayFormats.Namespace);
+        }
+
+        var outerTypes = new List<string>();
+        for (var outerType = this.TypeSymbol.ContainingType; outerType != null; outerType = outerType.ContainingType)
+        {
+            outerTypes.Add(outerType.ToDisplayString(SymbolDisplayFormats.TypeDeclaration));
+        }
+
+        return new()
+        {
+            TypeDeclaration = this.TypeSymbol.ToDisplayString(SymbolDisplayFormats.TypeDeclaration),
+            TypeNameForGeneratedFileName = this.TypeSymbol.ToDisplayString(SymbolDisplayFormats.GeneratedFileName),
+            ContainingNamespace = containingNamespace,
+            OuterTypes = new ReadOnlyEquatableList<string>(outerTypes),
+            INotifyPropertyChanged = this.INotifyPropertyChanged ?? throw new ArgumentNullException(nameof(this.INotifyPropertyChanged)),
+            INotifyPropertyChanging = this.INotifyPropertyChanging ?? throw new ArgumentNullException(nameof(this.INotifyPropertyChanging)),
+            IsChangedPropertyName = this.IsChangedPropertyName,
+            IsChangedSetterIsPrivate = this.IsChangedSetterIsPrivate,
+            Members = new ReadOnlyEquatableList<MemberAnalysis>(this.Members.Select(x => x.Build()).ToList()),
+            NullableContext = this.NullableContext,
+            BaseDependsOn = this.baseDependsOn == null
+                ? ReadOnlyEquatableList<(string, AlsoNotifyMember)>.Empty
+                : new ReadOnlyEquatableList<(string, AlsoNotifyMember)>(this.baseDependsOn.OrderBy(x => x.baseProperty).ThenBy(x => x.notifyProperty.Name).ToList()),
+        };
+    }
+}
+
+public record TypeAnalysis
+{
+    public required string TypeDeclaration { get; init; }
+    public required string TypeNameForGeneratedFileName { get; init; }
+    public required string? ContainingNamespace { get; init; }
+    public required ReadOnlyEquatableList<string> OuterTypes { get; init; }
+
+    public required InterfaceAnalysis INotifyPropertyChanged { get; init; }
+    public required InterfaceAnalysis INotifyPropertyChanging { get; init; }
+
+    public required string? IsChangedPropertyName { get; init; }
+    public required bool IsChangedSetterIsPrivate { get; init; }
+    public required ReadOnlyEquatableList<MemberAnalysis> Members { get; init; }
+    public required NullableContextOptions NullableContext { get; init; }
+
+    public required ReadOnlyEquatableList<(string baseProperty, AlsoNotifyMember notifyProperty)> BaseDependsOn { get; init; }
 }

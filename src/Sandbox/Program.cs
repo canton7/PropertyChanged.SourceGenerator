@@ -1,9 +1,8 @@
 ﻿using PropertyChanged.SourceGenerator;
 using System;
+using System.ComponentModel;
 
 namespace Sandbox;
-
-using System.ComponentModel;
 
 public class Program
 {

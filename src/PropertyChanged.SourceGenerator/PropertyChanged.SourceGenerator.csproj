@@ -6,6 +6,10 @@
     <Nullable>enable</Nullable>
     <IncludeBuildOutput>false</IncludeBuildOutput>
     <SuppressDependenciesWhenPacking>true</SuppressDependenciesWhenPacking>
+    <EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules>
+	  
+	  <DebugType>pdbonly</DebugType>
+<DebugSymbols>true</DebugSymbols>
 
     <VersionPrefix>0.0.0</VersionPrefix>
     <PackageId>PropertyChanged.SourceGenerator</PackageId>
@@ -28,7 +32,7 @@ Supports features such as automatic and manual dependencies between properties, 
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="3.9.0" />
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.3.1" />
   </ItemGroup>
 
   <ItemGroup>

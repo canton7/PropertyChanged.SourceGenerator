@@ -31,7 +31,7 @@ public abstract class TestsBase
         this.verifySettings.UseDirectory("../");
     }
 
-    private Compilation CreateCompilation(string input, NullableContextOptions nullableContextOptions, bool addAttributes = false)
+    private Compilation CreateCompilation(string input, NullableContextOptions nullableContextOptions = NullableContextOptions.Disable, bool addAttributes = false)
     {
         input = @"using PropertyChanged.SourceGenerator;
 " + input;
@@ -51,14 +51,15 @@ public abstract class TestsBase
 
     private (GeneratorDriver driver, Compilation compilation, ImmutableArray<Diagnostic> diagnostics) RunDriver(
         string input,
-        NullableContextOptions nullableContextOptions)
+        NullableContextOptions nullableContextOptions = NullableContextOptions.Disable)
     {
         var inputCompilation = this.CreateCompilation(input, nullableContextOptions);
 
         var generator = new PropertyChangedSourceGenerator();
 
-        GeneratorDriver driver = CSharpGeneratorDriver.Create(new[] { generator }, optionsProvider: new TestOptionsProvider());
+        GeneratorDriver driver = CSharpGeneratorDriver.Create(new[] { generator.AsSourceGenerator() }, driverOptions: new GeneratorDriverOptions(IncrementalGeneratorOutputKind.None, true));
         driver = driver.RunGeneratorsAndUpdateCompilation(inputCompilation, out var outputCompilation, out var diagnostics);
+        var runResult = driver.GetRunResult();
 
         return (driver, outputCompilation, diagnostics);
     }
@@ -70,10 +71,24 @@ public abstract class TestsBase
         Assert.NotNull(type);
 
         var diagnostics = new DiagnosticReporter();
-        var analyser = new Analyser(diagnostics, compilation, new ConfigurationParser(new TestOptionsProvider(), diagnostics));
-        var typeAnalyses = analyser.Analyse(new HashSet<INamedTypeSymbol>(SymbolEqualityComparer.Default) { type! }).ToList();
+        var analyser = new Analyser(diagnostics, compilation, compilation.Options.NullableContextOptions, new ConfigurationParser(new TestOptionsProvider()));
+        
+        var analyserInput = new AnalyserInput(type!);
+        foreach (var member in type!.GetMembers().Where(x => !x.IsImplicitlyDeclared))
+        {
+            var attributes = member.GetAttributes().Where(x => x.ToString()!.StartsWith("PropertyChanged.SourceGenerator")).ToList();
+            if (attributes.Count > 0)
+            {
+                analyserInput.Update(member, attributes.ToImmutableArray());
+            }
+        }
+        var inputs = new Dictionary<INamedTypeSymbol, AnalyserInput>(SymbolEqualityComparer.Default)
+        {
+            {  type!, analyserInput },
+        };
+        var typeAnalyses = analyser.Analyse(inputs, CancellationToken.None).ToList();
 
-        DiagnosticVerifier.VerifyDiagnostics(diagnostics.Diagnostics, Array.Empty<DiagnosticResult>(), 1);
+        DiagnosticVerifier.VerifyDiagnostics(diagnostics.GetDiagnostics(), Array.Empty<DiagnosticResult>(), 1);
 
         Assert.AreEqual(1, typeAnalyses.Count);
         return typeAnalyses[0];
@@ -269,7 +284,7 @@ public class Expectation
     }
 }
 
-public struct FileExpectation
+public readonly struct FileExpectation
 {
     public string Name { get; }
     public string? Source { get; }

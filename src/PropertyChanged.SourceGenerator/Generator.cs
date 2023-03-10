@@ -8,19 +8,18 @@ using System.Linq;
 using System.Text;
 using Microsoft.CodeAnalysis;
 using PropertyChanged.SourceGenerator.Analysis;
+using PropertyChanged.SourceGenerator.EventArgs;
 
 namespace PropertyChanged.SourceGenerator;
 
 public class Generator
 {
-    public const string EventArgsCacheName = "EventArgsCache";
+    private readonly BetterIndentedTextWriter writer = new();
+    private readonly EventArgsCacheLookup eventArgsCacheLookup;
 
-    private readonly IndentedTextWriter writer = new(new StringWriter());
-    private readonly EventArgsCache eventArgsCache;
-
-    public Generator(EventArgsCache eventArgsCache)
+    public Generator(EventArgsCacheLookup eventArgsCacheLookup)
     {
-        this.eventArgsCache = eventArgsCache;
+        this.eventArgsCacheLookup = eventArgsCacheLookup;
      
         this.writer.WriteLine(StringConstants.FileHeader);
     }
@@ -33,9 +32,9 @@ public class Generator
             this.writer.WriteLine(NullableContextToComment(typeAnalysis.NullableContext));
         }
 
-        if (typeAnalysis.TypeSymbol.ContainingNamespace is { IsGlobalNamespace: false } @namespace)
+        if (typeAnalysis.ContainingNamespace != null)
         {
-            this.writer.WriteLine($"namespace {@namespace.ToDisplayString(SymbolDisplayFormats.Namespace)}");
+            this.writer.WriteLine($"namespace {typeAnalysis.ContainingNamespace}");
             this.writer.WriteLine("{");
             this.writer.Indent++;
 
@@ -52,19 +51,14 @@ public class Generator
 
     private void GenerateType(TypeAnalysis typeAnalysis)
     {
-        var outerTypes = new List<INamedTypeSymbol>();
-        for (var outerType = typeAnalysis.TypeSymbol.ContainingType; outerType != null; outerType = outerType.ContainingType)
+        foreach (string outerType in typeAnalysis.OuterTypes.Reverse())
         {
-            outerTypes.Add(outerType);
-        }
-        foreach (var outerType in outerTypes.AsEnumerable().Reverse())
-        {
-            this.writer.WriteLine($"partial {outerType.ToDisplayString(SymbolDisplayFormats.TypeDeclaration)}");
+            this.writer.WriteLine($"partial {outerType}");
             this.writer.WriteLine("{");
             this.writer.Indent++;
         }
 
-        this.writer.Write($"partial {typeAnalysis.TypeSymbol.ToDisplayString(SymbolDisplayFormats.TypeDeclaration)}");
+        this.writer.Write($"partial {typeAnalysis.TypeDeclaration}");
         var interfaces = new List<string>();
         if (typeAnalysis.INotifyPropertyChanged.RequiresInterface)
         {
@@ -108,7 +102,7 @@ public class Generator
         this.writer.Indent--;
         this.writer.WriteLine("}");
 
-        for (int i = 0; i < outerTypes.Count; i++)
+        for (int i = 0; i < typeAnalysis.OuterTypes.Count; i++)
         {
             this.writer.Indent--;
             this.writer.WriteLine("}");
@@ -120,10 +114,9 @@ public class Generator
         InterfaceAnalysis interfaceAnalysis,
         Func<IMember, OnPropertyNameChangedInfo?> onPropertyNameChangedOrChangingGetter)
     {
-        var baseDependsOn = typeAnalysis.BaseDependsOn.ToLookup(x => x.baseProperty);
         if (interfaceAnalysis.RaiseMethodType == RaisePropertyChangedMethodType.None ||
             (interfaceAnalysis.RaiseMethodType == RaisePropertyChangedMethodType.Override &&
-            baseDependsOn.Count == 0 &&
+            typeAnalysis.BaseDependsOn.Count == 0 &&
             interfaceAnalysis.OnAnyPropertyChangedOrChangingInfo == null))
         {
             return;
@@ -183,7 +176,7 @@ public class Generator
                 propertyNameAccessor = propertyNameParamName;
                 break;
             case RaisePropertyChangedOrChangingNameType.PropertyChangedEventArgs:
-                this.writer.Write(interfaceAnalysis.EventArgsSymbol.ToDisplayString(SymbolDisplayFormats.FullyQualifiedTypeName));
+                this.writer.Write(interfaceAnalysis.EventArgsFullyQualifiedTypeName);
                 this.writer.Write($" {eventArgsParamName}");
                 propertyNameOrEventArgsName = eventArgsParamName;
                 propertyNameAccessor = $"{eventArgsParamName}.PropertyName";
@@ -240,12 +233,13 @@ public class Generator
                 break;
         }
 
-        if (baseDependsOn.Count > 0)
+        if (typeAnalysis.BaseDependsOn.Count > 0)
         {
             this.writer.WriteLine($"switch ({propertyNameAccessor})");
             this.writer.WriteLine("{");
             this.writer.Indent++;
 
+            var baseDependsOn = typeAnalysis.BaseDependsOn.ToLookup(x => x.baseProperty);
             foreach (var group in baseDependsOn)
             {
                 this.writer.WriteLine($"case {EscapeString(group.Key)}:");
@@ -286,23 +280,17 @@ public class Generator
 
         var (propertyAccessibility, getterAccessibility, setterAccessibility) = CalculateAccessibilities(member);
 
-        if (member.DocComment != null)
+        foreach (string line in member.DocComment)
         {
-            foreach (string line in member.DocComment)
-            {
-                this.writer.WriteLine($"/// {line}");
-            }
+            this.writer.WriteLine($"/// {line}");
         }
 
-        if (member.AttributesForGeneratedProperty != null)
+        foreach (string attr in member.AttributesForGeneratedProperty)
         {
-            foreach (string attr in member.AttributesForGeneratedProperty)
-            {
-                this.writer.WriteLine(attr);
-            }
+            this.writer.WriteLine(attr);
         }
 
-        this.writer.WriteLine($"{propertyAccessibility}{(member.IsVirtual ? "virtual " : "")}{member.Type.ToDisplayString(SymbolDisplayFormats.FullyQualifiedTypeName)} {member.Name}");
+        this.writer.WriteLine($"{propertyAccessibility}{(member.IsVirtual ? "virtual " : "")}{member.FullyQualifiedTypeName} {member.Name}");
         this.writer.WriteLine("{");
         this.writer.Indent++;
 
@@ -312,7 +300,7 @@ public class Generator
         this.writer.Indent++;
 
         this.writer.WriteLine("if (!global::System.Collections.Generic.EqualityComparer<" +
-            member.Type.ToDisplayString(SymbolDisplayFormats.FullyQualifiedTypeName) +
+            member.FullyQualifiedTypeName +
             $">.Default.Equals(value, {backingMemberReference}))");
         this.writer.WriteLine("{");
         this.writer.Indent++;
@@ -355,11 +343,10 @@ public class Generator
         {
             this.writer.WriteLine(NullableContextToComment(type.NullableContext));
         }
-
     }
 
     private static string GetBackingMemberReference(MemberAnalysis member) =>
-        "this." + member.BackingMember.ToDisplayString(SymbolDisplayFormats.SymbolName);
+        "this." + member.BackingMemberSymbolName;
 
     private void GenerateOldVariablesIfNecessary(TypeAnalysis type, MemberAnalysis member)
     {
@@ -378,7 +365,7 @@ public class Generator
             if (type.INotifyPropertyChanged.RaiseMethodSignature.HasOld || member.OnPropertyNameChanged?.HasOld == true ||
                 type.INotifyPropertyChanging.RaiseMethodSignature.HasOld || member.OnPropertyNameChanging?.HasOld == true)
             {
-                this.writer.WriteLine($"{member.Type!.ToDisplayString(SymbolDisplayFormats.FullyQualifiedTypeName)} old_{member.Name} = {backingMemberReference};");
+                this.writer.WriteLine($"{member.FullyQualifiedTypeName} old_{member.Name} = {backingMemberReference};");
             }
         }
     }
@@ -408,7 +395,7 @@ public class Generator
     private void GenerateNewVariable<T>(T member, string? backingMemberReferenceOverride = null) where T : IMember
     {
         string backingMemberReference = backingMemberReferenceOverride ?? $"this.{member.Name}";
-        this.writer.WriteLine($"{member.Type!.ToDisplayString(SymbolDisplayFormats.FullyQualifiedTypeName)} new_{member.Name} = {backingMemberReference};");
+        this.writer.WriteLine($"{member.FullyQualifiedTypeName} new_{member.Name} = {backingMemberReference};");
     }
 
     private void GenerateRaiseEvent(InterfaceAnalysis interfaceAnalysis, string? propertyName, bool isCallable, bool hasOldVariable)
@@ -423,8 +410,8 @@ public class Generator
         switch (interfaceAnalysis.RaiseMethodSignature.NameType)
         {
             case RaisePropertyChangedOrChangingNameType.PropertyChangedEventArgs:
-                string cacheName = this.eventArgsCache.GetOrAdd(propertyName, interfaceAnalysis.EventArgsSymbol);
-                this.writer.Write($"global::PropertyChanged.SourceGenerator.Internal.{EventArgsCacheName}.{cacheName}");
+                string cacheName = this.eventArgsCacheLookup.Get(propertyName, interfaceAnalysis.EventName, interfaceAnalysis.EventArgsFullyQualifiedTypeName);
+                this.writer.Write($"global::PropertyChanged.SourceGenerator.Internal.{EventArgsCacheGenerator.EventArgsCacheName}.{cacheName}");
                 break;
 
             case RaisePropertyChangedOrChangingNameType.String:
@@ -474,7 +461,7 @@ public class Generator
                 }
                 else
                 {
-                    this.writer.Write($"default({member.Type!.ToDisplayString(SymbolDisplayFormats.FullyQualifiedTypeName)})");
+                    this.writer.Write($"default({member.FullyQualifiedTypeName})");
                 }
             }
             if (onPropertyNameChangedInfo.Value.HasNew)
@@ -487,6 +474,43 @@ public class Generator
             }
             this.writer.WriteLine(");");
         }
+    }
+
+    public static (EventArgsCache cache, EventArgsCacheLookup lookup) CreateEventArgsCacheAndLookup(IEnumerable<TypeAnalysis> typeAnalyses)
+    {
+        // Annoyingly, this has to be perfectly synced with the code above which calls EventArgsCache.Get
+
+        var builder = new EventArgsCacheBuilder();
+
+        foreach (var typeAnalysis in typeAnalyses)
+        {
+            Inspect(typeAnalysis, typeAnalysis.INotifyPropertyChanged);
+            Inspect(typeAnalysis, typeAnalysis.INotifyPropertyChanging);
+        }
+
+        void Inspect(TypeAnalysis typeAnalysis, InterfaceAnalysis interfaceAnalysis)
+        {
+            if (interfaceAnalysis.CanCallRaiseMethod &&
+                interfaceAnalysis.RaiseMethodSignature.NameType == RaisePropertyChangedOrChangingNameType.PropertyChangedEventArgs)
+            {
+                foreach (var member in typeAnalysis.Members)
+                {
+                    builder.Add(member.Name, interfaceAnalysis.EventName, interfaceAnalysis.EventArgsFullyQualifiedTypeName);
+
+                    foreach (var alsoNotify in member.AlsoNotify)
+                    {
+                        builder.Add(alsoNotify.Name, interfaceAnalysis.EventName, interfaceAnalysis.EventArgsFullyQualifiedTypeName);
+                    }
+                }
+
+                foreach (var (_, notifyProperty) in typeAnalysis.BaseDependsOn)
+                {
+                    builder.Add(notifyProperty.Name, interfaceAnalysis.EventName, interfaceAnalysis.EventArgsFullyQualifiedTypeName);
+                }
+            }
+        }
+
+        return builder.ToCacheAndLookup();
     }
 
     private static (string property, string getter, string setter) CalculateAccessibilities(MemberAnalysis member)
@@ -541,36 +565,6 @@ public class Generator
         return str == null
             ? "null"
             : "@\"" + str.Replace("\"", "\"\"") + "\"";
-    }
-
-    public void GenerateNameCache()
-    {
-        this.writer.WriteLine("namespace PropertyChanged.SourceGenerator.Internal");
-        this.writer.WriteLine("{");
-        this.writer.Indent++;
-
-        this.writer.WriteLine($"internal static class {EventArgsCacheName}");
-        this.writer.WriteLine("{");
-        this.writer.Indent++;
-
-        foreach (var (cacheName, eventArgsTypeSymbol, propertyName) in this.eventArgsCache.GetEntries().OrderBy(x => x.cacheName))
-        {
-            string backingFieldName = "_" + cacheName;
-            for (int i = 0; this.eventArgsCache.ContainsCacheName(backingFieldName); i++)
-            {
-                backingFieldName = $"_{cacheName}{i}";
-            }
-            string eventArgsType = eventArgsTypeSymbol.ToDisplayString(SymbolDisplayFormats.FullyQualifiedTypeName);
-            this.writer.WriteLine($"private static {eventArgsType} {backingFieldName};");
-            this.writer.WriteLine($"public static {eventArgsType} {cacheName} => " +
-                $"{backingFieldName} ??= new {eventArgsType}({EscapeString(propertyName)});");
-        }
-
-        this.writer.Indent--;
-        this.writer.WriteLine("}");
-
-        this.writer.Indent--;
-        this.writer.WriteLine("}");
     }
 
     public override string ToString() => this.writer.InnerWriter.ToString();

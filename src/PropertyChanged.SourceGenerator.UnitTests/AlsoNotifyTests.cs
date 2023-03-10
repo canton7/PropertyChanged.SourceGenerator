@@ -162,7 +162,7 @@ public class AlsoNotifyTests : TestsBase
 
         this.AssertThat(input, It
             .HasFile("SomeViewModel", RemoveInpcMembersRewriter.All)
-            .HasFile("EventArgsCache"));
+            .HasFile("PropertyChanged.SourceGenerator.Internal.EventArgsCache"));
     }
 
     [Test]

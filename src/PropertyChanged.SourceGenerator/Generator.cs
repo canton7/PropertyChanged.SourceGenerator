@@ -14,7 +14,7 @@ namespace PropertyChanged.SourceGenerator;
 
 public class Generator
 {
-    private readonly IndentedTextWriter writer = new(new StringWriter());
+    private readonly BetterIndentedTextWriter writer = new();
     private readonly EventArgsCacheLookup eventArgsCacheLookup;
 
     public Generator(EventArgsCacheLookup eventArgsCacheLookup)

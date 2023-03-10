@@ -3,13 +3,14 @@ using System.CodeDom.Compiler;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
+using PropertyChanged.SourceGenerator;
 using PropertyChanged.SourceGenerator.EventArgs;
 
 public class EventArgsCacheGenerator
 {
     public const string EventArgsCacheName = "EventArgsCache";
 
-    private readonly IndentedTextWriter writer = new(new StringWriter());
+    private readonly BetterIndentedTextWriter writer = new();
     private readonly EventArgsCache eventArgsCache;
 
     public EventArgsCacheGenerator(EventArgsCache eventArgsCache)

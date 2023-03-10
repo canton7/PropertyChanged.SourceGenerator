@@ -29,6 +29,7 @@ public abstract class InterfaceAnalyser
     protected readonly Compilation Compilation;
     private readonly Func<TypeAnalysisBuilder, InterfaceAnalysis> interfaceAnalysisGetter;
 
+    private readonly Dictionary<INamedTypeSymbol, IEventSymbol> typeToInterfaceEventCache = new(SymbolEqualityComparer.Default);
     private readonly Dictionary<DiscoveredMethodInfoKey, DiscoveredMethodInfo> discoveredMethodInfoCache = new();
 
     protected InterfaceAnalyser(
@@ -71,9 +72,23 @@ public abstract class InterfaceAnalyser
         //   a. If PropertyChanged is in a base class, we'll need to abort if we can't find one
         //   b. If PropertyChanged is in our class, we'll just define one and call it
 
+        
+        IEventSymbol? eventSymbol = null;
+
+        bool updateTypeToInterfaceEventCache = false;
+        // Keep a cache of base type -> implementation, as many viewmodels will share a common base type and
+        // FindImplementationForInterfaceMember isn't cheap
+        if (typeSymbol.BaseType?.SpecialType != SpecialType.System_Object)
+        {
+            updateTypeToInterfaceEventCache = !this.typeToInterfaceEventCache.TryGetValue(typeSymbol.BaseType!, out eventSymbol);
+        }
+
         // Start by looking for the event by its implementation. This catches explicitly-implemented events as
         // well as being slightly cheaper.
-        var eventSymbol = (IEventSymbol?)typeSymbol.FindImplementationForInterfaceMember(this.interfaceEventSymbol);
+        if (eventSymbol == null)
+        {
+            eventSymbol = (IEventSymbol?)typeSymbol.FindImplementationForInterfaceMember(this.interfaceEventSymbol);
+        }
 
         // Fall back to searching for it by signature, as they might have defined the event but not the interface.
         // Do this for all types in the hierarchy. It's possible for them to define the event but not implement
@@ -85,6 +100,11 @@ public abstract class InterfaceAnalyser
                 .OfType<IEventSymbol>()
                 .FirstOrDefault(x => SymbolEqualityComparer.Default.Equals(x.Type, this.eventHandlerSymbol) &&
                     !x.IsStatic);
+        }
+
+        if (updateTypeToInterfaceEventCache)
+        {
+            this.typeToInterfaceEventCache[typeSymbol.BaseType!] = eventSymbol;
         }
 
         bool isGeneratingAnyParent = baseTypeAnalyses.Any(x => x.CanGenerate);

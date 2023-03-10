@@ -158,8 +158,13 @@ public partial class Analyser
 
         typeAnalysis.NullableContext = this.nullableContextOptions;
 
+        // These are relatively expensive
         typeAnalysis.INotifyPropertyChanged = this.propertyChangedInterfaceAnalyser.CreateInterfaceAnalysis(typeAnalysis.TypeSymbol, baseTypeAnalyses, config);
+        token.ThrowIfCancellationRequested();
+
         typeAnalysis.INotifyPropertyChanging = this.propertyChangingInterfaceAnalyser!.CreateInterfaceAnalysis(typeAnalysis.TypeSymbol, baseTypeAnalyses, config);
+        token.ThrowIfCancellationRequested();
+
         InterfaceAnalyser.PopulateRaiseMethodNameIfEmpty(typeAnalysis.INotifyPropertyChanged, typeAnalysis.INotifyPropertyChanging, config);
         this.ResoveInheritedIsChanged(typeAnalysis, baseTypeAnalyses);
 

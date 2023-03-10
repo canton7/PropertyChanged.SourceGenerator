@@ -14,7 +14,7 @@
     <VersionPrefix>0.0.0</VersionPrefix>
     <PackageId>PropertyChanged.SourceGenerator</PackageId>
     <PackageTags>INPC;INotifyPropertyChanged;INotifyPropertyChanging;SourceGenerator;MVVM;Binding</PackageTags>
-    <Copyright>Copyright © Antony Male 2021</Copyright>
+    <Copyright>Copyright © Antony Male 2021 - 2023</Copyright>
     <PackageIcon>icon.png</PackageIcon>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <PackageProjectUrl>https://github.com/canton7/PropertyChanged.SourceGenerator</PackageProjectUrl>

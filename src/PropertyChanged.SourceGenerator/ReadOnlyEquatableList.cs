@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace PropertyChanged.SourceGenerator;
 
@@ -44,4 +45,7 @@ public readonly struct ReadOnlyEquatableList<T> : IEquatable<ReadOnlyEquatableLi
 
     public IEnumerator<T> GetEnumerator() => this.inner.GetEnumerator();
     IEnumerator IEnumerable.GetEnumerator() => ((IEnumerable)this.inner).GetEnumerator();
+
+    // Avoid a box
+    public IEnumerable<T> Reverse() => this.inner.Reverse();
 }

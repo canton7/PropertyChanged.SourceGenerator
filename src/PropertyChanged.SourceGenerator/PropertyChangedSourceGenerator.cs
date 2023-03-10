@@ -31,27 +31,29 @@ public class PropertyChangedSourceGenerator : IIncrementalGenerator
             return context.SyntaxProvider.ForAttributeWithMetadataName(
                 attribute,
                 (node, token) => node is VariableDeclaratorSyntax
-                { 
+                {
                     Parent: VariableDeclarationSyntax
                     {
                         Parent: FieldDeclarationSyntax
                         {
                             AttributeLists.Count: > 0
-                        } 
-                   }
+                        }
+                    }
                 } || node is PropertyDeclarationSyntax
                 {
                     AttributeLists.Count: > 0,
                 },
                 (ctx, token) => (member: ctx.TargetSymbol, attributes: ctx.Attributes, compilation: ctx.SemanticModel.Compilation))
+            .WithComparer(AlwaysFalseEqualityComparer<(ISymbol member, ImmutableArray<AttributeData> attributes, Compilation compilation)>.Instance)
             .WithTrackingName($"attributeContainingTypeSources_{attribute}");
         }).ToList();
 
         var typesSource = Collect(attributeContainingTypeSources)
+            .WithComparer(AlwaysFalseEqualityComparer<ImmutableArray<(ISymbol member, ImmutableArray<AttributeData> attributes, Compilation compilation)>>.Instance)
             .WithTrackingName("typesSource");
 
-        var nullableContextAndConfigurationParser = context.CompilationProvider.Select(static (compilation, _) => compilation.Options.NullableContextOptions)
-            .Combine(context.AnalyzerConfigOptionsProvider.Select(static (options, _) => new ConfigurationParser(options)))
+        var nullableContextAndConfigurationParser = context.CompilationProvider.Select((compilation, _) => compilation.Options.NullableContextOptions)
+            .Combine(context.AnalyzerConfigOptionsProvider.Select((options, _) => new ConfigurationParser(options)))
             .WithTrackingName("nullableContextAndConfigurationParser");
 
         var modelsAndDiagnosticsSource = nullableContextAndConfigurationParser.Combine(typesSource).Select((input, token) =>

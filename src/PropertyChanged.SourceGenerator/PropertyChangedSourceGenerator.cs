@@ -21,7 +21,7 @@ public class PropertyChangedSourceGenerator : IIncrementalGenerator
 
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
-        context.RegisterPostInitializationOutput(ctx => ctx.AddSource("Attributes", StringConstants.Attributes));
+        context.RegisterPostInitializationOutput(ctx => ctx.AddSource("PropertyChanged.SourceGenerator.Attributes", StringConstants.Attributes));
 
         // Collect all types which contain a field/property decorated with NotifyAttribute.
         // These will never be cached! That's OK: we'll generate a model in the next step which can be.

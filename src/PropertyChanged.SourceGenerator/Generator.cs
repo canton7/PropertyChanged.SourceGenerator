@@ -7,6 +7,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.Text;
 using PropertyChanged.SourceGenerator.Analysis;
 using PropertyChanged.SourceGenerator.EventArgs;
 
@@ -567,5 +568,5 @@ public class Generator
             : "@\"" + str.Replace("\"", "\"\"") + "\"";
     }
 
-    public override string ToString() => this.writer.InnerWriter.ToString();
+    public SourceText ToSourceText() => this.writer.ToSourceText();
 }

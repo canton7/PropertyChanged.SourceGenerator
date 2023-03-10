@@ -35,7 +35,7 @@ public class DiagnosticResult
     }
 }
 
-public struct DiagnosticResultLocation
+public readonly struct DiagnosticResultLocation
 {
     public int Line { get; }
     public int Column { get; }

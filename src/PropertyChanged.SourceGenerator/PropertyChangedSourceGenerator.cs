@@ -1,84 +1,144 @@
 ﻿using Microsoft.CodeAnalysis;
-using Microsoft.CodeAnalysis.Text;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 using PropertyChanged.SourceGenerator.Analysis;
-using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Linq;
-using System.Text;
 
 namespace PropertyChanged.SourceGenerator;
 
-[Generator]
-public class PropertyChangedSourceGenerator : ISourceGenerator
+[Generator(LanguageNames.CSharp)]
+public class PropertyChangedSourceGenerator : IIncrementalGenerator
 {
-    public void Initialize(GeneratorInitializationContext context)
+    private static readonly string[] attributeNames = new[]
     {
-        context.RegisterForSyntaxNotifications(() => new SyntaxContextReceiver());
+        "PropertyChanged.SourceGenerator.NotifyAttribute",
+        "PropertyChanged.SourceGenerator.AlsoNotifyAttribute",
+        "PropertyChanged.SourceGenerator.DependsOnAttribute",
+        "PropertyChanged.SourceGenerator.IsChangedAttribute",
+        "PropertyChanged.SourceGenerator.PropertyAttributeAttribute",
+    };
 
-        context.RegisterForPostInitialization(ctx => ctx.AddSource("Attributes", StringConstants.Attributes));
-    }
-
-    public void Execute(GeneratorExecutionContext context)
+    public void Initialize(IncrementalGeneratorInitializationContext context)
     {
-        if (context.SyntaxContextReceiver is not SyntaxContextReceiver receiver)
-            return;
+        context.RegisterPostInitializationOutput(ctx => ctx.AddSource("Attributes", StringConstants.Attributes));
 
-        var diagnostics = new DiagnosticReporter();
-        var configurationParser = new ConfigurationParser(context.AnalyzerConfigOptions, diagnostics);
-        var fileNames = new HashSet<string>();
-
-        try
+        // Collect all types which contain a field/property decorated with NotifyAttribute.
+        // These will never be cached! That's OK: we'll generate a model in the next step which can be.
+        // There will probably be duplicate symbols in here.
+        var attributeContainingTypeSources = attributeNames.Select(attribute =>
         {
-            var analyser = new Analyser(diagnostics, context.Compilation, configurationParser);
-
-            // If we've got diagnostics here, bail
-            if (diagnostics.HasDiagnostics)
-                return;
-
-            var analyses = analyser.Analyse(receiver.Types);
-
-            var eventArgsCache = new EventArgsCache();
-            foreach (var analysis in analyses)
-            {
-                if (analysis.CanGenerate)
+            return context.SyntaxProvider.ForAttributeWithMetadataName(
+                attribute,
+                (node, token) => node is VariableDeclaratorSyntax
                 {
-                    var generator = new Generator(eventArgsCache);
-                    generator.Generate(analysis!);
-                    AddSource(analysis!.TypeSymbol.Name, generator.ToString());
-                }
+                    Parent: VariableDeclarationSyntax
+                    {
+                        Parent: FieldDeclarationSyntax
+                        {
+                            AttributeLists.Count: > 0
+                        }
+                    }
+                } || node is PropertyDeclarationSyntax
+                {
+                    AttributeLists.Count: > 0,
+                },
+                (ctx, token) => (member: ctx.TargetSymbol, attributes: ctx.Attributes, compilation: ctx.SemanticModel.Compilation))
+            .WithComparer(AlwaysFalseEqualityComparer<(ISymbol member, ImmutableArray<AttributeData> attributes, Compilation compilation)>.Instance)
+            .WithTrackingName($"attributeContainingTypeSources_{attribute}");
+        }).ToList();
+
+        var typesSource = Collect(attributeContainingTypeSources)
+            .WithComparer(AlwaysFalseEqualityComparer<ImmutableArray<(ISymbol member, ImmutableArray<AttributeData> attributes, Compilation compilation)>>.Instance)
+            .WithTrackingName("typesSource");
+
+        var nullableContextAndConfigurationParser = context.CompilationProvider.Select((compilation, _) => compilation.Options.NullableContextOptions)
+            .Combine(context.AnalyzerConfigOptionsProvider.Select((options, _) => new ConfigurationParser(options)))
+            .WithTrackingName("nullableContextAndConfigurationParser");
+
+        var modelsAndDiagnosticsSource = nullableContextAndConfigurationParser.Combine(typesSource).Select((input, token) =>
+        {
+            var (nullableContextAndConfigurationParser, inputTypesAndCompilation) = input;
+            var (nullableContext, configurationParser) = nullableContextAndConfigurationParser;
+            if (inputTypesAndCompilation.Length == 0)
+            {
+                return (analyses: EquatableArray<TypeAnalysis>.Empty, diagnostics: EquatableArray<Diagnostic>.Empty);
             }
 
+            var analyserInputs = new Dictionary<INamedTypeSymbol, AnalyserInput>(SymbolEqualityComparer.Default);
+            foreach (var (member, attributes, _) in inputTypesAndCompilation)
+            {
+                if (!analyserInputs.TryGetValue(member.ContainingType, out var existingInputs))
+                {
+                    existingInputs = new(member.ContainingType);
+                    analyserInputs.Add(member.ContainingType, existingInputs);
+                }
+                existingInputs.Update(member, attributes);
+            }
+
+            var diagnostics = new DiagnosticReporter();
+
+            var compilation = inputTypesAndCompilation[0].compilation;
+            var analyzer = new Analyser(diagnostics, compilation, nullableContext, configurationParser);
+
+            var analyses = analyzer.Analyse(analyserInputs, token);
+            // These are going to be inputs to SelectMany, which will convert them to ImmutableArrays anyway
+            return (analyses: analyses.ToImmutableArray().AsEquatableArray(), diagnostics: diagnostics.GetDiagnostics());
+        }).WithTrackingName("modelsAndDiagnosticsSource");
+
+        var diagnosticsSource = modelsAndDiagnosticsSource.SelectMany((pair, token) => pair.diagnostics.AsImmutableArray())
+            .WithTrackingName("diagnosticsSource");
+
+        context.RegisterSourceOutput(diagnosticsSource, (ctx, diagnostic) =>
+        {
+            ctx.ReportDiagnostic(diagnostic);
+        });
+
+        var analysesSource = modelsAndDiagnosticsSource.Select((pair, token) => pair.analyses)
+            .WithTrackingName("analysesSource");
+
+        var eventArgsCacheAndLookupSource = analysesSource.Select((typeAnalyses, token) =>
+        {
+            return Generator.CreateEventArgsCacheAndLookup(typeAnalyses);
+        }).WithTrackingName("eventArgsCacheAndLookupSource");
+
+        var eventArgsCacheSource = eventArgsCacheAndLookupSource.Select((x, token) => x.cache)
+            .WithTrackingName("eventArgsCacheSource");
+
+        var eventArgsCacheLookupSource = eventArgsCacheAndLookupSource.Select((x, token) => x.lookup)
+            .WithTrackingName("eventArgsCacheLookupSource");
+
+        var analysisAndEventArgsCacheLookupSource = analysesSource
+            .SelectMany((analysis, token) => analysis.AsImmutableArray())
+            .Combine(eventArgsCacheLookupSource)
+            .WithTrackingName("analysisAndEventArgsCacheLookupSource");
+
+        context.RegisterSourceOutput(analysisAndEventArgsCacheLookupSource, (ctx, pair) =>
+        {
+            var (typeAnalysis, eventArgsCacheLookup) = pair;
+            var generator = new Generator(eventArgsCacheLookup);
+            generator.Generate(typeAnalysis);
+            ctx.AddSource(typeAnalysis.TypeNameForGeneratedFileName + ".g", generator.ToString());
+        });
+
+        context.RegisterSourceOutput(eventArgsCacheSource, (ctx, eventArgsCache) =>
+        {
             if (!eventArgsCache.IsEmpty)
             {
-                var nameCacheGenerator = new Generator(eventArgsCache);
-                nameCacheGenerator.GenerateNameCache();
-                AddSource(Generator.EventArgsCacheName, nameCacheGenerator.ToString());
+                var generator = new EventArgsCacheGenerator(eventArgsCache);
+                generator.GenerateNameCache();
+                ctx.AddSource("PropertyChanged.SourceGenerator.Internal.EventArgsCache.g", generator.ToString());
             }
-        }
-        finally
-        {
-            foreach (var diagnostic in diagnostics.Diagnostics)
-            {
-                context.ReportDiagnostic(diagnostic);
-            }
-        }
+        });
+    }
 
-        void AddSource(string hintName, string sourceText)
+    private static IncrementalValueProvider<ImmutableArray<T>> Collect<T>(List<IncrementalValuesProvider<T>> sources)
+    {
+        var aggregate = sources[0].Collect();
+        for (int i = 1; i < sources.Count; i++)
         {
-            string fileName = hintName;
-            if (!fileNames.Add(fileName))
-            {
-                for (int i = 2; ; i++)
-                {
-                    fileName = hintName + i;
-                    if (fileNames.Add(fileName))
-                    {
-                        break;
-                    }
-                }
-            }
-
-            context.AddSource(fileName + ".g", SourceText.From(sourceText, Encoding.UTF8));
+            aggregate = aggregate.Combine(sources[i].Collect()).Select((pair, token) => pair.Left.AddRange(pair.Right));
         }
+        return aggregate;
     }
 }

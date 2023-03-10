@@ -5,3 +5,4 @@ bin
 obj
 NuGet
 *.received.cs
+BenchmarkDotNet.Artifacts

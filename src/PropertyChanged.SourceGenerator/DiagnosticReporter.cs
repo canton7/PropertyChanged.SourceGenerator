@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Linq;
 using Microsoft.CodeAnalysis;
 using PropertyChanged.SourceGenerator.Analysis;
@@ -8,7 +9,7 @@ namespace PropertyChanged.SourceGenerator;
 
 public class DiagnosticReporter
 {
-    public List<Diagnostic> Diagnostics { get; } = new();
+    private readonly ImmutableArray<Diagnostic>.Builder diagnostics = ImmutableArray.CreateBuilder<Diagnostic>();
 
     public bool HasDiagnostics { get; private set; }
     public bool HasErrors { get; private set; }
@@ -55,7 +56,7 @@ public class DiagnosticReporter
         "INPC005",
         "Incompatible property accessibilities",
         "C# propertes may not have an internal getter and protected setter, or protected setter and internal getter. Defaulting both to protected internal");
-    public void ReportIncomapatiblePropertyAccessibilities(ISymbol member, AttributeData notifyAttribute)
+    public void ReportIncompatiblePropertyAccessibilities(ISymbol member, AttributeData notifyAttribute)
     {
         this.AddDiagnostic(incompatiblePropertyAccessibilities, AttributeLocations(notifyAttribute, member));
     }
@@ -376,8 +377,10 @@ public class DiagnosticReporter
         {
             this.HasErrors = true;
         }
-        this.Diagnostics.Add(diagnostic);
+        this.diagnostics.Add(diagnostic);
     }
+
+    public EquatableArray<Diagnostic> GetDiagnostics() => this.diagnostics.ToImmutable().AsEquatableArray();
 
     private static IEnumerable<Location> AttributeLocations(AttributeData? attributeData, ISymbol fallback)
     {

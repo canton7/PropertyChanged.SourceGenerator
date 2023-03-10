@@ -9,12 +9,12 @@ namespace PropertyChanged.SourceGenerator.Analysis;
 
 public partial class Analyser
 {
-    private void ResolveAlsoNotify(TypeAnalysis typeAnalysis, List<TypeAnalysis> baseTypeAnalyses)
+    private void ResolveAlsoNotify(TypeAnalysisBuilder typeAnalysis, List<TypeAnalysisBuilder> baseTypeAnalyses)
     {
         // We've already warned if there are AlsoNotify attributes on members that we haven't analysed
         foreach (var member in typeAnalysis.Members)
         {
-            var alsoNotifyAttributes = member.BackingMember.GetAttributes().Where(x => SymbolEqualityComparer.Default.Equals(x.AttributeClass, this.alsoNotifyAttributeSymbol));
+            var alsoNotifyAttributes = member.Attributes.Where(x => x.AttributeClass?.Name == "AlsoNotifyAttribute");
             foreach (var attribute in alsoNotifyAttributes)
             {
                 var alsoNotifyValues = ExtractAttributeStringParams(attribute);

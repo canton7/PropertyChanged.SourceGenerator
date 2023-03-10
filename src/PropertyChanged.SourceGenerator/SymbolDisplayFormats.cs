@@ -34,6 +34,11 @@ public static class SymbolDisplayFormats
     /// </summary>
     public static SymbolDisplayFormat EventDefinition { get; }
 
+    /// <summary>
+    /// A string suitable for using as part of a generated file name
+    /// </summary>
+    public static SymbolDisplayFormat GeneratedFileName { get; }
+
     static SymbolDisplayFormats()
     {
         SymbolName = new SymbolDisplayFormat(
@@ -62,5 +67,8 @@ public static class SymbolDisplayFormats
             memberOptions: SymbolDisplayMemberOptions.IncludeContainingType
                 | SymbolDisplayMemberOptions.IncludeExplicitInterface,
             miscellaneousOptions: SymbolDisplayMiscellaneousOptions.EscapeKeywordIdentifiers);
+
+        GeneratedFileName = new SymbolDisplayFormat(
+            typeQualificationStyle: SymbolDisplayTypeQualificationStyle.NameAndContainingTypesAndNamespaces);
     }
 }

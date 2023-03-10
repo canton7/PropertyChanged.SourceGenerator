@@ -14,13 +14,15 @@ public partial class Analyser
 {
     private static readonly ImmutableHashSet<IPropertySymbol> emptyPropertyHashSet = ImmutableHashSet<IPropertySymbol>.Empty.WithComparer(SymbolEqualityComparer.Default);
 
-    private void ResolveDependsOn(TypeAnalysis typeAnalysis, Configuration config)
+    private void ResolveDependsOn(TypeAnalysisBuilder typeAnalysis, IReadOnlyDictionary<ISymbol, List<AttributeData>> members, Configuration config)
     {
         var lookups = new TypeAnalysisLookups(typeAnalysis);
         foreach (var member in typeAnalysis.TypeSymbol.GetMembers().Where(x => !x.IsImplicitlyDeclared && x is IFieldSymbol or IPropertySymbol))
         {
-            var dependsOnAttributes = member.GetAttributes()
-                .Where(x => SymbolEqualityComparer.Default.Equals(x.AttributeClass, this.dependsOnAttributeSymbol))
+            // Does it have a DependsOn attribute?
+            IEnumerable<AttributeData> attributes = members.TryGetValue(member, out var attributesOut) ? attributesOut : Array.Empty<AttributeData>();
+            var dependsOnAttributes = attributes
+                .Where(x => x.AttributeClass?.Name == "DependsOnAttribute")
                 .ToList();
             if (dependsOnAttributes.Count > 0)
             {
@@ -33,7 +35,7 @@ public partial class Analyser
         }
     }
 
-    private void ResolveManualDependsOn(TypeAnalysis typeAnalysis, TypeAnalysisLookups lookups, ISymbol member, List<AttributeData> dependsOnAttributes)
+    private void ResolveManualDependsOn(TypeAnalysisBuilder typeAnalysis, TypeAnalysisLookups lookups, ISymbol member, List<AttributeData> dependsOnAttributes)
     {
         foreach (var attribute in dependsOnAttributes)
         {
@@ -70,12 +72,12 @@ public partial class Analyser
                     else
                     {
                         // We'll assume it'll pass through RaisePropertyChanged
-                        if (typeAnalysis.INotifyPropertyChanged.CanCallRaiseMethod &&
+                        if (typeAnalysis.INotifyPropertyChanged!.CanCallRaiseMethod &&
                             typeAnalysis.INotifyPropertyChanged.RaiseMethodType == RaisePropertyChangedMethodType.None)
                         {
                             this.diagnostics.ReportDependsOnSpecifiedButRaisePropertyChangedMethodCannotBeOverridden(attribute, member, dependsOn!, typeAnalysis.INotifyPropertyChanged.RaiseMethodName!);
                         }
-                        if (typeAnalysis.INotifyPropertyChanging.CanCallRaiseMethod &&
+                        if (typeAnalysis.INotifyPropertyChanging!.CanCallRaiseMethod &&
                             typeAnalysis.INotifyPropertyChanging.RaiseMethodType == RaisePropertyChangedMethodType.None)
                         {
                             this.diagnostics.ReportDependsOnSpecifiedButRaisePropertyChangingMethodCannotBeOverridden(attribute, member, dependsOn!, typeAnalysis.INotifyPropertyChanged.RaiseMethodName!);
@@ -90,7 +92,7 @@ public partial class Analyser
     /// <param name="notifyProperty">The property to raise an event for</param>
     /// <param name="analyseProperty">The property whose body should be analysed</param>
     private void ResolveAutoDependsOn(
-        TypeAnalysis typeAnalysis,
+        TypeAnalysisBuilder typeAnalysis,
         IPropertySymbol notifyProperty,
         IPropertySymbol analyseProperty,
         TypeAnalysisLookups lookups,

@@ -10,7 +10,7 @@ using PropertyChanged.SourceGenerator;
 using PropertyChanged.SourceGenerator.UnitTests.Framework;
 
 [EtwProfiler]
-public class Benckmarks
+public class Benchmarks
 {
     private (GeneratorDriver driver, Compilation compilation) selfGeneratedCompilation = default;
     private (GeneratorDriver driver, Compilation compilation) baseClassCompilation = default;
@@ -29,14 +29,14 @@ public class Benckmarks
 
             // Run once first with an empty syntax tree, so that FAWMN gets a chance to set itself up, without the cost of that being counted
             var inputCompilation = CSharpCompilation.Create("TestCompilation",
-                new[] { CSharpSyntaxTree.ParseText("") },
+                new[] { CSharpSyntaxTree.ParseText(input) },
                 ReferenceAssemblies.Net50,
                 new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary,
                     nullableContextOptions: NullableContextOptions.Disable));
 
             driver = driver.RunGenerators(inputCompilation);
 
-            return (driver, inputCompilation.AddSyntaxTrees(CSharpSyntaxTree.ParseText(input)));
+            return (driver, inputCompilation.AddSyntaxTrees(CSharpSyntaxTree.ParseText("")));
         }
     }
 
@@ -130,6 +130,6 @@ public class Program
 {
     public static void Main()
     {
-        BenchmarkRunner.Run<Benckmarks>();
+        BenchmarkRunner.Run<Benchmarks>();
     }
 }

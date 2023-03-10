@@ -190,6 +190,7 @@ public class AlsoNotifyTests : TestsBase
             using System.Collections.Generic;
             public partial class SomeViewModel
             {
+                public event PropertyChangedEventHandler PropertyChanged;
                 [Notify, AlsoNotify("Bar")]
                 private string _foo;
 
@@ -206,8 +207,10 @@ public class AlsoNotifyTests : TestsBase
     public void PassesNullForOldAndNewValueIfPropertyDoesNotExist()
     {
         string input = """
+            using System.ComponentModel;
             public partial class SomeViewModel
             {
+                public event PropertyChangedEventHandler PropertyChanged;
                 [Notify, AlsoNotify("Item[]", "NonExistent", "")]
                 private string _foo;
 
@@ -219,11 +222,11 @@ public class AlsoNotifyTests : TestsBase
             .HasDiagnostics(
                 // (3,14): Warning INPC009: Unable to find a property called 'Item[]' on this type or its base types. This event will still be raised
                 // AlsoNotify("Item[]", "NonExistent", "")
-                Diagnostic("INPC009", @"AlsoNotify(""Item[]"", ""NonExistent"", """")").WithLocation(3, 14),
+                Diagnostic("INPC009", @"AlsoNotify(""Item[]"", ""NonExistent"", """")").WithLocation(5, 14),
 
                 // (3,14): Warning INPC009: Unable to find a property called 'NonExistent' on this type or its base types. This event will still be raised
                 // AlsoNotify("Item[]", "NonExistent", "")
-                Diagnostic("INPC009", @"AlsoNotify(""Item[]"", ""NonExistent"", """")").WithLocation(3, 14)
+                Diagnostic("INPC009", @"AlsoNotify(""Item[]"", ""NonExistent"", """")").WithLocation(5, 14)
                 ));
     }
 

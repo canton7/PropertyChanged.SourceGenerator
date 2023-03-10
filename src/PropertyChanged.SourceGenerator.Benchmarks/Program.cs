@@ -1,4 +1,5 @@
 ﻿
+using Basic.Reference.Assemblies;
 using BenchmarkDotNet.Attributes;
 using BenchmarkDotNet.Configs;
 using BenchmarkDotNet.Diagnostics.Windows.Configs;
@@ -9,30 +10,49 @@ using PropertyChanged.SourceGenerator;
 using PropertyChanged.SourceGenerator.UnitTests.Framework;
 
 [EtwProfiler]
-public class Benckmarks : TestsBase
+public class Benckmarks
 {
-    private CSharpGeneratorDriver driver = null!;
-    private Compilation selfGeneratedCompilation = null!;
-    private Compilation baseClassCompilation = null!;
+    private (GeneratorDriver driver, Compilation compilation) selfGeneratedCompilation = default;
+    private (GeneratorDriver driver, Compilation compilation) baseClassCompilation = default;
 
     [GlobalSetup]
     public void SetUp()
     {
-        this.selfGeneratedCompilation = this.CreateCompilation(SelfGeneratedInput);
-        this.baseClassCompilation = this.CreateCompilation(BaseClassInput);
-
         var generator = new PropertyChangedSourceGenerator();
-        this.driver = CSharpGeneratorDriver.Create(new[] { generator.AsSourceGenerator() }, driverOptions: new GeneratorDriverOptions(IncrementalGeneratorOutputKind.None, true));
+
+        this.selfGeneratedCompilation = Create(SelfGeneratedInput);
+        this.baseClassCompilation = Create(BaseClassInput);
+
+        (GeneratorDriver driver, Compilation compilation) Create(string input)
+        {
+            GeneratorDriver driver = CSharpGeneratorDriver.Create(new[] { generator.AsSourceGenerator() }, driverOptions: new GeneratorDriverOptions(IncrementalGeneratorOutputKind.None, true));
+
+            // Run once first with an empty syntax tree, so that FAWMN gets a chance to set itself up, without the cost of that being counted
+            var inputCompilation = CSharpCompilation.Create("TestCompilation",
+                new[] { CSharpSyntaxTree.ParseText("") },
+                ReferenceAssemblies.Net50,
+                new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary,
+                    nullableContextOptions: NullableContextOptions.Disable));
+
+            driver = driver.RunGenerators(inputCompilation);
+
+            return (driver, inputCompilation.AddSyntaxTrees(CSharpSyntaxTree.ParseText(input)));
+        }
     }
 
+    private void Run((GeneratorDriver driver, Compilation compilation) pair)
+    {
+        pair.driver.RunGenerators(pair.compilation);
+    }
 
     [Benchmark]
-    public void SelfGenerated() => this.driver.RunGenerators(this.selfGeneratedCompilation);
+    public void SelfGenerated() => this.Run(this.selfGeneratedCompilation);
 
     [Benchmark]
-    public void BaseClass() => this.driver.RunGenerators(this.baseClassCompilation);
+    public void BaseClass() => this.Run(this.baseClassCompilation);
 
-    private const string SelfGeneratedInput = """
+    public const string SelfGeneratedInput = """
+        using PropertyChanged.SourceGenerator;
         public partial class A1
         {
             [Notify] private string _fooA;
@@ -66,6 +86,8 @@ public class Benckmarks : TestsBase
         """;
 
     private const string BaseClassInput = """
+        using PropertyChanged.SourceGenerator;
+        using System.ComponentModel;
         public class PropertyChangedBase : INotifyPropertyChanged
         {
             public event PropertyChangedEventHandler PropertyChanged;

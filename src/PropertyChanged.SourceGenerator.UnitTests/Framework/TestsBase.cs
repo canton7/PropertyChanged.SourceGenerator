@@ -31,7 +31,7 @@ public abstract class TestsBase
         this.verifySettings.UseDirectory("../");
     }
 
-    protected Compilation CreateCompilation(string input, NullableContextOptions nullableContextOptions = NullableContextOptions.Disable, bool addAttributes = false)
+    private Compilation CreateCompilation(string input, NullableContextOptions nullableContextOptions = NullableContextOptions.Disable, bool addAttributes = false)
     {
         input = @"using PropertyChanged.SourceGenerator;
 " + input;
@@ -49,7 +49,7 @@ public abstract class TestsBase
         return inputCompilation;
     }
 
-    protected (GeneratorDriver driver, Compilation compilation, ImmutableArray<Diagnostic> diagnostics) RunDriver(
+    private (GeneratorDriver driver, Compilation compilation, ImmutableArray<Diagnostic> diagnostics) RunDriver(
         string input,
         NullableContextOptions nullableContextOptions = NullableContextOptions.Disable)
     {

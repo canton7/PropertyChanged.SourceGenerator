@@ -225,7 +225,7 @@ public abstract class InterfaceAnalyser
         };
     }
 
-    public static void PopulateRaiseMethodNameIfEmpty(
+    public static (InterfaceAnalysis propertyChangedAnalysis, InterfaceAnalysis propertyChangingAnalysis) PopulateRaiseMethodNameIfEmpty(
         InterfaceAnalysis propertyChangedAnalysis,
         InterfaceAnalysis propertyChangingAnalysis,
         Configuration config)
@@ -233,13 +233,15 @@ public abstract class InterfaceAnalyser
         if (propertyChangedAnalysis.CanCallRaiseMethod && propertyChangedAnalysis.RaiseMethodName == null)
         {
             // Do we have a name from PropertyChanging that we can copy?
-            propertyChangedAnalysis.RaiseMethodName = GetMatchingName(propertyChangingAnalysis, config.RaisePropertyChangingMethodNames, config.RaisePropertyChangedMethodNames);
+            propertyChangedAnalysis = propertyChangedAnalysis with { RaiseMethodName = GetMatchingName(propertyChangingAnalysis, config.RaisePropertyChangingMethodNames, config.RaisePropertyChangedMethodNames) };
         }
 
         if (propertyChangingAnalysis.CanCallRaiseMethod && propertyChangingAnalysis.RaiseMethodName == null)
         {
-            propertyChangingAnalysis.RaiseMethodName = GetMatchingName(propertyChangedAnalysis, config.RaisePropertyChangedMethodNames, config.RaisePropertyChangingMethodNames);
+            propertyChangingAnalysis = propertyChangingAnalysis with { RaiseMethodName = GetMatchingName(propertyChangedAnalysis, config.RaisePropertyChangedMethodNames, config.RaisePropertyChangingMethodNames) };
         }
+
+        return (propertyChangedAnalysis, propertyChangingAnalysis);
 
         string GetMatchingName(InterfaceAnalysis theirAnalysis, ImmutableArray<string> theirNames, ImmutableArray<string> ourNames)
         {

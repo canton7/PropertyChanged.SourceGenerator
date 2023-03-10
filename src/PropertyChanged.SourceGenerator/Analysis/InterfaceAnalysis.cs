@@ -52,7 +52,7 @@ public record InterfaceAnalysis
     /// The name of the method to raise this event
     /// </summary>
     // TODO: Make this immutable
-    public required string? RaiseMethodName { get; set; }
+    public required string? RaiseMethodName { get; init; }
 
     /// <summary>
     /// The signature of the raise method

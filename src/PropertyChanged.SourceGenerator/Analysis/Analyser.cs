@@ -165,7 +165,7 @@ public partial class Analyser
         typeAnalysis.INotifyPropertyChanging = this.propertyChangingInterfaceAnalyser!.CreateInterfaceAnalysis(typeAnalysis.TypeSymbol, baseTypeAnalyses, config);
         token.ThrowIfCancellationRequested();
 
-        InterfaceAnalyser.PopulateRaiseMethodNameIfEmpty(typeAnalysis.INotifyPropertyChanged, typeAnalysis.INotifyPropertyChanging, config);
+        (typeAnalysis.INotifyPropertyChanged, typeAnalysis.INotifyPropertyChanging) = InterfaceAnalyser.PopulateRaiseMethodNameIfEmpty(typeAnalysis.INotifyPropertyChanged, typeAnalysis.INotifyPropertyChanging, config);
         this.ResoveInheritedIsChanged(typeAnalysis, baseTypeAnalyses);
 
         foreach (var kvp in members)

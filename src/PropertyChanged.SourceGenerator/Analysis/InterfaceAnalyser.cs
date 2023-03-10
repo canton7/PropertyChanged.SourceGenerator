@@ -109,7 +109,8 @@ public abstract class InterfaceAnalyser
 
         bool isGeneratingAnyParent = baseTypeAnalyses.Any(x => x.CanGenerate);
 
-        var discoveredMethodInfo = this.DiscoverMethods(typeSymbol, config);
+        // If they haven't defined the event, they can't have a method to raise it, so we can skip this
+        var discoveredMethodInfo = eventSymbol != null ? this.DiscoverMethods(typeSymbol, config) : DiscoveredMethodInfo.None;
 
         // Get this populated now -- we'll need to adjust our behaviour based on what we find
         var onAnyPropertyChangedOrChangingInfo = this.FindOnAnyPropertyChangedOrChangingMethod(typeSymbol, out var onAnyPropertyChangedMethod);
@@ -447,7 +448,10 @@ public abstract class InterfaceAnalyser
         }
     }
 
-    private readonly record struct DiscoveredMethodInfo(IMethodSymbol? Method, RaisePropertyChangedOrChangingMethodSignature? Signature, ImmutableArray<string> MethodNamesFoundButDidntKnowHowToCall);
+    private readonly record struct DiscoveredMethodInfo(IMethodSymbol? Method, RaisePropertyChangedOrChangingMethodSignature? Signature, ImmutableArray<string> MethodNamesFoundButDidntKnowHowToCall)
+    {
+        public static DiscoveredMethodInfo None { get; } = new(null, null, ImmutableArray<string>.Empty);
+    }
 
     #endregion
 

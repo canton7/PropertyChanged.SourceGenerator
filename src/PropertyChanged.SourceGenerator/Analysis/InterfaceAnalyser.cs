@@ -72,7 +72,7 @@ public abstract class InterfaceAnalyser
         //   a. If PropertyChanged is in a base class, we'll need to abort if we can't find one
         //   b. If PropertyChanged is in our class, we'll just define one and call it
 
-        
+
         IEventSymbol? eventSymbol = null;
 
         bool updateTypeToInterfaceEventCache = false;
@@ -291,7 +291,7 @@ public abstract class InterfaceAnalyser
 
         // The most common case is that the type inherits from one that we already know about and which has the same config as us, and doesn't
         // add any new members that we care about, so optimise for this case.
-        if (typeSymbol.BaseType != null && 
+        if (typeSymbol.BaseType != null &&
             this.discoveredMethodInfoCache.TryGetValue(new DiscoveredMethodInfoKey(typeSymbol.BaseType, methodNamesEquatableArray), out var discoveredCachedMethodInfo) &&
             !typeSymbol.GetMembers().Any(x => x is IMethodSymbol { IsStatic: false } && methodNamesLookup.Contains(x.Name)))
         {
@@ -350,6 +350,8 @@ public abstract class InterfaceAnalyser
         {
             foreach (string methodName in methodNames)
             {
+                bool foundMethodWithThisName = false;
+
                 if (methodName == discoveredBaseMethodInfo?.Method?.Name && RaisePropertyChangedOrChangingMethodSignatureBetternessComparer.Instance.Compare(discoveredBaseMethodInfo?.Signature, discoveredMethodInfo?.Signature) > 0)
                 {
                     discoveredMethodInfo = discoveredBaseMethodInfo;
@@ -366,6 +368,7 @@ public abstract class InterfaceAnalyser
                             if (RaisePropertyChangedOrChangingMethodSignatureBetternessComparer.Instance.Compare(signature, discoveredMethodInfo?.Signature) > 0)
                             {
                                 discoveredMethodInfo = new(discoveredMethod, signature, methodNamesFoundButDidntKnowHowToCall);
+                                foundMethodWithThisName = true;
                             }
                         }
                         else
@@ -373,12 +376,14 @@ public abstract class InterfaceAnalyser
                             if (discoveredMethod.ContainingType.AllInterfaces.Contains(this.interfaceSymbol, SymbolEqualityComparer.Default))
                             {
                                 methodNamesFoundButDidntKnowHowToCall = methodNamesFoundButDidntKnowHowToCall.Add(methodName);
-                                discoveredMethodInfo = new(null, null, methodNamesFoundButDidntKnowHowToCall);
+                                // Don't set discoveredMethodInfo here, to avoid interfering with identifying valid methodInfos above.
+                                // (We'll set it below if no valid methods are found).
+                                foundMethodWithThisName = true;
                             }
                         }
                     }
 
-                    if (discoveredMethodInfo != null)
+                    if (foundMethodWithThisName)
                     {
                         // We found something for this method name. Stop now.
                         break;

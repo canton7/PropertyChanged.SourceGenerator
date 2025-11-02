@@ -152,6 +152,10 @@ public class Generator
                 this.writer.WriteLine($"/// <param name=\"{newValueParamName}\">New value of the property</param>");
             }
         }
+        else
+        {
+            this.writer.WriteLine($"/// <inheritdoc />");
+        }
 
         this.writer.Write(AccessibilityToString(interfaceAnalysis.RaiseMethodSignature.Accessibility));
         switch (interfaceAnalysis.RaiseMethodType)

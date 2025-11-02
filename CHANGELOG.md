@@ -1,3 +1,10 @@
+v1.1.2
+------
+
+ - Fix issue finding 'OnPropertyChanged' method to call if there are overloads. (#49, 50)
+ - Generate `<inheritdoc/>` for overridden PropertyChanged methods (#41)
+
+
 v1.1.1
 ------
 

@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Microsoft.CodeAnalysis;
+﻿using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using NUnit.Framework;
 using PropertyChanged.SourceGenerator.UnitTests.Framework;
@@ -144,6 +139,28 @@ public class RaisePropertyChangedCallTests : TestsBase
             """;
 
         this.AssertThat(input, It.HasFile("SomeViewModel"));
+    }
+
+    [Test]
+    public void FindsAndCallsMethodWithStringNameEvenWithUnrecognisableOverload()
+    {
+        string input = """
+           using System.ComponentModel;
+           public class Base : INotifyPropertyChanged
+           {
+               public event PropertyChangedEventHandler PropertyChanged;
+               protected virtual void OnPropertyChanged(string name) =>
+                   PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
+               protected virtual void OnPropertyChanged(int arg) { }
+           }
+           public partial class Derived : Base
+           {
+               [Notify]
+               private string _foo;
+           }
+           """;
+
+        this.AssertThat(input, It.HasFile("Derived"));
     }
 
     [Test]

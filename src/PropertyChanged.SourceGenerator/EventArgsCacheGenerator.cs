@@ -39,7 +39,7 @@ public class EventArgsCacheGenerator
             }
             this.writer.WriteLine($"private static {eventArgsTypeName} {backingFieldName};");
             this.writer.WriteLine($"public static {eventArgsTypeName} {cacheName} => " +
-                $"{backingFieldName} ??= new {eventArgsTypeName}({EscapeString(propertyName)});");
+                $"{backingFieldName} = {backingFieldName} ?? new {eventArgsTypeName}({EscapeString(propertyName)});");
         }
 
         this.writer.Indent--;
